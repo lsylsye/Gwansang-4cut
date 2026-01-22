@@ -98,78 +98,6 @@ const CAPTURE_STEPS = [
       </svg>
     ),
   },
-  {
-    id: "left",
-    title: "좌측 옆얼굴",
-    guide:
-      "고개를 오른쪽으로 돌려 왼쪽 얼굴을 보여주세요 (Enter로 촬영)",
-    overlay: (
-      <svg
-        viewBox="0 0 100 100"
-        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[70%] h-[80%] opacity-50 pointer-events-none"
-      >
-        <path
-          d="M40 10 C 60 10, 75 30, 75 50 C 75 80, 50 90, 40 95"
-          fill="none"
-          stroke="white"
-          strokeWidth="1"
-          strokeDasharray="4"
-        />
-        <path
-          d="M40 10 L 40 95"
-          fill="none"
-          stroke="white"
-          strokeWidth="0.5"
-          strokeDasharray="2"
-        />
-        <text
-          x="50"
-          y="50"
-          fill="white"
-          fontSize="5"
-          textAnchor="middle"
-        >
-          왼쪽 얼굴
-        </text>
-      </svg>
-    ),
-  },
-  {
-    id: "right",
-    title: "우측 옆얼굴",
-    guide:
-      "고개를 왼쪽으로 돌려 오른쪽 얼굴을 보여주세요 (Enter로 촬영)",
-    overlay: (
-      <svg
-        viewBox="0 0 100 100"
-        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[70%] h-[80%] opacity-50 pointer-events-none"
-      >
-        <path
-          d="M60 10 C 40 10, 25 30, 25 50 C 25 80, 50 90, 60 95"
-          fill="none"
-          stroke="white"
-          strokeWidth="1"
-          strokeDasharray="4"
-        />
-        <path
-          d="M60 10 L 60 95"
-          fill="none"
-          stroke="white"
-          strokeWidth="0.5"
-          strokeDasharray="2"
-        />
-        <text
-          x="50"
-          y="50"
-          fill="white"
-          fontSize="5"
-          textAnchor="middle"
-        >
-          오른쪽 얼굴
-        </text>
-      </svg>
-    ),
-  },
 ];
 
 // Mock Avatar Images for Segmentation Simulation
@@ -192,7 +120,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
   const [capturedImages, setCapturedImages] = useState<
     (string | null)[]
-  >([null, null, null]);
+  >([null]);
   const [currentStep, setCurrentStep] = useState(0);
   const [isCapturing, setIsCapturing] = useState(
     mode === "personal",
@@ -326,16 +254,10 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
   const handleNextStep = useCallback(() => {
     if (mode === "personal") {
-      if (currentStep < 2) {
-        setCurrentStep(currentStep + 1);
-        setIsCapturing(true);
-      } else if (currentStep === 2) {
-        // After last photo capture, go to feature check
+      // 정면 촬영 후 바로 사주 정보 입력 단계(Step 2)로 이동
+      if (currentStep === 0) {
         setIsCapturing(false);
-        setCurrentStep(3);
-      } else if (currentStep === 3) {
-        // After feature check, go to saju info
-        setCurrentStep(4);
+        setCurrentStep(2); // Skip to saju info directly (Step 2)
       }
     } else {
       if (isGroupPhotoConfirming) {
@@ -398,19 +320,17 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
   const handleRetake = () => {
     if (mode === "personal") {
-      // If in feature check or saju info page, retake from beginning
-      if (currentStep >= 3) {
-        setCapturedImages([null, null, null]);
+      // If in saju info page, retake from beginning
+      if (currentStep >= 2) {
+        setCapturedImages([null]);
         setCurrentStep(0);
         setIsCapturing(true);
       } else {
-        const newImages = [...capturedImages];
-        newImages[currentStep] = null;
-        setCapturedImages(newImages);
+        setCapturedImages([null]);
         setIsCapturing(true);
       }
     } else {
-      setCapturedImages([null, null, null]);
+      setCapturedImages([null]);
       setGroupMembers([]);
       setIsCameraActive(true);
       setIsIndividualPhotoUpload(false);
@@ -476,8 +396,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
   const isReady =
     mode === "personal"
-      ? capturedImages.every((img) => img !== null) &&
-      currentStep === 4
+      ? capturedImages[0] !== null &&
+      currentStep === 2
       : groupMembers.length >= 2 &&
       groupMembers.every(
         (m) => m.name.trim() !== "" && m.avatar,
@@ -902,7 +822,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
   // --- Camera View ---
   if (
-    (mode === "personal" && currentStep < 3) ||
+    (mode === "personal" && currentStep === 0) ||
     (mode === "group" && isCameraActive)
   ) {
     const stepInfo =
@@ -985,7 +905,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           <div className="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-black/80 to-transparent text-white text-center z-10 pointer-events-none">
             {mode === "personal" && !hasCapturedImage ? (
               <div className="inline-block px-3 py-1 bg-[#00897B] rounded-full text-xs font-bold mb-2 shadow-sm">
-                단계 {currentStep + 1} / 3
+                사진 촬영
               </div>
             ) : (
               !hasCapturedImage && (
@@ -1008,7 +928,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             {hasCapturedImage && mode === "personal" && (
               <>
                 <div className="inline-block px-3 py-1 bg-[#00897B] rounded-full text-xs font-bold mb-2 shadow-sm">
-                  단계 {currentStep + 1} / 3
+                  촬영 완료
                 </div>
                 <h3 className="text-2xl font-bold font-display mb-1">
                   {stepInfo.title}
@@ -1047,9 +967,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                     onClick={handleNextStep}
                     className="py-3 px-6 text-base"
                   >
-                    {currentStep < 2
-                      ? "다음 단계로"
-                      : "분석하기"}{" "}
+                    다음 단계로{" "}
                     <ArrowRight size={18} className="ml-2" />
                   </ActionButton>
                 ) : (
@@ -1127,22 +1045,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           />
         </GlassCard>
 
-        {mode === "personal" && (
-          <div className="mt-6 flex gap-3">
-            {CAPTURE_STEPS.map((_, idx) => (
-              <div
-                key={idx}
-                className={`h-3 rounded-full transition-all duration-300 shadow-sm ${idx === currentStep ? "w-10 bg-[#00897B]" : idx < currentStep ? "w-3 bg-[#00897B]/50" : "w-3 bg-gray-300"}`}
-              ></div>
-            ))}
-          </div>
-        )}
+        {/* 단일 정면 촬영이므로 진행 표시 제거 */}
       </div>
     );
   }
 
-  // --- Feature Check Page (Step 3) ---
-  if (mode === "personal" && currentStep === 3) {
+  // --- Saju Info Page (Step 2) ---
+  if (mode === "personal" && currentStep === 2) {
     return (
       <div className="flex flex-col items-center justify-center gap-6 w-full max-w-4xl mx-auto pb-20 px-4">
         <motion.div
@@ -1231,8 +1140,11 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     );
   }
 
-  // --- Saju Info Page (Step 4) ---
-  if (mode === "personal" && currentStep === 4) {
+  // --- Deleted Feature Check Page ---
+  // Feature Check 단계는 삭제되었습니다.
+
+  // This condition will never be true now
+  if (false) {
     return (
       <div className="flex flex-col items-center justify-center gap-6 w-full max-w-4xl mx-auto pb-20 px-4">
         <motion.div
@@ -1496,10 +1408,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           <div className="flex gap-4 mt-16">
             <ActionButton
               variant="secondary"
-              onClick={() => setCurrentStep(3)}
+              onClick={() => {
+                setCurrentStep(0);
+                setIsCapturing(true);
+              }}
               className="flex-1"
             >
-              ← 특징 선택으로
+              ← 사진 다시 찍기
             </ActionButton>
             <ActionButton
               variant="primary"
