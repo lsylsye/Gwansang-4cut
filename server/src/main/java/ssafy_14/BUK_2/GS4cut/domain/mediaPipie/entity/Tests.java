@@ -1,4 +1,4 @@
-package ssafy_14.BUK_2.GS4cut.mediaPipie.entity;
+package ssafy_14.BUK_2.GS4cut.domain.mediaPipie.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
