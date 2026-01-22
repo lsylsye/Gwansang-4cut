@@ -71,7 +71,6 @@ interface RankingSectionProps {
   userScore: number;
   initialTeamName: string;
   fromAnalysis?: boolean; // 분석 완료 후 랭킹으로 왔는지 여부
-  isLoggedIn?: boolean; // 로그인 상태
 }
 
 export const RankingSection: React.FC<RankingSectionProps> = ({
@@ -80,7 +79,6 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
   userScore,
   initialTeamName,
   fromAnalysis = false,
-  isLoggedIn = false
 }) => {
   const [teamName, setTeamName] = useState(initialTeamName);
   const [isFixed, setIsFixed] = useState(false);
@@ -260,8 +258,8 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
         </motion.div>
       )}
 
-      {/* Tabs (Only visible when logged in) */}
-      {isLoggedIn && !fromAnalysis && (
+      {/* Tabs */}
+      {!fromAnalysis && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
