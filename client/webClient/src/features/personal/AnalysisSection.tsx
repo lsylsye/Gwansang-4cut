@@ -1,9 +1,13 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Brain, Heart, Camera, RotateCcw, Share2 } from "lucide-react";
+import { Brain, Heart, Camera, RotateCcw, Share2, Download, QrCode, X, Check } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { FaceAnalysis } from "./face/components/FaceAnalysis";
 import { StatsAnalysis } from "./stats/components/StatsAnalysis";
+import { GlassCard } from "@/shared/ui/core/GlassCard";
+import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
+import { Checkbox } from "@/shared/ui/forms/checkbox";
+import { Label } from "@/shared/ui/forms/label";
 
 // --- Types ---
 interface AnalysisSectionProps {
@@ -56,15 +60,39 @@ const MOCK_DATA = {
 // --- Main Component ---
 export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], onRestart }) => {
     const [currentTab, setCurrentTab] = useState<"physiognomy" | "constitution" | "future">("physiognomy");
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
+    const [consentChecked, setConsentChecked] = useState(false);
+    const [isDataDeleted, setIsDataDeleted] = useState(false);
+
+    // Mock QR code URL (실제로는 서버에서 생성된 고유 URL을 사용)
+    const shareUrl = `${window.location.origin}/result/abc123`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`;
 
     const handleShare = () => {
-        if (navigator.share) {
-            navigator.share({
-                title: '거북이의 눈',
-                text: '내 관상 분석 결과를 확인해보세요!',
-                url: window.location.href,
-            });
-        }
+        setIsShareModalOpen(true);
+    };
+
+    const handleDownload = () => {
+        // 로그인 없이 바로 다운로드 (Mock)
+        const link = document.createElement('a');
+        link.download = 'my-analysis-result.png';
+        link.href = images[0] || '';
+        link.click();
+    };
+
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(shareUrl);
+        alert('링크가 복사되었습니다!');
+    };
+
+    const handleDeleteData = () => {
+        // Mock 데이터 삭제
+        setIsDataDeleted(true);
+        setTimeout(() => {
+            setIsConsentModalOpen(false);
+            alert('개인 데이터가 안전하게 삭제되었습니다.');
+        }, 1000);
     };
 
     return (
@@ -124,14 +152,114 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
             </AnimatePresence>
 
             {/* Bottom Actions */}
-            <div className="flex justify-center gap-4 mt-16 pb-10">
+            <div className="flex flex-wrap justify-center gap-4 mt-16 pb-10">
                 <ActionButton variant="secondary" onClick={onRestart} className="flex items-center gap-2">
                     <RotateCcw size={20} /> 처음으로
                 </ActionButton>
+                <ActionButton variant="secondary" onClick={handleDownload} className="flex items-center gap-2">
+                    <Download size={20} /> 사진 다운로드
+                </ActionButton>
                 <ActionButton variant="primary" onClick={handleShare} className="flex items-center gap-2">
-                    <Share2 size={20} /> 결과 공유하기
+                    <QrCode size={20} /> QR로 공유하기
+                </ActionButton>
+                <ActionButton 
+                    variant="secondary" 
+                    onClick={() => setIsConsentModalOpen(true)} 
+                    className="flex items-center gap-2 text-red-500 hover:text-red-600"
+                >
+                    내 데이터 삭제
                 </ActionButton>
             </div>
+
+            {/* QR 공유 모달 */}
+            <Modal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} size="md">
+                <ModalHeader description="QR 코드를 스캔하거나 링크를 공유하세요">
+                    결과 공유하기
+                </ModalHeader>
+                <ModalBody>
+                    <div className="flex flex-col items-center gap-6">
+                        <div className="bg-white p-4 rounded-2xl shadow-clay-sm border-4 border-[#E0F2F1]">
+                            <img 
+                                src={qrCodeUrl} 
+                                alt="QR Code" 
+                                className="w-48 h-48"
+                            />
+                        </div>
+                        <p className="text-sm text-gray-500 text-center">
+                            QR 코드를 스캔하면 결과 페이지로 이동합니다
+                        </p>
+                        <div className="flex gap-3 w-full">
+                            <ActionButton 
+                                variant="secondary" 
+                                onClick={handleCopyLink}
+                                className="flex-1 flex items-center justify-center gap-2"
+                            >
+                                링크 복사
+                            </ActionButton>
+                            <ActionButton 
+                                variant="primary" 
+                                onClick={() => {
+                                    const link = document.createElement('a');
+                                    link.download = 'qr-code.png';
+                                    link.href = qrCodeUrl;
+                                    link.click();
+                                }}
+                                className="flex-1 flex items-center justify-center gap-2"
+                            >
+                                <Download size={18} /> QR 저장
+                            </ActionButton>
+                        </div>
+                        <p className="text-xs text-gray-400 text-center">
+                            ※ 로그인 없이 누구나 결과를 볼 수 있습니다
+                        </p>
+                    </div>
+                </ModalBody>
+            </Modal>
+
+            {/* 데이터 삭제 동의 모달 */}
+            <Modal isOpen={isConsentModalOpen} onClose={() => setIsConsentModalOpen(false)} size="md">
+                <ModalHeader description="개인정보 보호를 위해 데이터를 삭제할 수 있습니다">
+                    데이터 삭제
+                </ModalHeader>
+                <ModalBody>
+                    {!isDataDeleted ? (
+                        <div className="space-y-6">
+                            <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4">
+                                <p className="text-sm text-amber-800">
+                                    ⚠️ 데이터 삭제 시 분석 결과와 업로드된 사진이 영구적으로 삭제됩니다.
+                                    이 작업은 되돌릴 수 없습니다.
+                                </p>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <Checkbox 
+                                    id="consent" 
+                                    checked={consentChecked}
+                                    onCheckedChange={(checked) => setConsentChecked(checked as boolean)}
+                                />
+                                <Label htmlFor="consent" className="text-sm text-gray-600 cursor-pointer">
+                                    위 내용을 확인했으며, 내 데이터 삭제에 동의합니다.
+                                </Label>
+                            </div>
+                            <ActionButton 
+                                variant="primary" 
+                                onClick={handleDeleteData}
+                                disabled={!consentChecked}
+                                className={`w-full bg-red-500 hover:bg-red-600 ${!consentChecked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                데이터 삭제하기
+                            </ActionButton>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center gap-4 py-8">
+                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                                <Check size={32} className="text-green-600" />
+                            </div>
+                            <p className="text-lg font-bold text-gray-800">삭제 완료</p>
+                            <p className="text-sm text-gray-500">데이터가 안전하게 삭제되었습니다.</p>
+                        </div>
+                    )}
+                </ModalBody>
+            </Modal>
         </div>
     );
 };
