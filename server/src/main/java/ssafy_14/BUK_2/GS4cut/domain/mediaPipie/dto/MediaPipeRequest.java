@@ -1,4 +1,4 @@
-package ssafy_14.BUK_2.GS4cut.mediaPipie.dto;
+package ssafy_14.BUK_2.GS4cut.domain.mediaPipie.dto;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

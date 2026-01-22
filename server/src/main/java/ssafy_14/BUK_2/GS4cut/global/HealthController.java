@@ -1,4 +1,4 @@
-package ssafy_14.BUK_2.GS4cut;
+package ssafy_14.BUK_2.GS4cut.global;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
