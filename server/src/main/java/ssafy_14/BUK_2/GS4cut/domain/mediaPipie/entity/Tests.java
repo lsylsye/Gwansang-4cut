@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class Tests {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private String testId;
+    private Long testId;
 
     private String test;
 
