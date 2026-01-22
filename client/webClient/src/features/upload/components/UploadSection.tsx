@@ -254,10 +254,14 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
   const handleNextStep = useCallback(() => {
     if (mode === "personal") {
-      // 정면 촬영 후 바로 사주 정보 입력 단계(Step 2)로 이동
+      // 정면 촬영 후 바로 분석 시작
       if (currentStep === 0) {
         setIsCapturing(false);
-        setCurrentStep(2); // Skip to saju info directly (Step 2)
+        onAnalyze(
+          capturedImages as string[],
+          selectedFeatures,
+          sajuData,
+        );
       }
     } else {
       if (isGroupPhotoConfirming) {
@@ -272,6 +276,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     isGroupPhotoConfirming,
     capturedImages,
     processGroupPhoto,
+    onAnalyze,
+    selectedFeatures,
+    sajuData,
   ]);
 
   useEffect(() => {
@@ -1050,95 +1057,6 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     );
   }
 
-  // --- Saju Info Page (Step 2) ---
-  if (mode === "personal" && currentStep === 2) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-6 w-full max-w-4xl mx-auto pb-20 px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full"
-        >
-          {/* Header Section */}
-          <div className="text-center mb-8">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3 font-display">
-              얼굴 특징 체크
-            </h2>
-            <p className="text-lg text-gray-600 font-sans">
-              촬영된 사진에서 해당하는 얼굴 특징을 선택해주세요
-            </p>
-          </div>
-
-          {/* Feature Selection Card */}
-          <GlassCard className="w-full p-8 shadow-clay-md mb-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-gray-800 font-bold text-2xl flex items-center gap-2 font-display">
-                <Check size={28} className="text-[#00897B]" />
-                해당하는 특징을 선택하세요
-              </h3>
-              {selectedFeatures.length > 0 && (
-                <span className="bg-[#00897B] text-white text-sm font-bold px-4 py-2 rounded-full shadow-md">
-                  {selectedFeatures.length}개 선택됨
-                </span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
-              {FEATURES.map((feature, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className={`flex items-center space-x-3 p-4 rounded-xl transition-all cursor-pointer ${selectedFeatures.includes(feature)
-                    ? "bg-[#E0F2F1] border-2 border-[#00897B] shadow-md"
-                    : "bg-gray-50/50 hover:bg-[#E0F2F1]/30 border-2 border-transparent hover:border-[#00897B]/20"
-                    }`}
-                  onClick={() => toggleFeature(feature)}
-                >
-                  <Checkbox
-                    checked={selectedFeatures.includes(feature)}
-                    className="border-gray-400 w-5 h-5 data-[state=checked]:bg-[#00897B] pointer-events-none"
-                  />
-                  <Label className="text-gray-700 cursor-pointer flex-grow text-base font-medium">
-                    {feature}
-                  </Label>
-                </motion.div>
-              ))}
-            </div>
-
-            <div className="mt-6 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl">
-              <p className="text-sm text-amber-800 font-sans text-center">
-                💡 선택사항입니다. 해당하는 특징이 없다면
-                건너뛰어도 됩니다.
-              </p>
-            </div>
-          </GlassCard>
-
-          {/* Navigation Buttons */}
-          <div className="flex gap-4">
-            <ActionButton
-              variant="secondary"
-              onClick={() => {
-                setCurrentStep(0);
-                setIsCapturing(true);
-              }}
-              className="flex-1"
-            >
-              ← 사진 다시 찍기
-            </ActionButton>
-            <ActionButton
-              variant="primary"
-              onClick={handleNextStep}
-              className="flex-1"
-            >
-              다음 단계로 →
-            </ActionButton>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
 
   // --- Deleted Feature Check Page ---
   // Feature Check 단계는 삭제되었습니다.

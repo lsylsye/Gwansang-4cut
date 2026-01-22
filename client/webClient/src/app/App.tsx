@@ -278,7 +278,6 @@ export default function App() {
                   userScore={groupScore}
                   initialTeamName={userTeamName}
                   fromAnalysis={fromAnalysis}
-                  isLoggedIn={isLoggedIn}
                 />
               </motion.div>
             )}
@@ -293,7 +292,6 @@ export default function App() {
                 className="w-full h-full"
               >
                 <HistorySection
-                  isLoggedIn={isLoggedIn}
                   historyData={historyData}
                   onViewResult={(item: HistoryItem) => {
                     // TODO: Navigate to result page with history data
