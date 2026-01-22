@@ -13,7 +13,7 @@ const toggleVariants = cva(
       variant: {
         default: "bg-transparent",
         outline:
-          "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground data-[state=on]:bg-[#FFF3E0] data-[state=on]:text-[#FF7043] data-[state=on]:border-[#FF7043]",
+          "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground data-[state=on]:bg-brand-orange-muted data-[state=on]:text-brand-orange data-[state=on]:border-brand-orange",
       },
       size: {
         default: "h-9 px-2 min-w-9",

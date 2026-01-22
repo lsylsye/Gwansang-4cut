@@ -114,7 +114,7 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
                                 className={`
                             flex items-center gap-2 px-8 py-3.5 rounded-2xl transition-all duration-300 font-bold font-display
                             ${isActive
-                                        ? "bg-[#00897B] text-white shadow-clay-xs scale-105"
+                                        ? "bg-brand-green text-white shadow-clay-xs scale-105"
                                         : "hover:bg-gray-100 text-gray-400 hover:text-gray-700"}
                         `}
                             >
@@ -178,7 +178,7 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
                 </ModalHeader>
                 <ModalBody>
                     <div className="flex flex-col items-center gap-6">
-                        <div className="bg-white p-4 rounded-2xl shadow-clay-sm border-4 border-[#E0F2F1]">
+                        <div className="bg-white p-4 rounded-2xl shadow-clay-sm border-4 border-brand-green-muted">
                             <img 
                                 src={qrCodeUrl} 
                                 alt="QR Code" 

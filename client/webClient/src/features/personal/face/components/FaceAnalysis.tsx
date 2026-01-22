@@ -61,7 +61,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                                 animate={{ opacity: 1 }}
                                 className="absolute top-6 left-0 right-0 flex justify-center z-30 pointer-events-none"
                             >
-                                <div className="bg-white/90 backdrop-blur-sm px-6 py-3 rounded-full font-display text-sm text-[#00897B] shadow-clay-xs border-2 border-white flex items-center gap-2 animate-bounce-subtle">
+                                <div className="bg-white/90 backdrop-blur-sm px-6 py-3 rounded-full font-display text-sm text-brand-green shadow-clay-xs border-2 border-white flex items-center gap-2 animate-bounce-subtle">
                                     <Sparkles size={16} />
                                     궁금한 부위를 눌러보세요
                                 </div>
@@ -75,7 +75,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                                 alt="Face Analysis"
                                 className="w-full h-full object-cover opacity-30 grayscale mix-blend-overlay"
                             />
-                            <div className="absolute inset-0 bg-[#00897B]/5 backdrop-blur-[2px]" />
+                            <div className="absolute inset-0 bg-brand-green/5 backdrop-blur-[2px]" />
                         </div>
 
                         <svg viewBox="0 0 200 220" className="h-[85%] w-[85%] relative z-10 drop-shadow-2xl">
@@ -98,8 +98,8 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                                         <path
                                             d={part.d}
                                             className={`transition-all duration-500 ${isActive
-                                                ? "fill-[#00897B]/60 stroke-[#00897B] stroke-2 shadow-[0_0_20px_rgba(0,137,123,0.5)]"
-                                                : "fill-white/20 stroke-white/40 hover:fill-[#00897B]/20 hover:stroke-[#00897B]/50"
+                                                ? "fill-brand-green/60 stroke-brand-green stroke-2 shadow-[0_0_20px_rgba(0,137,123,0.5)]"
+                                                : "fill-white/20 stroke-white/40 hover:fill-brand-green/20 hover:stroke-brand-green/50"
                                                 }`}
                                         />
 
@@ -111,7 +111,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                                             initial={{ opacity: 1 }}
                                             animate={isActive ? { r: [6, 8, 6], opacity: [1, 0.6, 1] } : { r: 4, opacity: 1 }}
                                             transition={{ repeat: Infinity, duration: 2 }}
-                                            className={`${isActive ? "fill-white" : "fill-[#00897B]"} stroke-white stroke-1 shadow-sm`}
+                                            className={`${isActive ? "fill-white" : "fill-brand-green"} stroke-white stroke-1 shadow-sm`}
                                         />
 
                                         {/* Tooltip Label */}
@@ -152,7 +152,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                                         className="absolute bottom-8 left-8 right-8 bg-white/90 backdrop-blur-xl shadow-clay-md border-4 border-white rounded-[32px] p-6 text-center z-20"
                                         onClick={(e) => e.stopPropagation()}
                                     >
-                                        <div className="inline-block px-3 py-1 bg-[#E0F2F1] text-[#00897B] rounded-full text-[10px] font-black mb-2 uppercase tracking-wider">
+                                        <div className="inline-block px-3 py-1 bg-brand-green-muted text-brand-green rounded-full text-[10px] font-black mb-2 uppercase tracking-wider">
                                             {faceParts.find(p => p.id === activeFeature)?.label}
                                         </div>
                                         <h4 className="font-bold text-gray-900 mb-2 text-xl font-display">
@@ -177,7 +177,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                 {/* 업무 상성 섹션 */}
                 <GlassCard className="p-8 border-4 border-white rounded-[40px] shadow-clay-md bg-white/40">
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="w-12 h-12 bg-[#FF7043] rounded-2xl flex items-center justify-center text-2xl shadow-clay-xs">
+                        <div className="w-12 h-12 bg-brand-orange rounded-2xl flex items-center justify-center text-2xl shadow-clay-xs">
                             <Briefcase className="text-white" size={24} />
                         </div>
                         <h3 className="font-bold text-2xl text-gray-800 font-display">업무 상성 분석</h3>
@@ -185,7 +185,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                     
                     <div className="space-y-4">
                         {/* Best Match */}
-                        <div className="bg-[#E8F5E9] p-5 rounded-2xl border-2 border-green-100">
+                        <div className="bg-brand-green-pale p-5 rounded-2xl border-2 border-green-100">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                     <Users size={18} className="text-green-600" />
@@ -200,7 +200,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         </div>
 
                         {/* Team Role */}
-                        <div className="bg-[#E3F2FD] p-5 rounded-2xl border-2 border-blue-100">
+                        <div className="bg-brand-blue-muted p-5 rounded-2xl border-2 border-blue-100">
                             <div className="flex items-center gap-2 mb-2">
                                 <Star size={18} className="text-blue-600" />
                                 <span className="font-bold text-blue-800">팀 내 역할</span>
@@ -210,7 +210,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         </div>
 
                         {/* Worst Match */}
-                        <div className="bg-[#FFF3E0] p-5 rounded-2xl border-2 border-orange-100">
+                        <div className="bg-brand-orange-muted p-5 rounded-2xl border-2 border-orange-100">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                     <Users size={18} className="text-orange-600" />
@@ -255,7 +255,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                 <GlassCard className="flex-1 p-10 border-4 border-white rounded-[40px] shadow-clay-md bg-white/40">
                     <div className="flex justify-between items-center mb-8 cursor-pointer select-none" onClick={() => setIsDetailOpen(!isDetailOpen)}>
                         <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-[#00897B] rounded-2xl flex items-center justify-center text-2xl shadow-clay-xs">🐢</div>
+                            <div className="w-12 h-12 bg-brand-green rounded-2xl flex items-center justify-center text-2xl shadow-clay-xs">🐢</div>
                             <h3 className="font-bold text-3xl text-gray-800 font-display">거북 도사의 총평</h3>
                         </div>
                         {isDetailOpen ? <ChevronUp size={28} className="text-gray-400" /> : <ChevronDown size={28} className="text-gray-400" />}
@@ -272,15 +272,15 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                                     {totalAnalysis}
                                 </div>
                                 <div className="mt-8 grid grid-cols-2 gap-4">
-                                    <div className="bg-[#E0F2F1] p-4 rounded-2xl shadow-clay-xs border border-white">
-                                        <p className="text-xs text-[#00897B] font-bold mb-1">행운의 색상</p>
+                                    <div className="bg-brand-green-muted p-4 rounded-2xl shadow-clay-xs border border-white">
+                                        <p className="text-xs text-brand-green font-bold mb-1">행운의 색상</p>
                                         <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 rounded-full bg-[#00897B] shadow-inner" />
+                                            <div className="w-4 h-4 rounded-full bg-brand-green shadow-inner" />
                                             <span className="text-sm font-bold text-gray-700">에메랄드 그린</span>
                                         </div>
                                     </div>
-                                    <div className="bg-[#FFF3E0] p-4 rounded-2xl shadow-clay-xs border border-white">
-                                        <p className="text-xs text-[#E65100] font-bold mb-1">행운의 숫자</p>
+                                    <div className="bg-brand-orange-muted p-4 rounded-2xl shadow-clay-xs border border-white">
+                                        <p className="text-xs text-brand-orange-dark font-bold mb-1">행운의 숫자</p>
                                         <span className="text-xl font-bold text-gray-700">4, 8</span>
                                     </div>
                                 </div>

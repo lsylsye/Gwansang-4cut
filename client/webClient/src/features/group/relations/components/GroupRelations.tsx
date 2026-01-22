@@ -35,7 +35,7 @@ export const GroupRelations: React.FC<GroupRelationsProps> = ({ groupMembers }) 
                             <h3 className="text-xl font-bold text-gray-800 font-sans flex items-center gap-2">
                                 <span className="text-2xl">👥</span> 멤버별 관상 역할
                             </h3>
-                            <div className="px-3 py-1 bg-orange-100 text-[#FF7043] rounded-lg text-xs font-bold font-sans">
+                            <div className="px-3 py-1 bg-orange-100 text-brand-orange rounded-lg text-xs font-bold font-sans">
                                 TOTAL: {groupMembers.length} MEMBERS
                             </div>
                         </div>

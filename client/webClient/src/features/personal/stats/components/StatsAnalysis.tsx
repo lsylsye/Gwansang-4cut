@@ -187,11 +187,11 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ tab, images }) => 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     <GlassCard className="p-10 border-8 border-white rounded-[40px] shadow-clay-md bg-white/60">
                         <div className="flex items-center gap-4 mb-6">
-                            <div className="w-16 h-16 bg-[#26A69A] rounded-3xl flex items-center justify-center shadow-clay-xs">
+                            <div className="w-16 h-16 bg-brand-teal rounded-3xl flex items-center justify-center shadow-clay-xs">
                                 <Heart className="text-white w-8 h-8" />
                             </div>
                             <div>
-                                <h3 className="text-3xl font-bold text-[#00897B] font-display">{CONSTITUTION_DATA.type}</h3>
+                                <h3 className="text-3xl font-bold text-brand-green font-display">{CONSTITUTION_DATA.type}</h3>
                                 <p className="text-sm text-gray-500 font-bold">체질 기반 사주 풀이</p>
                             </div>
                         </div>
@@ -273,7 +273,7 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ tab, images }) => 
                                         className={`
                                             px-6 py-2.5 rounded-2xl transition-all duration-300 font-bold font-display text-sm
                                             ${isActive
-                                                ? "bg-[#00897B] text-white shadow-clay-xs scale-105"
+                                                ? "bg-brand-green text-white shadow-clay-xs scale-105"
                                                 : "hover:bg-gray-100 text-gray-400 hover:text-gray-700"}
                                         `}
                                     >
@@ -294,7 +294,7 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ tab, images }) => 
                                         onClick={() => setSelectedMenuIdx(i)}
                                         className={`
                                             p-4 flex flex-col items-center text-center transition-all cursor-pointer relative overflow-hidden rounded-[32px] border-4
-                                            ${isActive ? "border-[#00897B] bg-[#E0F2F1] shadow-clay-md scale-105" : "border-white bg-white/60 hover:bg-white shadow-clay-sm"}
+                                            ${isActive ? "border-brand-green bg-brand-green-muted shadow-clay-md scale-105" : "border-white bg-white/60 hover:bg-white shadow-clay-sm"}
                                         `}
                                     >
                                         <div className="w-full aspect-square rounded-2xl overflow-hidden mb-4 shadow-inner border-2 border-white/50">
@@ -307,7 +307,7 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ tab, images }) => 
                             })}
                         </div>
                         <div className="lg:col-span-1">
-                            <GlassCard className="h-full p-6 border-4 border-white rounded-[32px] shadow-clay-sm bg-[#00897B] text-white flex flex-col justify-center">
+                            <GlassCard className="h-full p-6 border-4 border-white rounded-[32px] shadow-clay-sm bg-brand-green text-white flex flex-col justify-center">
                                 <h5 className="font-bold text-lg mb-2 flex items-center gap-2">
                                     <Clock size={18} /> 추천 사유
                                 </h5>
@@ -333,7 +333,7 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ tab, images }) => 
                 <div className="flex flex-col xl:flex-row gap-12 items-center xl:items-start max-w-5xl w-full">
                     {/* Photo Strip Frame */}
                     <div className="flex flex-col gap-6">
-                        <div className="bg-[#1a1a1a] p-8 pb-14 shadow-[20px_20px_60px_rgba(0,0,0,0.4)] max-w-[360px] w-full relative group rounded-sm transform -rotate-1">
+                        <div className="bg-brand-black-light p-8 pb-14 shadow-[20px_20px_60px_rgba(0,0,0,0.4)] max-w-[360px] w-full relative group rounded-sm transform -rotate-1">
                             <div className="flex justify-between text-white/40 text-[9px] font-mono mb-4 uppercase tracking-[0.3em] font-bold">
                                 <span>Turtle AI Simulation</span>
                                 <span>{new Date().toLocaleDateString().replace(/\./g, ' /')}</span>
@@ -382,7 +382,7 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ tab, images }) => 
                     {/* Period Descriptions */}
                     <div className="flex-1 space-y-6">
                         <h4 className="text-2xl font-bold text-gray-800 font-display mb-6 flex items-center gap-3">
-                            <TrendingUp className="text-[#00897B]" />
+                            <TrendingUp className="text-brand-green" />
                             시대별 인상 변화 풀이
                         </h4>
 
@@ -396,17 +396,17 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ tab, images }) => 
                             <div className="h-[320px] bg-white rounded-2xl p-4">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={FUTURE_CHART_DATA} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
-                                        <CartesianGrid strokeDasharray="5 5" stroke="#F3F4F6" vertical={false} />
+                                        <CartesianGrid strokeDasharray="5 5" stroke="var(--color-gray-100)" vertical={false} />
                                         <XAxis
                                             dataKey="period"
-                                            tick={{ fill: '#9CA3AF', fontSize: 13, fontWeight: '600' }}
-                                            stroke="#E5E7EB"
-                                            axisLine={{ stroke: '#E5E7EB' }}
+                                            tick={{ fill: "var(--color-gray-400)", fontSize: 13, fontWeight: '600' }}
+                                            stroke="var(--color-gray-200)"
+                                            axisLine={{ stroke: "var(--color-gray-200)" }}
                                         />
                                         <YAxis
-                                            tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                                            stroke="#E5E7EB"
-                                            axisLine={{ stroke: '#E5E7EB' }}
+                                            tick={{ fill: "var(--color-gray-400)", fontSize: 12 }}
+                                            stroke="var(--color-gray-200)"
+                                            axisLine={{ stroke: "var(--color-gray-200)" }}
                                             domain={[0, 100]}
                                         />
                                         <Tooltip
@@ -417,7 +417,7 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ tab, images }) => 
                                                 padding: '12px 16px',
                                                 boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
                                             }}
-                                            labelStyle={{ fontWeight: '700', color: '#1F2937', marginBottom: '8px', fontSize: '14px' }}
+                                            labelStyle={{ fontWeight: '700', color: "var(--color-gray-800)", marginBottom: '8px', fontSize: '14px' }}
                                             itemStyle={{ fontSize: '13px', padding: '2px 0' }}
                                         />
                                         <Legend
@@ -428,25 +428,25 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ tab, images }) => 
                                         <Line
                                             type="monotone"
                                             dataKey="재물운"
-                                            stroke="#F59E0B"
+                                            stroke="var(--color-amber-500)"
                                             strokeWidth={3}
-                                            dot={{ fill: '#F59E0B', r: 5, strokeWidth: 2, stroke: 'white' }}
+                                            dot={{ fill: "var(--color-amber-500)", r: 5, strokeWidth: 2, stroke: 'white' }}
                                             activeDot={{ r: 7 }}
                                         />
                                         <Line
                                             type="monotone"
                                             dataKey="애정운"
-                                            stroke="#EC4899"
+                                            stroke="var(--color-pink-500)"
                                             strokeWidth={3}
-                                            dot={{ fill: '#EC4899', r: 5, strokeWidth: 2, stroke: 'white' }}
+                                            dot={{ fill: "var(--color-pink-500)", r: 5, strokeWidth: 2, stroke: 'white' }}
                                             activeDot={{ r: 7 }}
                                         />
                                         <Line
                                             type="monotone"
                                             dataKey="건강운"
-                                            stroke="#10B981"
+                                            stroke="var(--color-emerald-500)"
                                             strokeWidth={3}
-                                            dot={{ fill: '#10B981', r: 5, strokeWidth: 2, stroke: 'white' }}
+                                            dot={{ fill: "var(--color-emerald-500)", r: 5, strokeWidth: 2, stroke: 'white' }}
                                             activeDot={{ r: 7 }}
                                         />
                                     </LineChart>
@@ -470,7 +470,7 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ tab, images }) => 
                                         <div>
                                             <div className="flex items-baseline gap-2 mb-1">
                                                 <h5 className="font-bold text-gray-800 text-lg">{period.label}</h5>
-                                                <span className="text-xs font-bold text-[#00897B] bg-[#E0F2F1] px-2 py-0.5 rounded-full">{period.age}</span>
+                                                <span className="text-xs font-bold text-brand-green bg-brand-green-muted px-2 py-0.5 rounded-full">{period.age}</span>
                                             </div>
                                             <p className="text-sm text-gray-600 leading-relaxed font-hand">
                                                 {period.desc}

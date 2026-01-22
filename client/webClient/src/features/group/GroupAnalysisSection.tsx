@@ -21,7 +21,7 @@ export const GroupAnalysisSection: React.FC<GroupAnalysisSectionProps> = ({ grou
                 className="text-center mb-10"
             >
                 <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2 font-display">
-                    <span className="text-[#FF7043]">모임 관상</span> 결과
+                    <span className="text-brand-orange">모임 관상</span> 결과
                 </h2>
                 <p className="text-gray-500 font-sans">천기를 읽어 자네들의 인연을 점수화해 보았네!</p>
             </motion.div>

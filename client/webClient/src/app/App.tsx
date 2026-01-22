@@ -225,7 +225,7 @@ export default function App() {
                 className="w-full h-[60vh] flex flex-col items-center justify-center text-center"
               >
                 <div className="mb-8 relative">
-                  <div className="absolute inset-0 bg-[#00897B] blur-3xl opacity-20 rounded-full animate-pulse"></div>
+                  <div className="absolute inset-0 bg-brand-green blur-3xl opacity-20 rounded-full animate-pulse"></div>
                   <h2 className="text-3xl font-bold text-gray-800 mb-4 relative z-10 font-display">
                     분석 중...
                   </h2>
@@ -278,6 +278,7 @@ export default function App() {
                   userScore={groupScore}
                   initialTeamName={userTeamName}
                   fromAnalysis={fromAnalysis}
+                  isLoggedIn={isLoggedIn}
                 />
               </motion.div>
             )}
@@ -292,6 +293,7 @@ export default function App() {
                 className="w-full h-full"
               >
                 <HistorySection
+                  isLoggedIn={isLoggedIn}
                   historyData={historyData}
                   onViewResult={(item: HistoryItem) => {
                     // TODO: Navigate to result page with history data

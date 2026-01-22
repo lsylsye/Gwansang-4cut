@@ -7,6 +7,7 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { AnalyzeMode } from "@/shared/types";
 import logoImage from "@/assets/film.png";
+import { ModeSelectionCard } from "./ModeSelectionCard";
 
 interface LandingSectionProps {
     onStart: (mode: AnalyzeMode) => void;
@@ -28,7 +29,7 @@ export const LandingSection: React.FC<LandingSectionProps> = ({ onStart }) => {
                         className="text-5xl md:text-7xl font-extrabold text-gray-900 leading-tight tracking-tight drop-shadow-sm font-display"
                     >
                         <span className="block text-gray-800 mb-1">나의 운명,</span>
-                        <span className="text-[#00897B] flex items-center justify-center md:justify-start gap-3">
+                        <span className="text-brand-green flex items-center justify-center md:justify-start gap-3">
                             관상네컷
                             <img
                                 src={logoImage}
@@ -151,68 +152,26 @@ export const LandingSection: React.FC<LandingSectionProps> = ({ onStart }) => {
                 </div>
 
                 {/* Option 1: Personal Face */}
-                <div
-                    className="relative group cursor-pointer"
+                <ModeSelectionCard
+                    mode="personal"
+                    title="개인 관상"
+                    description={<>카메라로 직접 촬영하여<br />나의 관상을 즉시 분석해보세요.</>}
+                    icon={User}
+                    badgeText="추천"
+                    badgeIcon={Star}
                     onClick={() => onStart("personal")}
-                >
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-[#00897B] to-[#4DB6AC] rounded-2xl blur opacity-0 group-hover:opacity-30 transition duration-500"></div>
-                    <GlassCard className="relative p-6 hover:bg-white/80 transition-all duration-300 border border-white/50 group-hover:border-[#00897B]/50 flex items-center gap-5">
-                        <div className="w-16 h-16 rounded-2xl bg-[#E0F2F1] flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
-                            <User className="w-8 h-8 text-[#00897B]" />
-                            <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1.5 shadow-sm border border-gray-100">
-                                <Camera className="w-3 h-3 text-gray-600" />
-                            </div>
-                        </div>
-                        <div className="flex-1 text-left">
-                            <h3 className="text-xl font-bold text-gray-800 group-hover:text-[#00897B] font-display mb-1">
-                                개인 관상
-                            </h3>
-                            <p className="text-gray-500 text-sm leading-tight font-hand">
-                                카메라로 직접 촬영하여<br />나의 관상을 즉시 분석해보세요.
-                            </p>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-[#00897B] flex items-center justify-center transition-colors">
-                            <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-white" />
-                        </div>
-                    </GlassCard>
-                    {/* Badge */}
-                    <div className="absolute -top-2 right-4 bg-[#FF5252] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg border border-red-400/50 flex items-center gap-1 z-20">
-                        <Star className="w-2.5 h-2.5 text-yellow-300 fill-yellow-300" />
-                        <span>추천</span>
-                    </div>
-                </div>
+                />
 
                 {/* Option 2: Group Face */}
-                <div
-                    className="relative group cursor-pointer"
+                <ModeSelectionCard
+                    mode="group"
+                    title="모임 관상"
+                    description={<>친구들과 함께 촬영하여<br />우리 모임의 기운을 확인해보세요.</>}
+                    icon={Users}
+                    badgeText="HOT"
+                    badgeIcon={Sparkles}
                     onClick={() => onStart("group")}
-                >
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-[#FF7043] to-[#FFAB91] rounded-2xl blur opacity-0 group-hover:opacity-30 transition duration-500"></div>
-                    <GlassCard className="relative p-6 hover:bg-white/80 transition-all duration-300 border border-white/50 group-hover:border-[#FF7043]/50 flex items-center gap-5">
-                        <div className="w-16 h-16 rounded-2xl bg-[#FBE9E7] flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
-                            <Users className="w-8 h-8 text-[#D84315]" />
-                            <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1.5 shadow-sm border border-gray-100">
-                                <Camera className="w-3 h-3 text-gray-600" />
-                            </div>
-                        </div>
-                        <div className="flex-1 text-left">
-                            <h3 className="text-xl font-bold text-gray-800 group-hover:text-[#D84315] font-display mb-1">
-                                모임 관상
-                            </h3>
-                            <p className="text-gray-500 text-sm leading-tight font-hand">
-                                친구들과 함께 촬영하여<br />우리 모임의 기운을 확인해보세요.
-                            </p>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-[#FF7043] flex items-center justify-center transition-colors">
-                            <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-white" />
-                        </div>
-                    </GlassCard>
-                    {/* Badge */}
-                    <div className="absolute -top-2 right-4 bg-gray-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg border border-gray-700/50 flex items-center gap-1 z-20">
-                        <Sparkles className="w-2.5 h-2.5 text-yellow-400" />
-                        <span>HOT</span>
-                    </div>
-                </div>
+                />
 
             </motion.div>
 
