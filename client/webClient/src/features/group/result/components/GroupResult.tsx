@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "motion/react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
-import { Sparkles, Flame, Trophy, Coins, Zap, Utensils, Clock, Share2 } from "lucide-react";
+import { Sparkles, Flame, Trophy, Coins, Zap, Utensils, Clock, Share2, QrCode, Download } from "lucide-react";
+import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
 
 // --- Mock Data (Moved from GroupAnalysisSection) ---
 const GROUP_MOCK_DATA = {
@@ -37,6 +38,17 @@ interface GroupResultProps {
 }
 
 export const GroupResult: React.FC<GroupResultProps> = ({ onViewRanking }) => {
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    
+    // Mock QR code URL
+    const shareUrl = `${window.location.origin}/group-result/xyz789`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`;
+
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(shareUrl);
+        alert('링크가 복사되었습니다!');
+    };
+
     return (
         <div className="space-y-8">
             {/* 0. Compatibility Score Section (TOP HIGHLIGHT) */}
@@ -254,11 +266,56 @@ export const GroupResult: React.FC<GroupResultProps> = ({ onViewRanking }) => {
                     <Trophy size={20} />
                     전체 랭킹 확인하기
                 </ActionButton>
-                <ActionButton variant="orange-primary" onClick={() => alert("공유 기능은 준비 중입니다!")} className="flex-1 flex items-center justify-center gap-2 text-base">
-                    <Share2 size={20} />
-                    결과 공유하기
+                <ActionButton variant="orange-primary" onClick={() => setIsShareModalOpen(true)} className="flex-1 flex items-center justify-center gap-2 text-base">
+                    <QrCode size={20} />
+                    QR로 공유하기
                 </ActionButton>
             </div>
+
+            {/* QR 공유 모달 */}
+            <Modal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} size="md">
+                <ModalHeader description="QR 코드를 스캔하거나 링크를 공유하세요">
+                    모임 결과 공유하기
+                </ModalHeader>
+                <ModalBody>
+                    <div className="flex flex-col items-center gap-6">
+                        <div className="bg-white p-4 rounded-2xl shadow-clay-sm border-4 border-[#FFF3E0]">
+                            <img 
+                                src={qrCodeUrl} 
+                                alt="QR Code" 
+                                className="w-48 h-48"
+                            />
+                        </div>
+                        <p className="text-sm text-gray-500 text-center">
+                            QR 코드를 스캔하면 모임 결과 페이지로 이동합니다
+                        </p>
+                        <div className="flex gap-3 w-full">
+                            <ActionButton 
+                                variant="orange-secondary" 
+                                onClick={handleCopyLink}
+                                className="flex-1 flex items-center justify-center gap-2"
+                            >
+                                링크 복사
+                            </ActionButton>
+                            <ActionButton 
+                                variant="orange-primary" 
+                                onClick={() => {
+                                    const link = document.createElement('a');
+                                    link.download = 'group-qr-code.png';
+                                    link.href = qrCodeUrl;
+                                    link.click();
+                                }}
+                                className="flex-1 flex items-center justify-center gap-2"
+                            >
+                                <Download size={18} /> QR 저장
+                            </ActionButton>
+                        </div>
+                        <p className="text-xs text-gray-400 text-center">
+                            ※ 로그인 없이 누구나 결과를 볼 수 있습니다
+                        </p>
+                    </div>
+                </ModalBody>
+            </Modal>
         </div>
     );
 };
