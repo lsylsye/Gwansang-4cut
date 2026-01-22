@@ -10,14 +10,13 @@ import { RankingSection } from "@/features/ranking/components/RankingSection";
 import { HistorySection } from "@/features/history/components/HistorySection";
 import { TurtleGuide } from "@/shared/components/TurtleGuide";
 import { AnimatePresence, motion } from "motion/react";
-import { LogIn, User, LogOut, Package } from "lucide-react";
+import { Package } from "lucide-react";
 import { Trophy } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import logoImage from "@/assets/film.png";
 import {
   AnalyzeMode,
   SajuData,
-  UserProfile,
   HistoryItem,
   GroupMember,
 } from "@/shared/types";
@@ -42,30 +41,13 @@ export default function App() {
   >([]);
   const [userTeamName, setUserTeamName] = useState("");
   const [groupScore, setGroupScore] = useState(88);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userProfile, setUserProfile] =
-    useState<UserProfile | null>(null);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [fromAnalysis, setFromAnalysis] = useState(false); // 분석 결과에서 랭킹으로 왔는지 여부
   const [historyData, setHistoryData] = useState<HistoryItem[]>(
     [],
   );
 
-  const handleKakaoLogin = () => {
-    // TODO: Implement actual Kakao login logic
-    // For now, mock login
-    setIsLoggedIn(true);
-    setUserProfile({
-      name: "거북이",
-      profileImage: undefined, // Kakao will provide this
-    });
-    setShowProfileMenu(false);
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUserProfile(null);
-    setShowProfileMenu(false);
+  const handleHistory = () => {
+    setStep("history");
   };
 
   const handleStart = (selectedMode: AnalyzeMode) => {
@@ -91,32 +73,30 @@ export default function App() {
     setTimeout(() => {
       setStep("result");
 
-      // 히스토리에 저장 (로그인 상태일 때만)
-      if (isLoggedIn) {
-        const now = new Date();
-        const date = now.toISOString().split("T")[0];
-        const timestamp = now
-          .toTimeString()
-          .split(" ")[0]
-          .substring(0, 5);
+      // 히스토리에 저장 (로그인 없이도 저장)
+      const now = new Date();
+      const date = now.toISOString().split("T")[0];
+      const timestamp = now
+        .toTimeString()
+        .split(" ")[0]
+        .substring(0, 5);
 
-        const newHistoryItem: HistoryItem = {
-          id: Date.now().toString(),
-          type: mode,
-          date,
-          timestamp,
-          ...(mode === "personal"
-            ? { images: capturedImages }
-            : {
-              teamName: userTeamName,
-              memberCount: members?.length || 0,
-              score: groupScore,
-              thumbnail: capturedImages[0],
-            }),
-        };
+      const newHistoryItem: HistoryItem = {
+        id: Date.now().toString(),
+        type: mode,
+        date,
+        timestamp,
+        ...(mode === "personal"
+          ? { images: capturedImages }
+          : {
+            teamName: userTeamName,
+            memberCount: members?.length || 0,
+            score: groupScore,
+            thumbnail: capturedImages[0],
+          }),
+      };
 
-        setHistoryData((prev) => [newHistoryItem, ...prev]);
-      }
+      setHistoryData((prev) => [newHistoryItem, ...prev]);
     }, 3000);
   };
 
@@ -133,11 +113,6 @@ export default function App() {
     setSaju(null);
     setGroupMembers([]);
     setStep("intro");
-  };
-
-  const handleHistory = () => {
-    setStep("history");
-    setShowProfileMenu(false);
   };
 
   // Determine guide message based on step
@@ -194,86 +169,17 @@ export default function App() {
             모임 랭킹
           </button>
 
-          {/* Login/Profile Section */}
+          {/* Login/Profile Section - 로그인 없이 히스토리 접근 */}
           <div className="relative">
-            {isLoggedIn ? (
-              <>
-                <button
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-all border border-gray-200"
-                  onClick={() =>
-                    setShowProfileMenu(!showProfileMenu)
-                  }
-                >
-                  {userProfile?.profileImage ? (
-                    <img
-                      src={userProfile.profileImage}
-                      alt="Profile"
-                      className="w-6 h-6 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-[#00897B] flex items-center justify-center">
-                      <User className="w-4 h-4 text-white" />
-                    </div>
-                  )}
-                  <span className="text-sm font-bold text-gray-900">
-                    {userProfile?.name}
-                  </span>
-                </button>
-
-                <AnimatePresence>
-                  {showProfileMenu && (
-                    <>
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-40"
-                        onClick={() =>
-                          setShowProfileMenu(false)
-                        }
-                      />
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden z-50"
-                      >
-                        <button
-                          className="w-full px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
-                          onClick={handleHistory}
-                        >
-                          <Package className="w-4 h-4" />
-                          나의 히스토리
-                        </button>
-                        <div className="h-px bg-gray-100" />
-                        <button
-                          className="w-full px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
-                          onClick={handleLogout}
-                        >
-                          <LogOut className="w-4 h-4" />
-                          로그아웃
-                        </button>
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-              </>
-            ) : (
-              <button
-                onClick={handleKakaoLogin}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#FEE500] hover:bg-[#FDD835] transition-all font-bold text-[#000000] text-sm shadow-sm hover:shadow-md"
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M12 3C6.477 3 2 6.477 2 10.5c0 2.658 1.759 4.99 4.398 6.367-.191.706-.623 2.453-.719 2.846-.111.457.168.452.351.328.145-.098 2.193-1.505 3.154-2.167.517.072 1.048.109 1.591.109 5.523 0 9.775-3.477 9.775-7.483C22 6.477 17.523 3 12 3z" />
-                </svg>
-                카카오 로그인
-              </button>
-            )}
+            <button
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-all border border-gray-200"
+              onClick={handleHistory}
+            >
+              <Package className="w-4 h-4 text-gray-600" />
+              <span className="text-sm font-bold text-gray-900">
+                나의 기록
+              </span>
+            </button>
           </div>
         </div>
       </header>
