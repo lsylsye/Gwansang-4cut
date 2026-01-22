@@ -101,7 +101,7 @@ export const TurtleGuide: React.FC<TurtleGuideProps> = ({ message, isThinking })
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsOpen(true)}
-            className="w-16 h-16 md:w-20 md:h-20 bg-[#00897B] hover:bg-[#00796B] text-white rounded-full flex items-center justify-center shadow-2xl transition-all pointer-events-auto"
+            className="w-16 h-16 md:w-20 md:h-20 bg-brand-green hover:bg-brand-green-deep text-white rounded-full flex items-center justify-center shadow-2xl transition-all pointer-events-auto"
             title="도사님 보기"
           >
             <MessageCircle size={32} className="md:w-10 md:h-10" />

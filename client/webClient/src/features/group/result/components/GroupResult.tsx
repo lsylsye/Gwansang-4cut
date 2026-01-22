@@ -59,7 +59,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({ onViewRanking }) => {
                 className="relative"
             >
                 <GlassCard className="w-full p-8 md:p-10 bg-gradient-to-br from-white to-orange-50 border-4 border-white shadow-clay-lg overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#FF8A65] to-[#FF7043]"></div>
+                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-orange-light to-brand-orange"></div>
 
                     {/* Horizontal Layout */}
                     <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
@@ -71,7 +71,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({ onViewRanking }) => {
                                     cy="50%"
                                     r="45%"
                                     fill="none"
-                                    stroke="#FFF3E0"
+                                    stroke="var(--brand-orange-muted)"
                                     strokeWidth="12"
                                 />
                                 <motion.circle
@@ -88,8 +88,8 @@ export const GroupResult: React.FC<GroupResultProps> = ({ onViewRanking }) => {
                                 />
                                 <defs>
                                     <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" stopColor="#FF8A65" />
-                                        <stop offset="100%" stopColor="#FF7043" />
+                                        <stop offset="0%" stopColor="var(--brand-orange-light)" />
+                                        <stop offset="100%" stopColor="var(--brand-orange)" />
                                     </linearGradient>
                                 </defs>
                             </svg>
@@ -102,7 +102,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({ onViewRanking }) => {
                                 >
                                     {GROUP_MOCK_DATA.compatibility.score}
                                 </motion.span>
-                                <span className="text-lg md:text-xl font-bold text-[#FF7043] font-display mt-[-4px]">점</span>
+                                <span className="text-lg md:text-xl font-bold text-brand-orange font-display mt-[-4px]">점</span>
                             </div>
                         </div>
 
@@ -172,10 +172,10 @@ export const GroupResult: React.FC<GroupResultProps> = ({ onViewRanking }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
             >
-                <GlassCard className="w-full p-8 border-t-4 border-t-[#FF7043] shadow-pixel-lg">
+                <GlassCard className="w-full p-8 border-t-4 border-t-brand-orange shadow-pixel-lg">
                     <div className="flex flex-col md:flex-row gap-8 items-center">
                         <div className="w-32 h-32 rounded-3xl bg-orange-100 flex items-center justify-center shrink-0 shadow-clay-sm relative overflow-hidden group">
-                            <Coins className="w-16 h-16 text-[#FF7043] fill-orange-200 relative z-10 group-hover:scale-110 transition-transform" />
+                            <Coins className="w-16 h-16 text-brand-orange fill-orange-200 relative z-10 group-hover:scale-110 transition-transform" />
                             <div className="absolute inset-0 bg-gradient-to-br from-orange-200 to-transparent opacity-50"></div>
                         </div>
                         <div className="flex-1 text-center md:text-left space-y-3">
@@ -279,7 +279,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({ onViewRanking }) => {
                 </ModalHeader>
                 <ModalBody>
                     <div className="flex flex-col items-center gap-6">
-                        <div className="bg-white p-4 rounded-2xl shadow-clay-sm border-4 border-[#FFF3E0]">
+                        <div className="bg-white p-4 rounded-2xl shadow-clay-sm border-4 border-brand-orange-muted">
                             <img 
                                 src={qrCodeUrl} 
                                 alt="QR Code" 

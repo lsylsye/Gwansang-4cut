@@ -2,14 +2,3 @@
 @source '../**/*.{js,ts,jsx,tsx}';
 
 @import 'tw-animate-css';
-
-/* Custom font utilities for cleaner usage */
-@layer utilities {
-  .font-display {
-    font-family: 'YeogiOttaeJalnan', sans-serif;
-  }
-  
-  .font-hand {
-    font-family: 'IsYun', cursive;
-  }
-}
