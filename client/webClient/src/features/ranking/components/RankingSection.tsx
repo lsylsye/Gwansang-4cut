@@ -71,7 +71,6 @@ interface RankingSectionProps {
   userScore: number;
   initialTeamName: string;
   fromAnalysis?: boolean; // 분석 완료 후 랭킹으로 왔는지 여부
-  isLoggedIn?: boolean; // 로그인 상태
 }
 
 export const RankingSection: React.FC<RankingSectionProps> = ({
@@ -79,8 +78,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
   onHome,
   userScore,
   initialTeamName,
-  fromAnalysis = false,
-  isLoggedIn = false
+  fromAnalysis = false
 }) => {
   const [teamName, setTeamName] = useState(initialTeamName);
   const [isFixed, setIsFixed] = useState(false);
@@ -256,36 +254,6 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
             {/* Background Decoration */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Tabs (Only visible when logged in) */}
-      {isLoggedIn && !fromAnalysis && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl w-fit mx-auto">
-            <button
-              onClick={() => handleTabChange("all")}
-              className={`px-6 py-3 rounded-xl font-bold font-sans text-sm transition-all ${activeTab === "all"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-                }`}
-            >
-              전체 랭킹
-            </button>
-            <button
-              onClick={() => handleTabChange("my")}
-              className={`px-6 py-3 rounded-xl font-bold font-sans text-sm transition-all ${activeTab === "my"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-                }`}
-            >
-              내 모임 랭킹
-            </button>
           </div>
         </motion.div>
       )}
