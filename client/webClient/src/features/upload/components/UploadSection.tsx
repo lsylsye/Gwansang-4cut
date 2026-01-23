@@ -4,7 +4,6 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
-import Webcam from "react-webcam";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import {
@@ -16,6 +15,7 @@ import {
   ArrowRight,
   Scan,
   UserCheck,
+  Check,
   Sparkles,
   Calendar,
   Clock,
@@ -100,7 +100,6 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   mode,
   onAnalyze,
 }) => {
-  const webcamRef = useRef<Webcam>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const groupFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -138,7 +137,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
   // Simulation: Initialize group members after detection
   const processGroupPhoto = useCallback(
-    (photo: string) => {
+    (_photo: string) => {
       setIsSegmenting(true);
       // Simulate segmentation time
       setTimeout(() => {
@@ -163,22 +162,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   );
 
   useEffect(() => {
-    let interval: any;
     if (isCapturing || isCameraActive) {
       setIsScanning(true);
-      interval = setInterval(() => {
-        const count =
-          mode === "personal"
-            ? 1
-            : Math.floor(Math.random() * 3) + 2; // 2-4 for group
-        setDetectedCount(count);
-      }, 1500);
     } else {
       setIsScanning(false);
       setDetectedCount(0);
     }
-    return () => clearInterval(interval);
-  }, [isCapturing, isCameraActive, mode]);
+  }, [isCapturing, isCameraActive]);
 
   const capture = useCallback(() => {
     const imageSrc = webcamRef.current?.getScreenshot();
@@ -1050,12 +1040,14 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     );
   }
 
-  // --- Group Photo Confirmation View ---
+  // --- Photo Confirmation View ---
+  const isPersonalConfirming = mode === "personal" && capturedImages[currentStep] !== null;
   if (
-    mode === "group" &&
-    isGroupPhotoConfirming &&
-    capturedImages[0] !== null &&
-    currentStep !== 3
+    (mode === "group" &&
+      isGroupPhotoConfirming &&
+      capturedImages[0] !== null &&
+      currentStep !== 3) ||
+    isPersonalConfirming
   ) {
     return (
       <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto pb-20">
@@ -1073,28 +1065,39 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
           <GlassCard className="w-full aspect-[4/3] relative overflow-hidden flex items-center justify-center bg-gray-900 shadow-clay-lg rounded-3xl border-8 border-white mb-8">
             <img
-              src={capturedImages[0]!}
-              alt="Group Photo"
-              className="w-full h-full object-cover"
+              src={
+                mode === "personal"
+                  ? capturedImages[currentStep]!
+                  : capturedImages[0]!
+              }
+              alt="Captured Photo"
+              className={`w-full h-full object-cover ${mode === "personal" ? "transform scale-x-[-1]" : ""
+                }`}
             />
 
-            {/* Detected Count Badge */}
-            <div className="absolute top-6 left-6 px-4 py-2 bg-brand-orange rounded-full text-white text-sm font-bold shadow-lg flex items-center gap-2 backdrop-blur-md border-2 border-white/50">
-              <Users size={18} />
-              {detectedCount > 0
-                ? `${detectedCount}명 감지됨`
-                : "인원 감지 중..."}
-            </div>
+            {/* Detected Count Badge - Group Mode Only */}
+            {mode === "group" && (
+              <div className="absolute top-6 left-6 px-4 py-2 bg-[#FF7043] rounded-full text-white text-sm font-bold shadow-lg flex items-center gap-2 backdrop-blur-md border-2 border-white/50">
+                <Users size={18} />
+                {detectedCount > 0
+                  ? `${detectedCount}명 감지됨`
+                  : "인원 감지 중..."}
+              </div>
+            )}
+
+            {/* Completion Badge - Personal Mode Only */}
+            {mode === "personal" && (
+              <div className="absolute top-6 left-6 px-4 py-2 bg-[#00897B] rounded-full text-white text-sm font-bold shadow-lg flex items-center gap-2 backdrop-blur-md border-2 border-white/50">
+                <Check size={18} />
+                촬영 완료
+              </div>
+            )}
           </GlassCard>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <ActionButton
               variant="orange-secondary"
-              onClick={() => {
-                setCapturedImages([null, null, null]);
-                setIsGroupPhotoConfirming(false);
-                setIsCameraActive(true);
-              }}
+              onClick={handleRetake}
               className="py-6 text-base flex items-center justify-center gap-2"
             >
               <RefreshCcw size={20} />
@@ -1103,10 +1106,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
             <ActionButton
               variant="orange-primary"
-              onClick={() => {
-                setIsGroupPhotoConfirming(false);
-                processGroupPhoto(capturedImages[0] || "");
-              }}
+              onClick={handleNextStep}
               className="py-6 text-base flex items-center justify-center gap-2"
             >
               <ArrowRight size={20} />
@@ -1134,26 +1134,37 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           overlay: null,
         };
 
-    const hasCapturedImage =
-      (mode === "personal" &&
-        capturedImages[currentStep] !== null) ||
-      (mode === "group" && capturedImages[0] !== null);
+    const hasCapturedImage = false; // Always false here because captured state is handled by confirmation view
 
     return (
       <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto pb-20">
         <GlassCard className="w-full aspect-[4/3] relative overflow-hidden flex flex-col items-center justify-center bg-black shadow-clay-lg rounded-[40px] border-[10px] border-white">
           {!hasCapturedImage ? (
-            <Webcam
-              audio={false}
-              ref={webcamRef}
-              screenshotFormat="image/jpeg"
-              className="absolute inset-0 w-full h-full object-cover transform scale-x-[-1]"
-              videoConstraints={{
-                facingMode: "user",
-                width: 1280,
-                height: 720,
-              }}
-            />
+            <div className="absolute inset-0">
+              <FaceMeshWebcam
+                onCapture={(img) => {
+                  setCapturedImages((prev) => {
+                    const newImages = [...prev];
+                    if (mode === "personal") {
+                      newImages[currentStep] = img;
+                    } else {
+                      newImages[0] = img;
+                    }
+                    return newImages;
+                  });
+                  if (mode === "group") {
+                    setIsGroupPhotoConfirming(true);
+                  }
+                }}
+                onClose={() => {
+                  setIsCapturing(false);
+                  setIsCameraActive(false);
+                }}
+                onFaceCountChange={setDetectedCount}
+                maxFaces={mode === "personal" ? 1 : 5}
+                title={mode === "personal" ? "정면을 응시해 주세요" : "모두 정면 3초 유지!"}
+              />
+            </div>
           ) : (
             <img
               src={
@@ -1166,7 +1177,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             />
           )}
 
-          {isScanning && !hasCapturedImage && (
+          {isScanning && !hasCapturedImage && mode === "group" && (
             <div className="absolute inset-0 pointer-events-none z-20">
               <motion.div
                 initial={{ top: "0%" }}
@@ -1178,23 +1189,6 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                 }}
                 className="absolute left-0 right-0 h-1 bg-brand-green shadow-[0_0_15px_var(--brand-green)] opacity-60"
               />
-              {mode === "group" &&
-                Array.from({ length: detectedCount }).map(
-                  (_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 0.6, scale: 1 }}
-                      className="absolute border-2 border-brand-green rounded-lg"
-                      style={{
-                        top: `${20 + ((i * 15) % 40)}%`,
-                        left: `${20 + ((i * 20) % 60)}%`,
-                        width: "60px",
-                        height: "60px",
-                      }}
-                    />
-                  ),
-                )}
             </div>
           )}
 
@@ -1219,15 +1213,35 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                 <Scan size={14} className="animate-pulse" />
                 실시간 인원 감지: {detectedCount}명
               </div>
-            )}
+            </div>
+          )}
 
-            <h3 className="text-3xl font-bold font-display mb-2">
-              {hasCapturedImage && mode === "personal" ? "정면 촬영" : stepInfo.title}
-            </h3>
-            <p className="text-base opacity-90">
-              {hasCapturedImage ? "촬영된 사진을 확인하세요" : stepInfo.guide}
-            </p>
-          </div>
+          {hasCapturedImage && (
+            <div className="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-black/80 to-transparent text-white text-center z-10 pointer-events-none">
+              {mode === "personal" ? (
+                <>
+                  <div className="inline-block px-3 py-1 bg-[#00897B] rounded-full text-xs font-bold mb-2 shadow-sm">
+                    단계 {currentStep + 1} / 3 | 촬영 완료
+                  </div>
+                  <h3 className="text-2xl font-bold font-display mb-1">
+                    {stepInfo.title}
+                  </h3>
+                  <p className="text-sm opacity-90">
+                    촬영된 사진을 확인하세요
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-2xl font-bold font-display mb-1">
+                    촬영된 사진 확인
+                  </h3>
+                  <p className="text-sm opacity-90">
+                    해당 사진 선택 또는 재촬영이 가능합니다.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Bottom Controls */}
           <div className="absolute bottom-10 left-0 right-0 flex justify-center z-10 pointer-events-auto">
@@ -1252,7 +1266,20 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           </div>
 
           {/* Top Right Controls */}
-          <div className="absolute top-8 right-8 flex gap-3 pointer-events-auto items-center">
+          <div className="absolute top-6 right-6 flex gap-2 pointer-events-auto">
+            {!hasCapturedImage && mode === "group" && (
+              <>
+                <button
+                  onClick={() => {
+                    setIsCapturing(false);
+                    setIsCameraActive(false);
+                  }}
+                  className="bg-black/40 text-white p-2.5 rounded-full backdrop-blur-md hover:bg-black/60 transition-colors"
+                >
+                  ✕
+                </button>
+              </>
+            )}
             {hasCapturedImage && (
               <button
                 onClick={handleRetake}
