@@ -1,13 +1,11 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Brain, Heart, Camera, RotateCcw, Share2, Download, QrCode, X, Check } from "lucide-react";
+import { Brain, Heart, Camera, RotateCcw, Download, QrCode } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { FaceAnalysis } from "./face/components/FaceAnalysis";
 import { StatsAnalysis } from "./stats/components/StatsAnalysis";
-import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
-import { Checkbox } from "@/shared/ui/forms/checkbox";
-import { Label } from "@/shared/ui/forms/label";
+import html2canvas from "html2canvas";
 
 // --- Types ---
 interface AnalysisSectionProps {
@@ -15,7 +13,7 @@ interface AnalysisSectionProps {
     onRestart: () => void;
 }
 
-// --- Mock Data (Should ideally share with children or fetch) ---
+// --- Mock Data ---
 const MOCK_DATA = {
     scores: [
         { subject: "재물운", A: 85, fullMark: 100 },
@@ -50,22 +48,41 @@ const MOCK_DATA = {
             desc: "인내심이 강하고 재복이 따르는 귀입니다. 건강하고 장수할 운명을 타고났습니다.",
         },
     },
-    totalAnalysis: `전체적으로 **오행의 조화**가 잘 어우러진 얼굴입니다. 
-  
-  특히 **이마와 코**의 기운이 좋아 30대 이후 재물운이 급상승할 것으로 보입니다. 거북이가 보기에 당신은 꾸준히 노력하면 큰 성취를 이룰 수 있는 '대기만성형' 인재군요!
-  
-  올해는 새로운 인연을 만날 확률이 높으니 주변을 잘 살펴보세요.`,
+    totalAnalysis: [
+        {
+            title: "전체적인 관상평",
+            content: "귀하의 관상은 전체적으로 **오행의 순환이 매우 매끄럽고 조화로운 '수려형'**에 속합니다. 전체적으로 밸런스가 좋아 평생 의식주가 풍족할 길상입니다."
+        },
+        {
+            title: "취업운과 직업적성 (관록궁)",
+            content: "이마의 중심부인 '관록궁'이 깨끗하고 빛이 나고 있어, 조직 생활에서의 승진운과 명예운이 매우 따르는 상입니다. \n\n취업을 준비 중이라면 자신의 논리적 사고를 발휘할 수 있는 전문직이나 연구직, 혹은 사람들을 이끄는 관리직군에서 큰 두각을 나타낼 것입니다. 특히 올해는 본인의 역량을 인정해 줄 귀인이 나타날 운세이니 면접이나 중요한 미팅에서 자신감을 가지세요."
+        },
+        {
+            title: "초년운과 지혜 (이마)",
+            content: "상정(이마)을 살펴보면, 넓고 기세가 좋아 초년운이 매우 안정적이었음을 알 수 있습니다. 특히 일월각(눈썹 위)의 기운이 뚜렷하여 윗사람이나 부모님의 덕을 많이 입었을 관상입니다."
+        },
+        {
+            title: "중년의 재물운 (코와 눈)",
+            content: "코의 기운이 가장 돋보입니다. 콧대가 곧고 콧망울이 도톰하여 재물을 모으는 힘인 '수재운'이 매우 강력합니다. 30대 중반부터 40대 중반 사이에 큰 재정적 성취를 이룰 기회가 반드시 찾아올 것입니다.\n\n다만, 눈매가 깊고 길어 감수성이 풍부한 만큼 결정적인 순간에 감정에 치우치지 않도록 주의가 필요합니다."
+        },
+        {
+            title: "말년의 덕망과 평안 (턱)",
+            content: "턱의 선이 둥글고 두툼하게 감싸고 있어, 나이가 들수록 주변에 사람이 모이고 아랫사람들로부터 신뢰와 존경을 받는 리더의 상을 갖추고 있습니다. 말년으로 갈수록 주거 환경이 안정되고 부동산 운이 따를 것입니다."
+        },
+        {
+            title: "거북 도사의 특별 조언",
+            content: "당신은 마치 **'천천히 하지만 쉼 없이 바다를 건너는 거북이'**처럼 끈기 있게 목표를 향해 나아가는 대기만성형 인재입니다. 올해는 특히 북동쪽에서 귀인이 나타날 운세이니, 새로운 사람과의 만남을 소홀히 하지 마세요."
+        }
+    ],
 };
 
 // --- Main Component ---
 export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], onRestart }) => {
     const [currentTab, setCurrentTab] = useState<"physiognomy" | "constitution" | "future">("physiognomy");
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-    const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
-    const [consentChecked, setConsentChecked] = useState(false);
-    const [isDataDeleted, setIsDataDeleted] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
-    // Mock QR code URL (실제로는 서버에서 생성된 고유 URL을 사용)
+    // Mock QR code URL
     const shareUrl = `${window.location.origin}/result/abc123`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`;
 
@@ -73,12 +90,54 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
         setIsShareModalOpen(true);
     };
 
-    const handleDownload = () => {
-        // 로그인 없이 바로 다운로드 (Mock)
-        const link = document.createElement('a');
-        link.download = 'my-analysis-result.png';
-        link.href = images[0] || '';
-        link.click();
+    const handleDownload = async () => {
+        if (isDownloading) return;
+        setIsDownloading(true);
+
+        const element = document.getElementById("analysis-result-container");
+        if (!element) {
+            setIsDownloading(false);
+            return;
+        }
+
+        try {
+            // --- 캡처 전 스타일 조정 ---
+            // 1. 스크롤 영역을 찾아서 강제로 확장
+            const scrollArea = element.querySelector(".overflow-y-auto");
+            const originalMaxHeight = (scrollArea as HTMLElement)?.style.maxHeight;
+            const originalOverflow = (scrollArea as HTMLElement)?.style.overflowY;
+            
+            if (scrollArea) {
+                (scrollArea as HTMLElement).style.maxHeight = "none";
+                (scrollArea as HTMLElement).style.overflowY = "visible";
+            }
+
+            // 2. 캡처 실행
+            const canvas = await html2canvas(element, {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: "#f8fafc", // 배경색 지정
+                scale: 2, // 고해상도
+                logging: false,
+            });
+
+            // 3. 스타일 원상 복구
+            if (scrollArea) {
+                (scrollArea as HTMLElement).style.maxHeight = originalMaxHeight;
+                (scrollArea as HTMLElement).style.overflowY = originalOverflow;
+            }
+
+            // 4. 다운로드
+            const link = document.createElement('a');
+            link.download = `관상분석결과_${new Date().getTime()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (error) {
+            console.error("다운로드 중 오류 발생:", error);
+            alert("이미지 저장 중 오류가 발생했습니다.");
+        } finally {
+            setIsDownloading(false);
+        }
     };
 
     const handleCopyLink = () => {
@@ -86,19 +145,10 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
         alert('링크가 복사되었습니다!');
     };
 
-    const handleDeleteData = () => {
-        // Mock 데이터 삭제
-        setIsDataDeleted(true);
-        setTimeout(() => {
-            setIsConsentModalOpen(false);
-            alert('개인 데이터가 안전하게 삭제되었습니다.');
-        }, 1000);
-    };
-
     return (
-        <div className="w-full max-w-6xl mx-auto pb-20">
+        <div className="w-full max-w-6xl mx-auto pb-20" id="analysis-result-container">
             {/* Tab Navigation */}
-            <div className="flex justify-center mb-10">
+            <div className="flex justify-center mb-10 no-capture">
                 <div className="bg-white/80 backdrop-blur-md p-2 rounded-3xl flex gap-1.5 shadow-clay-sm border-4 border-white">
                     {[
                         { id: "physiognomy", label: "관상 분석", icon: Brain },
@@ -134,17 +184,17 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
                     exit={{ opacity: 0, scale: 1.02 }}
                     transition={{ duration: 0.3 }}
                 >
-                    {/* --- Tab 1: Physiognomy Analysis (Dev A) --- */}
+                    {/* --- Tab 1: Physiognomy Analysis --- */}
                     {currentTab === "physiognomy" && (
                         <FaceAnalysis
-                            image={images[0]}
+                            image={images[0] || ""}
                             scores={MOCK_DATA.scores}
                             features={MOCK_DATA.features}
                             totalAnalysis={MOCK_DATA.totalAnalysis}
                         />
                     )}
 
-                    {/* --- Tab 2 & 3: Constitution & Future (Dev B) --- */}
+                    {/* --- Tab 2 & 3: Constitution & Future --- */}
                     {(currentTab === "constitution" || currentTab === "future") && (
                         <StatsAnalysis tab={currentTab} images={images} />
                     )}
@@ -152,22 +202,20 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
             </AnimatePresence>
 
             {/* Bottom Actions */}
-            <div className="flex flex-wrap justify-center gap-4 mt-16 pb-10">
+            <div className="flex flex-wrap justify-center gap-4 mt-16 pb-10 no-capture">
                 <ActionButton variant="secondary" onClick={onRestart} className="flex items-center gap-2">
                     <RotateCcw size={20} /> 처음으로
                 </ActionButton>
-                <ActionButton variant="secondary" onClick={handleDownload} className="flex items-center gap-2">
-                    <Download size={20} /> 사진 다운로드
+                <ActionButton 
+                    variant="secondary" 
+                    onClick={handleDownload} 
+                    className="flex items-center gap-2"
+                    disabled={isDownloading}
+                >
+                    <Download size={20} /> {isDownloading ? "저장 중..." : "결과 다운로드"}
                 </ActionButton>
                 <ActionButton variant="primary" onClick={handleShare} className="flex items-center gap-2">
                     <QrCode size={20} /> QR로 공유하기
-                </ActionButton>
-                <ActionButton 
-                    variant="secondary" 
-                    onClick={() => setIsConsentModalOpen(true)} 
-                    className="flex items-center gap-2 text-red-500 hover:text-red-600"
-                >
-                    내 데이터 삭제
                 </ActionButton>
             </div>
 
@@ -213,51 +261,6 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
                             ※ 로그인 없이 누구나 결과를 볼 수 있습니다
                         </p>
                     </div>
-                </ModalBody>
-            </Modal>
-
-            {/* 데이터 삭제 동의 모달 */}
-            <Modal isOpen={isConsentModalOpen} onClose={() => setIsConsentModalOpen(false)} size="md">
-                <ModalHeader description="개인정보 보호를 위해 데이터를 삭제할 수 있습니다">
-                    데이터 삭제
-                </ModalHeader>
-                <ModalBody>
-                    {!isDataDeleted ? (
-                        <div className="space-y-6">
-                            <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4">
-                                <p className="text-sm text-amber-800">
-                                    ⚠️ 데이터 삭제 시 분석 결과와 업로드된 사진이 영구적으로 삭제됩니다.
-                                    이 작업은 되돌릴 수 없습니다.
-                                </p>
-                            </div>
-                            <div className="flex items-start gap-3">
-                                <Checkbox 
-                                    id="consent" 
-                                    checked={consentChecked}
-                                    onCheckedChange={(checked) => setConsentChecked(checked as boolean)}
-                                />
-                                <Label htmlFor="consent" className="text-sm text-gray-600 cursor-pointer">
-                                    위 내용을 확인했으며, 내 데이터 삭제에 동의합니다.
-                                </Label>
-                            </div>
-                            <ActionButton 
-                                variant="primary" 
-                                onClick={handleDeleteData}
-                                disabled={!consentChecked}
-                                className={`w-full bg-red-500 hover:bg-red-600 ${!consentChecked ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                데이터 삭제하기
-                            </ActionButton>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center gap-4 py-8">
-                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                                <Check size={32} className="text-green-600" />
-                            </div>
-                            <p className="text-lg font-bold text-gray-800">삭제 완료</p>
-                            <p className="text-sm text-gray-500">데이터가 안전하게 삭제되었습니다.</p>
-                        </div>
-                    )}
                 </ModalBody>
             </Modal>
         </div>

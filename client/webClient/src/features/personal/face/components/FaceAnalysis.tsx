@@ -1,36 +1,27 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
-import { Sparkles, ChevronDown, ChevronUp, Brain, Briefcase, Users, Star } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronUp, Star } from "lucide-react";
 import { ResultCharts } from "@/features/personal/stats/components/ResultCharts";
 
 // --- Types ---
+interface AnalysisSection {
+    title: string;
+    content: string;
+}
+
 interface FaceAnalysisProps {
     image: string;
     scores: any[];
     features: any;
-    totalAnalysis: string;
+    totalAnalysis: AnalysisSection[];
 }
 
-// --- Work Compatibility Mock Data ---
-const WORK_COMPATIBILITY = {
-    bestMatch: {
-        type: "분석형 파트너",
-        desc: "꼼꼼하고 논리적인 ISTJ, INTJ 유형과 환상의 호흡을 자랑합니다.",
-        score: 95,
-    },
-    worstMatch: {
-        type: "즉흥형 파트너",
-        desc: "계획 없이 움직이는 ESFP, ESTP 유형과는 템포가 맞지 않을 수 있습니다.",
-        score: 45,
-    },
-    teamRole: "아이디어 제안자",
-    teamRoleDesc: "팀 내에서 새로운 방향을 제시하고 창의적인 해결책을 도출하는 역할을 합니다.",
-    historicalMatch: {
-        name: "세종대왕",
-        desc: "학문을 사랑하고 백성을 위해 헌신한 세종대왕과 비슷한 관상입니다. 지도력과 창의성이 뛰어납니다.",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/King_Sejong_statue_Gwanghwamun.jpg/220px-King_Sejong_statue_Gwanghwamun.jpg",
-    },
+// --- Historical Match Mock Data ---
+const HISTORICAL_MATCH = {
+    name: "세종대왕",
+    desc: "학문을 사랑하고 백성을 위해 헌신한 세종대왕과 비슷한 관상입니다. 지도력과 창의성이 뛰어납니다.",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/King_Sejong_statue_Gwanghwamun.jpg/220px-King_Sejong_statue_Gwanghwamun.jpg",
 };
 
 export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, features, totalAnalysis }) => {
@@ -174,84 +165,6 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
             </div>
 
             <div className="w-full lg:w-7/12 flex flex-col gap-6">
-                {/* 업무 상성 섹션 */}
-                <GlassCard className="p-8 border-4 border-white rounded-[40px] shadow-clay-md bg-white/40">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-12 h-12 bg-brand-orange rounded-2xl flex items-center justify-center text-2xl shadow-clay-xs">
-                            <Briefcase className="text-white" size={24} />
-                        </div>
-                        <h3 className="font-bold text-2xl text-gray-800 font-display">업무 상성 분석</h3>
-                    </div>
-                    
-                    <div className="space-y-4">
-                        {/* Best Match */}
-                        <div className="bg-brand-green-pale p-5 rounded-2xl border-2 border-green-100">
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                    <Users size={18} className="text-green-600" />
-                                    <span className="font-bold text-green-800">최고의 파트너</span>
-                                </div>
-                                <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                                    궁합 {WORK_COMPATIBILITY.bestMatch.score}%
-                                </span>
-                            </div>
-                            <p className="font-bold text-lg text-gray-800 mb-1">{WORK_COMPATIBILITY.bestMatch.type}</p>
-                            <p className="text-sm text-gray-600">{WORK_COMPATIBILITY.bestMatch.desc}</p>
-                        </div>
-
-                        {/* Team Role */}
-                        <div className="bg-brand-blue-muted p-5 rounded-2xl border-2 border-blue-100">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Star size={18} className="text-blue-600" />
-                                <span className="font-bold text-blue-800">팀 내 역할</span>
-                            </div>
-                            <p className="font-bold text-lg text-gray-800 mb-1">{WORK_COMPATIBILITY.teamRole}</p>
-                            <p className="text-sm text-gray-600">{WORK_COMPATIBILITY.teamRoleDesc}</p>
-                        </div>
-
-                        {/* Worst Match */}
-                        <div className="bg-brand-orange-muted p-5 rounded-2xl border-2 border-orange-100">
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                    <Users size={18} className="text-orange-600" />
-                                    <span className="font-bold text-orange-800">주의할 파트너</span>
-                                </div>
-                                <span className="bg-orange-400 text-white text-xs font-bold px-3 py-1 rounded-full">
-                                    궁합 {WORK_COMPATIBILITY.worstMatch.score}%
-                                </span>
-                            </div>
-                            <p className="font-bold text-lg text-gray-800 mb-1">{WORK_COMPATIBILITY.worstMatch.type}</p>
-                            <p className="text-sm text-gray-600">{WORK_COMPATIBILITY.worstMatch.desc}</p>
-                        </div>
-                    </div>
-                </GlassCard>
-
-                {/* 역사적 인물 매칭 */}
-                <GlassCard className="p-8 border-4 border-white rounded-[40px] shadow-clay-md bg-gradient-to-br from-amber-50/80 to-white/40">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-2xl shadow-clay-xs">👑</div>
-                        <h3 className="font-bold text-2xl text-gray-800 font-display">닮은 역사적 인물</h3>
-                    </div>
-                    
-                    <div className="flex gap-6 items-center">
-                        <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white shadow-clay-sm flex-shrink-0">
-                            <img 
-                                src={WORK_COMPATIBILITY.historicalMatch.image} 
-                                alt={WORK_COMPATIBILITY.historicalMatch.name}
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-                        <div>
-                            <p className="font-bold text-2xl text-amber-800 mb-2 font-display">
-                                {WORK_COMPATIBILITY.historicalMatch.name}
-                            </p>
-                            <p className="text-gray-600 text-sm leading-relaxed">
-                                {WORK_COMPATIBILITY.historicalMatch.desc}
-                            </p>
-                        </div>
-                    </div>
-                </GlassCard>
-
                 <GlassCard className="flex-1 p-10 border-4 border-white rounded-[40px] shadow-clay-md bg-white/40">
                     <div className="flex justify-between items-center mb-8 cursor-pointer select-none" onClick={() => setIsDetailOpen(!isDetailOpen)}>
                         <div className="flex items-center gap-3">
@@ -268,8 +181,22 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                                 exit={{ height: 0, opacity: 0 }}
                                 className="overflow-hidden"
                             >
-                                <div className="text-gray-800 leading-relaxed whitespace-pre-line font-hand text-xl bg-white/80 p-8 rounded-[32px] border-2 border-white shadow-inner">
-                                    {totalAnalysis}
+                                <div className="bg-white/80 p-8 rounded-[32px] border-2 border-white shadow-inner max-h-[65vh] overflow-y-auto custom-scrollbar pr-4">
+                                    {totalAnalysis.map((section, idx) => (
+                                        <div key={idx} className={idx !== 0 ? "mt-10" : ""}>
+                                            {/* 서브 제목 스타일 */}
+                                            <div className="flex items-center gap-3 mb-4 ml-1">
+                                                <div className="w-1.5 h-5 bg-brand-green rounded-full shadow-[0_0_8px_rgba(0,137,123,0.3)]" />
+                                                <h4 className="text-xl font-bold text-gray-800 font-display tracking-tight">
+                                                    {section.title}
+                                                </h4>
+                                            </div>
+                                            {/* 본문 스타일 */}
+                                            <p className="text-gray-700 leading-relaxed whitespace-pre-line font-hand text-xl pl-4 border-l-2 border-brand-green/10">
+                                                {section.content}
+                                            </p>
+                                        </div>
+                                    ))}
                                 </div>
                                 <div className="mt-8 grid grid-cols-2 gap-4">
                                     <div className="bg-brand-green-muted p-4 rounded-2xl shadow-clay-xs border border-white">
@@ -287,6 +214,32 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                             </motion.div>
                         )}
                     </AnimatePresence>
+                </GlassCard>
+
+                {/* 역사적 인물 매칭 */}
+                <GlassCard className="p-8 border-4 border-white rounded-[40px] shadow-clay-md bg-gradient-to-br from-amber-50/80 to-white/40">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-2xl shadow-clay-xs">👑</div>
+                        <h3 className="font-bold text-2xl text-gray-800 font-display">닮은 역사적 인물</h3>
+                    </div>
+                    
+                    <div className="flex gap-6 items-center">
+                        <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white shadow-clay-sm flex-shrink-0">
+                            <img 
+                                src={HISTORICAL_MATCH.image} 
+                                alt={HISTORICAL_MATCH.name}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                        <div>
+                            <p className="font-bold text-2xl text-amber-800 mb-2 font-display">
+                                {HISTORICAL_MATCH.name}
+                            </p>
+                            <p className="text-gray-600 text-sm leading-relaxed">
+                                {HISTORICAL_MATCH.desc}
+                            </p>
+                        </div>
+                    </div>
                 </GlassCard>
             </div>
         </div>
