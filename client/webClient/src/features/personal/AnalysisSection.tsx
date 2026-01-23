@@ -257,9 +257,6 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
                                 <Download size={18} /> QR 저장
                             </ActionButton>
                         </div>
-                        <p className="text-xs text-gray-400 text-center">
-                            ※ 로그인 없이 누구나 결과를 볼 수 있습니다
-                        </p>
                     </div>
                 </ModalBody>
             </Modal>
