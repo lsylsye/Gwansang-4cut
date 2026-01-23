@@ -73,7 +73,7 @@ export default function App() {
     setTimeout(() => {
       setStep("result");
 
-      // 히스토리에 저장 (로그인 없이도 저장)
+      // 히스토리에 저장
       const now = new Date();
       const date = now.toISOString().split("T")[0];
       const timestamp = now
@@ -169,7 +169,7 @@ export default function App() {
             모임 랭킹
           </button>
 
-          {/* Login/Profile Section - 로그인 없이 히스토리 접근 */}
+          {/* History Section */}
           <div className="relative">
             <button
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-all border border-gray-200"
@@ -278,7 +278,6 @@ export default function App() {
                   userScore={groupScore}
                   initialTeamName={userTeamName}
                   fromAnalysis={fromAnalysis}
-                  isLoggedIn={isLoggedIn}
                 />
               </motion.div>
             )}
@@ -293,7 +292,6 @@ export default function App() {
                 className="w-full h-full"
               >
                 <HistorySection
-                  isLoggedIn={isLoggedIn}
                   historyData={historyData}
                   onViewResult={(item: HistoryItem) => {
                     // TODO: Navigate to result page with history data

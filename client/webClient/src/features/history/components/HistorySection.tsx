@@ -7,7 +7,6 @@ import { HistoryItem } from "@/shared/types";
 
 interface HistorySectionProps {
   onViewResult?: (item: HistoryItem) => void;
-  isLoggedIn: boolean;
   onNewAnalysis?: () => void;
   historyData?: HistoryItem[];
 }
@@ -60,7 +59,6 @@ const MOCK_HISTORY: HistoryItem[] = [
 
 export const HistorySection: React.FC<HistorySectionProps> = ({
   onViewResult,
-  isLoggedIn,
   onNewAnalysis,
   historyData: propHistoryData
 }) => {
@@ -269,22 +267,6 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
       </GlassCard>
     </motion.div>
   );
-
-  if (!isLoggedIn) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 px-4">
-        <div className="text-center mb-8">
-          <span className="text-6xl mb-4 block">🔒</span>
-          <h3 className="text-2xl font-bold text-gray-800 mb-3 font-display">
-            로그인이 필요합니다
-          </h3>
-          <p className="text-gray-500">
-            나의 관상 기록을 확인하려면 로그인해주세요.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-8">
