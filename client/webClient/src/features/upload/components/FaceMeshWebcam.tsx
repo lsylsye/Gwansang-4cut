@@ -30,14 +30,57 @@ interface FaceMeshWebcamProps {
   onFaceCountChange?: (count: number) => void;
   maxFaces?: number;
   title?: string;
+  themeColor?: "green" | "orange";
+  showFaceCount?: boolean;
+  useEllipseGuide?: boolean; // 개인관상용 ellipse 범위 체크
 }
+
+// Ellipse 설정 (중심: 0.5, 0.5 / 반지름: x=0.35, y=0.45)
+const ELLIPSE_CX = 0.5;
+const ELLIPSE_CY = 0.5;
+const ELLIPSE_RX = 0.35;
+const ELLIPSE_RY = 0.45;
+const MIN_FACE_RATIO = 0.5; // 얼굴이 ellipse 크기의 최소 50% 이상이어야 함
+
+// Ellipse 범위 안에 점이 있는지 체크
+const isPointInsideEllipse = (x: number, y: number): boolean => {
+  return Math.pow((x - ELLIPSE_CX) / ELLIPSE_RX, 2) + Math.pow((y - ELLIPSE_CY) / ELLIPSE_RY, 2) <= 1;
+};
+
+// 바운딩 박스 전체가 Ellipse 안에 있고, 충분히 큰지 체크
+const isFaceInsideEllipse = (minX: number, minY: number, maxX: number, maxY: number): boolean => {
+  // 1. 네 꼭짓점 모두 ellipse 안에 있어야 함
+  const allCornersInside = (
+    isPointInsideEllipse(minX, minY) &&
+    isPointInsideEllipse(maxX, minY) &&
+    isPointInsideEllipse(minX, maxY) &&
+    isPointInsideEllipse(maxX, maxY)
+  );
+  
+  if (!allCornersInside) return false;
+  
+  // 2. 얼굴이 충분히 커야 함 (ellipse 크기 대비)
+  const faceWidth = maxX - minX;
+  const faceHeight = maxY - minY;
+  const ellipseWidth = ELLIPSE_RX * 2;
+  const ellipseHeight = ELLIPSE_RY * 2;
+  
+  const widthRatio = faceWidth / ellipseWidth;
+  const heightRatio = faceHeight / ellipseHeight;
+  
+  // 너비 또는 높이가 ellipse의 40% 이상이어야 함
+  return widthRatio >= MIN_FACE_RATIO || heightRatio >= MIN_FACE_RATIO;
+};
 
 export const FaceMeshWebcam = ({ 
   onCapture, 
   onClose, 
   onFaceCountChange,
   maxFaces = 5,
-  title = "모두 정면 3초 유지!"
+  title = "",
+  themeColor = "green",
+  showFaceCount = false,
+  useEllipseGuide = false
 }: FaceMeshWebcamProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -49,6 +92,11 @@ export const FaceMeshWebcam = ({
 
   const [running, setRunning] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const [faceCount, setFaceCount] = useState(0);
+  const [isFaceOutsideGuide, setIsFaceOutsideGuide] = useState(false); // 얼굴이 가이드 밖에 있는지
+  
+  // CSS 변수에서 브랜드 폰트 가져오기
+  const fontSans = getComputedStyle(document.documentElement).getPropertyValue('--font-family-sans').trim() || "'Pretendard', sans-serif";
 
   useEffect(() => {
     const loadModel = async () => {
@@ -113,6 +161,10 @@ export const FaceMeshWebcam = ({
           const currentFrameTrackers: FaceTracker[] = [];
           const landmarksList = results.faceLandmarks;
 
+          // 가이드 밖에 있는 얼굴 체크용 플래그
+          let hasOutsideFace = false;
+          let hasInsideFace = false;
+
           landmarksList.forEach((landmarks, i) => {
             // 중심점 계산
             let minX = 1, minY = 1, maxX = 0, maxY = 0;
@@ -124,6 +176,13 @@ export const FaceMeshWebcam = ({
             });
             const centerX = (minX + maxX) / 2;
             const centerY = (minY + maxY) / 2;
+
+            // ellipse 가이드 범위 체크 (개인관상일 때만) - 얼굴 전체가 들어와야 함
+            if (useEllipseGuide && !isFaceInsideEllipse(minX, minY, maxX, maxY)) {
+              hasOutsideFace = true; // 범위 밖 얼굴 있음
+              return; // 범위 밖이면 무시
+            }
+            hasInsideFace = true; // 범위 안 얼굴 있음
 
             // 각도 계산
             const matrix = results.facialTransformationMatrixes![i].data;
@@ -160,12 +219,17 @@ export const FaceMeshWebcam = ({
           });
 
           // 2. 🔥 [핵심 로직] "모두가 준비되었는가?" 판단
-          const faceCount = currentFrameTrackers.length;
-          if (onFaceCountChange) onFaceCountChange(faceCount);
+          const detectedFaceCount = currentFrameTrackers.length;
+          setFaceCount(detectedFaceCount);
+          if (onFaceCountChange) onFaceCountChange(detectedFaceCount);
+          
+          // 가이드 밖 얼굴 상태 업데이트 (얼굴이 감지되었지만 가이드 안에 없을 때)
+          setIsFaceOutsideGuide(hasOutsideFace && !hasInsideFace);
           const DURATION = 3000;
 
-          // 조건: 사람이 1명 이상이어야 하고, 모두가 정면이고, 모두가 3초를 넘겨야 함
-          const allReady = faceCount > 0 && currentFrameTrackers.every(t => t.isFrontal && (Date.now() - t.startTime >= DURATION));
+          // 조건: 개인(1명 이상), 그룹(2명 이상)이어야 하고, 모두가 정면이고, 모두가 3초를 넘겨야 함
+          const minFaces = maxFaces === 1 ? 1 : 2;
+          const allReady = detectedFaceCount >= minFaces && currentFrameTrackers.every(t => t.isFrontal && (Date.now() - t.startTime >= DURATION));
           
           // 중복 전송 방지: 구성원 중 한 명이라도 아직 'isSent'가 안 된 상태여야 보냄
           // (즉, 이미 다 보냈으면 또 안 보냄)
@@ -194,13 +258,13 @@ export const FaceMeshWebcam = ({
               }))
             };
 
-            fetch("http://i14e208.p.ssafy.io:8080/api/facemesh", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-            }).catch((err) => {
-              console.error("API 전송 실패:", err);
-            });
+            // fetch("http://i14e208.p.ssafy.io:8080/api/facemesh", {
+            //   method: "POST",
+            //   headers: { "Content-Type": "application/json" },
+            //   body: JSON.stringify(payload),
+            // }).catch((err) => {
+            //   console.error("API 전송 실패:", err);
+            // });
 
             // 인식 완료(Done) 즉시 다음 단계(사진 확인)로 이동
             if (onCapture && canvasRef.current) {
@@ -232,15 +296,19 @@ export const FaceMeshWebcam = ({
              const elapsed = Date.now() - tracker.startTime;
              
              // 색상 로직:
-             // 🔴 빨강: 정면 아님 (나 때문에 실패!)
-             // 🟡 노랑: 정면 O, 시간 가는 중 (나도 대기 중)
-             // 🟢 초록: 모두 성공해서 전송됨
+             // 🔴 실패: brand-red (#FF5252)
+             // 🔵 스캔중: 투명 파란색 (rgba(0, 180, 255, 0.8))
+             // 🟢 성공: brand-green (#00897B)
              
-             let color = "red";
+             const brandRed = "#FF5252";
+             const scanBlue = "rgba(0, 180, 255, 0.8)";
+             const successGreen = "#00897B"; // brand-green
+             
+             let color = brandRed; // 실패 (정면 아님)
              if (tracker.isSent) {
-               color = "#00FF00"; // 전송됨 (성공)
+               color = successGreen; // 전송됨 (성공)
              } else if (tracker.isFrontal) {
-               color = "yellow";  // 대기 중
+               color = scanBlue; // 스캔 중
              }
 
              // 랜드마크 점 찍기
@@ -251,41 +319,80 @@ export const FaceMeshWebcam = ({
                 ctx.fill();
              }
 
-             // 박스 그리기
+             // 촬영 프레임 스타일 (둥근 코너)
              ctx.strokeStyle = color;
-             ctx.lineWidth = 2;
-             ctx.strokeRect(x, y, w, h);
+             ctx.lineWidth = 5;
+             const cornerLength = Math.min(w, h) * 0.2; // 코너 길이 (박스 크기의 20%)
+             const radius = 10; // 둥근 정도
+             
+             // 좌상단 코너 (둥근)
+             ctx.beginPath();
+             ctx.moveTo(x, y + cornerLength);
+             ctx.lineTo(x, y + radius);
+             ctx.arcTo(x, y, x + radius, y, radius);
+             ctx.lineTo(x + cornerLength, y);
+             ctx.stroke();
+             
+             // 우상단 코너 (둥근)
+             ctx.beginPath();
+             ctx.moveTo(x + w - cornerLength, y);
+             ctx.lineTo(x + w - radius, y);
+             ctx.arcTo(x + w, y, x + w, y + radius, radius);
+             ctx.lineTo(x + w, y + cornerLength);
+             ctx.stroke();
+             
+             // 좌하단 코너 (둥근)
+             ctx.beginPath();
+             ctx.moveTo(x, y + h - cornerLength);
+             ctx.lineTo(x, y + h - radius);
+             ctx.arcTo(x, y + h, x + radius, y + h, radius);
+             ctx.lineTo(x + cornerLength, y + h);
+             ctx.stroke();
+             
+             // 우하단 코너 (둥근)
+             ctx.beginPath();
+             ctx.moveTo(x + w - cornerLength, y + h);
+             ctx.lineTo(x + w - radius, y + h);
+             ctx.arcTo(x + w, y + h, x + w, y + h - radius, radius);
+             ctx.lineTo(x + w, y + h - cornerLength);
+             ctx.stroke();
 
-             // 텍스트 및 게이지
-             ctx.font = "bold 16px Arial";
+             // 텍스트 및 게이지 (좌우반전 보정)
+             ctx.save();
+             ctx.scale(-1, 1);
+             ctx.font = `700 16px ${fontSans}`; // 브랜드 sans 폰트 사용
 
-             const faceLabel = `Face ${idx + 1}`;
+             const textX = -(x + w); // 반전된 x 좌표
+
+             const textGap = 24; // 프레임과 텍스트 사이 간격
+             const barGap = 16;  // 프레임과 게이지 바 사이 간격
 
              if (!tracker.isFrontal) {
-               ctx.fillStyle = "red";
-               ctx.fillText(`${faceLabel}: ❌ Look Front`, x, y - 10);
+               ctx.fillStyle = brandRed;
+               ctx.fillText(`❌ 정면을 바라봐주세요`, textX, y - textGap);
              } else if (tracker.isSent) {
-               ctx.fillStyle = "#00FF00";
-               ctx.fillText(`${faceLabel}: ✅ Done`, x, y - 10);
+               ctx.fillStyle = successGreen;
+               ctx.fillText(`✅ 촬영 완료`, textX, y - textGap);
              } else {
-               // 전체가 대기 중일 때
+               // 전체가 대기 중일 때 (스캔 중)
                ctx.fillStyle = "white";
                // 내 시간 보여주기
                const progress = Math.min(elapsed / DURATION, 1);
                
-               // 다른 사람이 안 보고 있어서 대기 중이라면?
-               if (!allReady && elapsed >= DURATION) {
-                 ctx.fillText(`${faceLabel}: ⚠️ Wait for others`, x, y - 10);
+               // 다른 사람이 안 보고 있어서 대기 중이라면? (그룹 모드일 때만)
+               if (!allReady && elapsed >= DURATION && maxFaces > 1) {
+                 ctx.fillText(`⏳ 다른 인원 대기중`, textX, y - textGap);
                } else {
-                 ctx.fillText(`${faceLabel}: ${(elapsed/1000).toFixed(1)}s`, x, y - 10);
+                 ctx.fillText(`✅ 인식중 ${(elapsed/1000).toFixed(1)}s`, textX, y - textGap);
                }
                
-               // 게이지 바
+               // 게이지 바 (반전 보정) 
                ctx.fillStyle = "rgba(255,255,255,0.3)";
-               ctx.fillRect(x, y - 5, w, 4);
-               ctx.fillStyle = "yellow";
-               ctx.fillRect(x, y - 5, w * progress, 4);
+               ctx.fillRect(-(x + w), y - barGap, w, 4);
+               ctx.fillStyle = scanBlue;
+               ctx.fillRect(-(x + w), y - barGap, w * progress, 4);
              }
+             ctx.restore();
           });
 
           facesStatusRef.current = currentFrameTrackers;
@@ -312,13 +419,47 @@ export const FaceMeshWebcam = ({
     if (onClose) onClose();
   };
 
+  const bgColorClass = themeColor === "green" ? "bg-brand-green" : "bg-brand-orange";
+  
+  // 상황별 안내 메시지
+  const getDisplayTitle = () => {
+    // 개인 모드: 가이드 밖에 얼굴이 있거나 너무 작을 때
+    if (useEllipseGuide && isFaceOutsideGuide) {
+      return "가이드에 맞게 얼굴을 가까이 해주세요";
+    }
+    // 그룹 모드: 인원 부족 시
+    if (showFaceCount && faceCount < 2) {
+      return "2명 이상부터 촬영 가능합니다";
+    }
+    return title;
+  };
+  const displayTitle = getDisplayTitle();
+
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <h2 style={{ color: "white", position: "absolute", top: "20px", zIndex: 10, textShadow: "0 2px 4px rgba(0,0,0,0.5)", width: "100%", textAlign: "center" }}>{title}</h2>
-      {!isModelLoaded && <p style={{ color: "white", position: "absolute", top: "60px", zIndex: 10 }}>⏳ 모델 로딩 중...</p>}
-      <div style={{ width: "100%", height: "100%" }}>
+    <div className="relative w-full h-full overflow-hidden flex items-center justify-center">
+      {/* Top Center - Title */}
+      {displayTitle && (
+        <div className="absolute top-5 z-10 w-full text-center flex justify-center">
+          <h2 className={`${bgColorClass} text-white text-sm font-bold px-4 py-2 rounded-full shadow-md font-sans`}>
+            {displayTitle}
+          </h2>
+        </div>
+      )}
+      
+      {/* Bottom Right - Face Count */}
+      {showFaceCount && (
+        <div className="absolute bottom-5 right-5 z-10">
+          <div className={`${bgColorClass} text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1.5`}>
+            <span className="animate-pulse">●</span>
+            {faceCount}명 감지
+          </div>
+        </div>
+      )}
+      
+      {!isModelLoaded && <p className="text-white absolute top-20 z-10">⏳ 모델 로딩 중...</p>}
+      <div className="w-full h-full">
         <video ref={videoRef} style={{ display: "none" }} playsInline muted />
-        <canvas ref={canvasRef} style={{ width: '100%', height: '100%', objectFit: 'cover', backgroundColor: '#000', transform: 'scaleX(-1)' }} />
+        <canvas ref={canvasRef} className="w-full h-full object-cover bg-black" style={{ transform: 'scaleX(-1)' }} />
       </div>
     </div>
   );
