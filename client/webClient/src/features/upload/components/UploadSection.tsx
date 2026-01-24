@@ -13,13 +13,10 @@ import {
   Trash2,
   Users,
   ArrowRight,
-  Scan,
   UserCheck,
-  Check,
   Sparkles,
   Calendar,
   Clock,
-  X,
   CheckCircle2,
 } from "lucide-react";
 import { Checkbox } from "@/shared/ui/forms/checkbox";
@@ -29,6 +26,7 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@/shared/ui/forms/toggle-group";
+import { DatePicker } from "@/shared/ui/forms/date-picker";
 import {
   Select,
   SelectContent,
@@ -56,7 +54,7 @@ const CAPTURE_STEPS = [
   {
     id: "front",
     title: "정면 촬영",
-    guide: "얼굴 정면을 가이드에 맞춰주세요 (Enter로 촬영)",
+    guide: "얼굴 정면을 가이드에 맞춰주세요",
     overlay: (
       <svg
         viewBox="0 0 100 100"
@@ -171,25 +169,6 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     }
   }, [isCapturing, isCameraActive]);
 
-  const capture = useCallback(() => {
-    // FaceMeshWebcam은 자동으로 onCapture를 호출하므로,
-    // 수동 capture는 기본 이미지를 사용하거나 무시합니다.
-    // 실제로는 FaceMeshWebcam의 onCapture 콜백이 처리합니다.
-    const defaultImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY4TcAAAAASUVORK5CYII=";
-
-    if (mode === "personal") {
-      const newImages = [...capturedImages];
-      newImages[currentStep] = defaultImage;
-      setCapturedImages(newImages);
-      // 촬영 후 바로 사주 정보 입력 화면으로 이동
-      setShowSajuInput(true);
-      setIsCapturing(false);
-    } else {
-      setCapturedImages([defaultImage, null, null]);
-      // Keep isCameraActive true to show confirmation within the same view
-    }
-  }, [mode, capturedImages, currentStep]);
-
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -259,48 +238,6 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     onAnalyze,
     showSajuInput,
     sajuData,
-  ]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter") {
-        if (mode === "personal" && isCapturing) {
-          if (!capturedImages[currentStep]) {
-            capture();
-          }
-        }
-        if (mode === "group" && isCameraActive) {
-          if (!capturedImages[0]) {
-            capture();
-          } else {
-            // 촬영된 사진이 있으면 "선택하기" 버튼 동작
-            setIsCameraActive(false);
-            processGroupPhoto(capturedImages[0]);
-          }
-        }
-        if (
-          mode === "group" &&
-          isGroupPhotoConfirming &&
-          capturedImages[0]
-        ) {
-          setIsGroupPhotoConfirming(false);
-          processGroupPhoto(capturedImages[0]);
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () =>
-      window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    capture,
-    handleNextStep,
-    mode,
-    isCapturing,
-    isCameraActive,
-    capturedImages,
-    currentStep,
-    isGroupPhotoConfirming,
-    processGroupPhoto,
   ]);
 
   const handleRetake = () => {
@@ -385,7 +322,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       <>
         <ConsentModal
           isOpen={isConsentModalOpen}
-          onClose={() => {}}
+          onClose={() => {
+            window.location.href = "/";
+          }}
           onAgree={handleConsentAgree}
         />
       </>
@@ -410,33 +349,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left: Captured Photo */}
-            <GlassCard className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Camera className="w-6 h-6 text-brand-green" />
-                <h3 className="text-xl font-bold text-gray-800 font-display">
-                  촬영된 사진
-                </h3>
-              </div>
-              <div className="w-full aspect-[4/3] bg-black rounded-2xl overflow-hidden mb-4">
-                <img
-                  src={capturedImages[0]}
-                  alt="Captured"
-                  className="w-full h-full object-cover transform scale-x-[-1]"
-                />
-              </div>
-              <ActionButton
-                variant="secondary"
-                onClick={handleRetake}
-                className="w-full flex items-center justify-center gap-2"
-              >
-                <RefreshCcw size={18} />
-                ← 사진 다시 찍기
-              </ActionButton>
-            </GlassCard>
-
-            {/* Right: Saju Input Form */}
+          <div className="w-full max-w-lg mx-auto">
+            {/* Saju Input Form */}
             <GlassCard className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <Calendar className="w-6 h-6 text-brand-orange" />
@@ -514,18 +428,12 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                   <Label className="text-sm font-bold text-gray-600">
                     생년월일
                   </Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-orange pointer-events-none z-10" />
-                    <Input
-                      type="date"
-                      value={sajuData.birthDate}
-                      onChange={(e) =>
-                        setSajuData({ ...sajuData, birthDate: e.target.value })
-                      }
-                      className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-12 rounded-xl transition-all cursor-pointer pl-11"
-                      style={{ colorScheme: "light" }}
-                    />
-                  </div>
+                  <DatePicker
+                    value={sajuData.birthDate}
+                    onChange={(value) => setSajuData({ ...sajuData, birthDate: value })}
+                    placeholder="YYYY.MM.DD"
+                    themeColor="orange"
+                  />
                 </div>
 
                 {/* Birth Time */}
@@ -1050,6 +958,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       currentStep !== 3) ||
     isPersonalConfirming
   ) {
+    const accentColor = mode === "personal" ? "bg-brand-green" : "bg-brand-orange";
+    const titleText = mode === "personal" ? "정면 촬영" : "단체 촬영";
+    
     return (
       <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto pb-20">
         <motion.div
@@ -1057,14 +968,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           animate={{ opacity: 1, y: 0 }}
           className="w-full"
         >
-          <h2 className="text-3xl font-bold text-gray-900 mb-2 text-center font-display">
-            촬영된 사진 확인
-          </h2>
-          <p className="text-center text-gray-500 mb-8 font-sans">
-            해당 사진 선택 또는 재촬영이 가능합니다.
-          </p>
-
-          <GlassCard className="w-full aspect-[4/3] relative overflow-hidden flex items-center justify-center bg-gray-900 shadow-clay-lg rounded-3xl border-8 border-white mb-8">
+          <GlassCard className="p-0 w-full aspect-[4/3] relative overflow-hidden flex items-center justify-center bg-gray-900 shadow-clay-lg rounded-[32px] border-8 border-white">
+            {/* Background Image */}
             <img
               src={
                 mode === "personal"
@@ -1072,48 +977,45 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                   : capturedImages[0]!
               }
               alt="Captured Photo"
-              className={`w-full h-full object-cover ${mode === "personal" ? "transform scale-x-[-1]" : ""
-                }`}
+              className={`w-full h-full object-cover ${mode === "personal" ? "transform scale-x-[-1]" : ""}`}
             />
 
-            {/* Detected Count Badge - Group Mode Only */}
-            {mode === "group" && (
-              <div className="absolute top-6 left-6 px-4 py-2 bg-[#FF7043] rounded-full text-white text-sm font-bold shadow-lg flex items-center gap-2 backdrop-blur-md border-2 border-white/50">
-                <Users size={18} />
-                {detectedCount > 0
-                  ? `${detectedCount}명 감지됨`
-                  : "인원 감지 중..."}
+            {/* Top Overlay - Title & Description */}
+            <div className="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-black/70 via-black/40 to-transparent text-white text-center pointer-events-none">
+              <div className={`inline-block px-4 py-1.5 ${accentColor} rounded-full text-xs font-bold mb-3 shadow-sm`}>
+                {mode === "personal" ? "촬영 완료" : `${detectedCount > 0 ? detectedCount : "?"}명 감지됨`}
               </div>
-            )}
+              <h3 className="text-2xl md:text-3xl font-bold font-display mb-1 drop-shadow-lg">
+                {titleText}
+              </h3>
+              <p className="text-sm opacity-90 drop-shadow-md">
+                촬영된 사진을 확인하세요
+              </p>
+            </div>
 
-            {/* Completion Badge - Personal Mode Only */}
-            {mode === "personal" && (
-              <div className="absolute top-6 left-6 px-4 py-2 bg-[#00897B] rounded-full text-white text-sm font-bold shadow-lg flex items-center gap-2 backdrop-blur-md border-2 border-white/50">
-                <Check size={18} />
-                촬영 완료
-              </div>
-            )}
+            {/* Top Right Controls */}
+            <div className="absolute top-5 right-5 flex gap-2 pointer-events-auto">
+              <button
+                onClick={handleRetake}
+                className={`${mode === "personal" ? "bg-brand-green hover:bg-brand-green/80" : "bg-brand-orange hover:bg-brand-orange/80"} text-white p-2.5 rounded-full backdrop-blur-md transition-colors`}
+                title="다시 찍기"
+              >
+                <RefreshCcw size={20} />
+              </button>
+            </div>
+
+            {/* Bottom Center Button */}
+            <div className="absolute bottom-8 left-0 right-0 flex justify-center pointer-events-auto">
+              <ActionButton
+                variant={mode === "personal" ? "primary" : "orange-primary"}
+                onClick={handleNextStep}
+                className="px-8 py-4"
+              >
+                다음 단계로
+                <ArrowRight size={18} className="ml-2" />
+              </ActionButton>
+            </div>
           </GlassCard>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ActionButton
-              variant="orange-secondary"
-              onClick={handleRetake}
-              className="py-6 text-base flex items-center justify-center gap-2"
-            >
-              <RefreshCcw size={20} />
-              다시 촬영하기
-            </ActionButton>
-
-            <ActionButton
-              variant="orange-primary"
-              onClick={handleNextStep}
-              className="py-6 text-base flex items-center justify-center gap-2"
-            >
-              <ArrowRight size={20} />
-              이대로 사용하기
-            </ActionButton>
-          </div>
         </motion.div>
       </div>
     );
@@ -1130,8 +1032,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         ? CAPTURE_STEPS[currentStep]
         : {
           title: "단체 사진 촬영",
-          guide:
-            "모든 인원이 잘 보이게 찍어주세요 (Enter로 촬영)",
+          guide: "모든 인원이 잘 보이게 찍어주세요",
           overlay: null,
         };
 
@@ -1163,7 +1064,10 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                 }}
                 onFaceCountChange={setDetectedCount}
                 maxFaces={mode === "personal" ? 1 : 5}
-                title={mode === "personal" ? "정면을 응시해 주세요" : "모두 정면 3초 유지!"}
+                title="카메라를 3초간 응시해 주세요"
+                themeColor={mode === "personal" ? "green" : "orange"}
+                showFaceCount={mode === "group"}
+                useEllipseGuide={mode === "personal"}
               />
             </div>
           ) : (
@@ -1201,21 +1105,6 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             </>
           )}
 
-          {/* Top Overlay UI */}
-          <div className="absolute top-0 left-0 right-0 p-8 text-white text-center z-10 pointer-events-none">
-            {mode === "personal" && !hasCapturedImage && (
-              <div className="inline-block px-4 py-1.5 bg-brand-green rounded-full text-xs font-bold mb-4 shadow-sm">
-                정면 촬영
-              </div>
-            )}
-            
-            {!hasCapturedImage && mode === "group" && (
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-orange rounded-full text-xs font-bold mb-2 shadow-sm">
-                <Scan size={14} className="animate-pulse" />
-                실시간 인원 감지: {detectedCount}명
-              </div>
-            )}
-          </div>
 
           {hasCapturedImage && (
             <div className="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-black/80 to-transparent text-white text-center z-10 pointer-events-none">
@@ -1244,72 +1133,19 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             </div>
           )}
 
-          {/* Bottom Controls */}
-          <div className="absolute bottom-10 left-0 right-0 flex justify-center z-10 pointer-events-auto">
-            {!hasCapturedImage ? (
-              <button
-                onClick={capture}
-                className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center bg-white/20 hover:bg-white/40 transition-all active:scale-95 ring-8 ring-black/10 shadow-lg"
-              >
-                <div className="w-16 h-16 bg-white rounded-full shadow-inner"></div>
-              </button>
-            ) : (
-              <div className="flex gap-4 items-center">
-                <button
-                  onClick={handleNextStep}
-                  className="px-8 py-3 bg-brand-green hover:bg-brand-green-deepest text-white rounded-full font-bold text-base flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-brand-green/20"
-                >
-                  {mode === "personal" ? "다음 단계로" : "선택하기"}
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            )}
-          </div>
 
           {/* Top Right Controls */}
           <div className="absolute top-6 right-6 flex gap-2 pointer-events-auto">
-            {!hasCapturedImage && mode === "group" && (
-              <>
-                <button
-                  onClick={() => {
-                    setIsCapturing(false);
-                    setIsCameraActive(false);
-                  }}
-                  className="bg-black/40 text-white p-2.5 rounded-full backdrop-blur-md hover:bg-black/60 transition-colors"
-                >
-                  ✕
-                </button>
-              </>
-            )}
             {hasCapturedImage && (
               <button
                 onClick={handleRetake}
-                className="bg-white text-gray-900 p-3 rounded-full hover:bg-white/90 transition-all shadow-lg border border-gray-100"
+                className={`${mode === "personal" ? "bg-brand-green hover:bg-brand-green/80" : "bg-brand-orange hover:bg-brand-orange/80"} text-white p-3 rounded-full transition-all shadow-lg`}
                 title="다시 찍기"
               >
                 <RefreshCcw size={24} />
               </button>
             )}
             
-            {!hasCapturedImage && mode === "personal" && (
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-white/10 text-white p-3 rounded-full backdrop-blur-md hover:bg-white/20 transition-all border border-white/20"
-                title="사진 업로드"
-              >
-                <Upload size={24} />
-              </button>
-            )}
-            
-            <button
-              onClick={() => {
-                setIsCapturing(false);
-                setIsCameraActive(false);
-              }}
-              className="text-white/60 hover:text-white transition-colors p-1"
-            >
-              <X size={32} />
-            </button>
           </div>
           
           <input
@@ -1467,24 +1303,12 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                             <Label className="text-sm font-bold text-gray-600 ml-1">
                               생년월일
                             </Label>
-                            <div className="relative">
-                              <Calendar
-                                className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-orange pointer-events-none z-10"
-                              />
-                              <Input
-                                type="date"
-                                value={member.birthDate}
-                                onChange={(e) =>
-                                  updateGroupMember(
-                                    member.id,
-                                    "birthDate",
-                                    e.target.value,
-                                  )
-                                }
-                                className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-12 rounded-xl transition-all cursor-pointer pl-11 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:left-3 [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-calendar-picker-indicator]:h-5 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                                style={{ colorScheme: 'light' }}
-                              />
-                            </div>
+                            <DatePicker
+                              value={member.birthDate}
+                              onChange={(value) => updateGroupMember(member.id, "birthDate", value)}
+                              placeholder="YYYY.MM.DD"
+                              themeColor="orange"
+                            />
                           </div>
                           <div className="space-y-2">
                             <div className="flex justify-between items-center">
