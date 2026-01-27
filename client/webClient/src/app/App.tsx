@@ -4,6 +4,7 @@ import "../styles/theme.css";
 import { Layout } from "./layout/Layout";
 import { LandingSection } from "@/features/landing/components/LandingSection";
 import { UploadSection } from "@/features/upload/components/UploadSection";
+import { AnalyzingSection } from "@/features/upload/components/AnalyzingSection";
 import { AnalysisSection } from "@/features/personal/AnalysisSection";
 import { GroupAnalysisSection } from "@/features/group/GroupAnalysisSection";
 import { RankingSection } from "@/features/ranking/components/RankingSection";
@@ -69,9 +70,12 @@ export default function App() {
       // Default placeholder, will be updated by result data
       setUserTeamName("기운찬 도사님들의 모임");
     }
-    setStep("analyzing");
+    // setStep("analyzing"); // 개발 중 분석 페이지 건너뛰기
+    setStep("result");
+    
+    // AI 분석 시뮬레이션 (개발 중에는 즉시 결과 페이지로 이동)
     setTimeout(() => {
-      setStep("result");
+      // setStep("result");
 
       // 히스토리에 저장
       const now = new Date();
@@ -97,7 +101,7 @@ export default function App() {
       };
 
       setHistoryData((prev) => [newHistoryItem, ...prev]);
-    }, 3000);
+    }, 500); // 개발용: 28초 -> 0.5초로 단축
   };
 
   const handleViewRanking = (score?: number, name?: string) => {
@@ -222,19 +226,9 @@ export default function App() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="w-full h-[60vh] flex flex-col items-center justify-center text-center"
+                className="w-full h-full"
               >
-                <div className="mb-8 relative">
-                  <div className="absolute inset-0 bg-brand-green blur-3xl opacity-20 rounded-full animate-pulse"></div>
-                  <h2 className="text-3xl font-bold text-gray-800 mb-4 relative z-10 font-display">
-                    분석 중...
-                  </h2>
-                  <p className="text-gray-500 text-lg relative z-10">
-                    {mode === "personal"
-                      ? "당신의 운명을 읽고 있습니다."
-                      : "모임의 기운을 읽고 있습니다."}
-                  </p>
-                </div>
+                <AnalyzingSection />
               </motion.div>
             )}
 

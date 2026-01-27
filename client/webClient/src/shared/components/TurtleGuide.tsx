@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ChevronDown, MessageCircle } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import turtleImage from "@/assets/turtle.png";
+import turtleShellImage from "@/assets/turtle_shell.png";
 
 interface TurtleGuideProps {
   message?: string;
@@ -10,6 +11,7 @@ interface TurtleGuideProps {
 
 export const TurtleGuide: React.FC<TurtleGuideProps> = ({ message, isThinking }) => {
   const [isOpen, setIsOpen] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end md:bottom-8 md:right-8">
@@ -93,6 +95,20 @@ export const TurtleGuide: React.FC<TurtleGuideProps> = ({ message, isThinking })
             </div>
           </motion.div>
         ) : (
+          <div className="relative flex flex-col items-end">
+            <AnimatePresence>
+              {isHovered && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.8 }}
+                  className="mb-3 px-4 py-2 bg-white text-gray-600 rounded-2xl shadow-xl border border-white/40 text-sm font-bold font-hand whitespace-nowrap z-50 pointer-events-none relative"
+                >
+                  도사님을 두드려보세요!
+                  <div className="absolute -bottom-1 right-8 w-2 h-2 bg-white rotate-45 border-r border-b border-white/40" />
+                </motion.div>
+              )}
+            </AnimatePresence>
           <motion.button
             key="turtle-closed"
             initial={{ opacity: 0, scale: 0.8 }}
@@ -100,12 +116,22 @@ export const TurtleGuide: React.FC<TurtleGuideProps> = ({ message, isThinking })
             exit={{ opacity: 0, scale: 0.8 }}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setIsOpen(true)}
-            className="w-16 h-16 md:w-20 md:h-20 bg-brand-green hover:bg-brand-green-deep text-white rounded-full flex items-center justify-center shadow-2xl transition-all pointer-events-auto"
+              onClick={() => {
+                setIsOpen(true);
+                setIsHovered(false);
+              }}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              className="w-16 h-16 md:w-20 md:h-20 bg-white hover:bg-gray-50 text-brand-green rounded-full flex items-center justify-center shadow-2xl transition-all pointer-events-auto overflow-hidden border-4 border-brand-green/20"
             title="도사님 보기"
           >
-            <MessageCircle size={32} className="md:w-10 md:h-10" />
+              <img
+                src={turtleShellImage}
+                alt="도사님 보기"
+                className="w-full h-full object-contain p-2"
+              />
           </motion.button>
+          </div>
         )}
       </AnimatePresence>
     </div>
