@@ -20,7 +20,6 @@ import {
   Clock,
   CheckCircle2,
   X,
-  CheckCircle2,
 } from "lucide-react";
 import { Checkbox } from "@/shared/ui/forms/checkbox";
 import { Label } from "@/shared/ui/forms/label";
