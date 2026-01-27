@@ -25,7 +25,7 @@ function getEulerAngles(matrix: any) {
 }
 
 interface FaceMeshWebcamProps {
-  onCapture?: (image: string, metadata?: any) => void;
+  onCapture?: (image: string) => void;
   onClose?: () => void;
   onFaceCountChange?: (count: number) => void;
   maxFaces?: number;
@@ -238,7 +238,7 @@ export const FaceMeshWebcam = ({
           // const minFaces = maxFaces === 1 ? 1 : 2;
           const minFaces = 0; // 개발용 최소 인원 없음
           // const allReady = detectedFaceCount >= minFaces && currentFrameTrackers.every(t => t.isFrontal && (Date.now() - t.startTime >= DURATION));
-          const allReady = detectedFaceCount >= minFaces;
+          const allReady = detectedFaceCount >= minFaces; // 개발용
           
           // 중복 전송 방지: 구성원 중 한 명이라도 아직 'isSent'가 안 된 상태여야 보냄
           // (즉, 이미 다 보냈으면 또 안 보냄)

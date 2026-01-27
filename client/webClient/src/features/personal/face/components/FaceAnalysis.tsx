@@ -100,7 +100,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                                             cy={part.cy}
                                             r={isActive ? 6 : 4}
                                             initial={{ opacity: 1 }}
-                                            animate={isActive ? { r: [6, 8, 6], opacity: [1, 0.6, 1] } : { r: 4, opacity: 1 }}
+                                            animate={isActive ? { scale: [1, 1.25, 1], opacity: [1, 0.6, 1] } : { scale: 1, opacity: 1 }}
                                             transition={{ repeat: Infinity, duration: 2 }}
                                             className={`${isActive ? "fill-white" : "fill-brand-green"} stroke-white stroke-1 shadow-sm`}
                                         />

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Brain, Heart, Camera, RotateCcw, Download, QrCode } from "lucide-react";
+import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { FaceAnalysis } from "./face/components/FaceAnalysis";
 import { StatsAnalysis } from "./stats/components/StatsAnalysis";
@@ -11,6 +11,7 @@ import html2canvas from "html2canvas";
 interface AnalysisSectionProps {
     images?: string[];
     onRestart: () => void;
+    onNavigateToPhotoGallery?: () => void;
 }
 
 // --- Mock Data ---
@@ -77,8 +78,8 @@ const MOCK_DATA = {
 };
 
 // --- Main Component ---
-export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], onRestart }) => {
-    const [currentTab, setCurrentTab] = useState<"physiognomy" | "constitution" | "future">("physiognomy");
+export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], onRestart, onNavigateToPhotoGallery }) => {
+    const [currentTab, setCurrentTab] = useState<"physiognomy" | "constitution" | "future" | "photo-gallery">("physiognomy");
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [futureImage, setFutureImage] = useState<string | null>(null);
@@ -155,13 +156,20 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
                         { id: "physiognomy", label: "관상 분석", icon: Brain },
                         { id: "constitution", label: "체질 분석", icon: Heart },
                         { id: "future", label: "미래의 나", icon: Camera },
+                        { id: "photo-gallery", label: "싸피네컷", icon: Images },
                     ].map((tab) => {
                         const Icon = tab.icon;
                         const isActive = currentTab === tab.id;
                         return (
                             <button
                                 key={tab.id}
-                                onClick={() => setCurrentTab(tab.id as any)}
+                                onClick={() => {
+                                    if (tab.id === "photo-gallery" && onNavigateToPhotoGallery) {
+                                        onNavigateToPhotoGallery();
+                                    } else {
+                                        setCurrentTab(tab.id as any);
+                                    }
+                                }}
                                 className={`
                             flex items-center gap-2 px-8 py-3.5 rounded-2xl transition-all duration-300 font-bold font-display
                             ${isActive
