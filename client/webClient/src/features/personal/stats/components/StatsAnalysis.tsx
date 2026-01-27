@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { ImageWithFallback } from "@/shared/components/figma/ImageWithFallback";
-import { Heart, AlertTriangle, Utensils, Snowflake, Brain, Sparkles, Clock, TrendingUp, Download, Camera } from "lucide-react";
+import { Heart, AlertTriangle, Utensils, Snowflake, Brain, Sparkles, Clock, TrendingUp, Download, Camera, Upload, X, CheckCircle2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import profileImage from "@/assets/profile.png";
+import selfieImage from "@/assets/selfie.png";
 
 // --- Constants (Moved from AnalysisSection) ---
 const CONSTITUTION_DATA = {
@@ -171,11 +173,32 @@ const FUTURE_CHART_DATA = [
 interface StatsAnalysisProps {
     tab: "constitution" | "future";
     images: string[];
+    futureImage?: string | null;
+    onFutureImageUpload?: (image: string | null) => void;
 }
 
-export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ tab, images }) => {
+export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ 
+    tab, 
+    images, 
+    futureImage = null, 
+    onFutureImageUpload 
+}) => {
     const [selectedMenuIdx, setSelectedMenuIdx] = useState(0);
     const [selectedCampus, setSelectedCampus] = useState<Campus>("부울경");
+    const futureFileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFutureImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                if (onFutureImageUpload) {
+                    onFutureImageUpload(reader.result as string);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const handleDownload = () => {
         alert("이미지가 저장되었습니다. (준비 중)");
@@ -325,163 +348,245 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ tab, images }) => 
     if (tab === "future") {
         return (
             <div className="flex flex-col items-center">
-                <div className="mb-10 text-center">
-                    <h3 className="text-3xl font-bold text-gray-900 mb-3 font-display">미래의 나와 인생네컷</h3>
-                    <p className="text-gray-500 font-hand text-lg italic">"거북 도사의 신통력으로 엿보는 당신의 찬란한 앞날"</p>
-                </div>
-
-                <div className="flex flex-col xl:flex-row gap-12 items-center xl:items-start max-w-5xl w-full">
-                    {/* Photo Strip Frame */}
-                    <div className="flex flex-col gap-6">
-                        <div className="bg-brand-black-light p-8 pb-14 shadow-[20px_20px_60px_rgba(0,0,0,0.4)] max-w-[360px] w-full relative group rounded-sm transform -rotate-1">
-                            <div className="flex justify-between text-white/40 text-[9px] font-mono mb-4 uppercase tracking-[0.3em] font-bold">
-                                <span>Turtle AI Simulation</span>
-                                <span>{new Date().toLocaleDateString().replace(/\./g, ' /')}</span>
-                            </div>
-
-                            <div className="flex flex-col gap-4 mb-10">
-                                {FUTURE_PERIODS.map((period, i) => {
-                                    // Use first captured image for current, unsplash for others
-                                    const imgSrc = i === 0 ? (images[0] || "https://images.unsplash.com/photo-1544005313-94ddf0286df2") :
-                                        i === 1 ? "https://images.unsplash.com/photo-1544005313-94ddf0286df2" :
-                                            i === 2 ? "https://images.unsplash.com/photo-1566616696957-983966fa5d44" :
-                                                "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91";
-
-                                    const filterClass = i === 0 ? "grayscale contrast-125" :
-                                        i === 1 ? "grayscale sepia-[0.2] brightness-110" :
-                                            i === 2 ? "grayscale sepia-[0.4] contrast-110" :
-                                                "grayscale sepia-[0.6] contrast-150 brightness-90";
-
-                                    return (
-                                        <div key={i} className="aspect-[3/4] bg-gray-900 relative overflow-hidden group/item">
-                                            <img src={imgSrc} alt={period.age} className={`w-full h-full object-cover opacity-90 transition-all duration-700 ${filterClass}`} />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                                            <div className="absolute top-2 left-2 text-white/50 text-[8px] font-mono">#{String(i + 1).padStart(2, '0')}</div>
-                                            <div className="absolute bottom-3 right-3 text-white/80 text-[10px] font-mono uppercase tracking-widest bg-black/40 px-2 py-0.5 rounded-sm">
-                                                {period.age}
+                {!futureImage ? (
+                    <div className="max-w-2xl w-full">
+                        <GlassCard className="p-12 border-8 border-white rounded-[48px] shadow-clay-lg bg-white/60 flex flex-col items-center text-center">
+                            <button 
+                                onClick={() => futureFileInputRef.current?.click()}
+                                className="relative group mb-8"
+                            >
+                                <div className="absolute -inset-4 bg-brand-orange/20 rounded-[40px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-pulse" />
+                                <div className="w-28 h-28 bg-white rounded-[32px] flex flex-col items-center justify-center text-brand-orange shadow-clay-md border-4 border-orange-50 group-hover:border-brand-orange/30 transition-all duration-300 relative overflow-hidden group-hover:shadow-clay-lg group-hover:-translate-y-1 active:translate-y-0 active:shadow-clay-sm">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-brand-orange/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <Upload size={40} className="group-hover:scale-110 transition-transform duration-300" />
+                                    <span className="text-[10px] font-bold mt-1 text-brand-orange/60 group-hover:text-brand-orange transition-colors">UPLOAD</span>
+                                </div>
+                            </button>
+                            <h4 className="text-2xl font-bold text-gray-800 mb-2 font-display">미래의 모습을 확인해볼까요?</h4>
+                            <p className="text-sm text-brand-orange font-bold mb-8 flex items-center gap-1.5 justify-center bg-orange-50 px-4 py-1.5 rounded-full border border-orange-100 shadow-sm">
+                                <Sparkles size={14} className="animate-pulse" />
+                                10년부터 50년 후 까지의 미래를 그려드립니다
+                            </p>
+                            
+                            {/* Compact Guidance with Examples - Horizontal Layout */}
+                            <div className="bg-gray-50/40 rounded-2xl p-5 border border-gray-100 flex flex-col md:flex-row items-center gap-6 mb-2 w-full max-w-xl">
+                                <div className="flex gap-4 shrink-0">
+                                    {/* Recommended Example */}
+                                    <div className="flex flex-col items-center gap-1.5">
+                                        <div className="relative w-12 h-16 bg-white rounded-lg shadow-sm border border-green-200 flex flex-col items-center justify-center overflow-hidden p-0.5">
+                                            <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-brand-green rounded-full flex items-center justify-center z-10 shadow-sm">
+                                                <CheckCircle2 size={7} className="text-white" />
                                             </div>
+                                            <img 
+                                                src={profileImage} 
+                                                alt="권장 예시" 
+                                                className="w-[95%] h-[95%] object-contain rounded-md"
+                                            />
                                         </div>
-                                    )
-                                })}
-                            </div>
-
-                            <div className="text-center pt-2 border-t border-white/10">
-                                <h2 className="text-white font-bold text-2xl tracking-tighter font-sans italic">관상네컷</h2>
-                                <p className="text-white/30 text-[9px] mt-1 tracking-[0.4em] uppercase font-bold">BY TURTLE GURU STUDIO</p>
-                            </div>
-
-                            {/* Film Grain/Dust overlays */}
-                            <div className="absolute inset-0 pointer-events-none opacity-10 mix-blend-screen bg-[url('https://www.transparenttextures.com/patterns/pinstriped-suit.png')]" />
-                        </div>
-
-                        <ActionButton variant="primary" onClick={handleDownload} className="w-full flex items-center justify-center gap-3 py-6 text-base max-w-[360px]">
-                            <Download size={20} /> 나의 미래 사진 저장하기
-                        </ActionButton>
-                    </div>
-
-                    {/* Period Descriptions */}
-                    <div className="flex-1 space-y-6">
-                        <h4 className="text-2xl font-bold text-gray-800 font-display mb-6 flex items-center gap-3">
-                            <TrendingUp className="text-brand-green" />
-                            시대별 인상 변화 풀이
-                        </h4>
-
-                        {/* Chart Section */}
-                        <GlassCard className="p-8 border-4 border-white shadow-clay-md rounded-[32px] bg-white">
-                            <div className="mb-8">
-                                <h5 className="text-xl font-bold text-gray-800 mb-2 font-display">운세 흐름 그래프</h5>
-                                <p className="text-sm text-gray-500 font-hand">시간이 흐를수록 변화하는 당신의 운기를 한눈에 확인하세요</p>
-                            </div>
-
-                            <div className="h-[320px] bg-white rounded-2xl p-4">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={FUTURE_CHART_DATA} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
-                                        <CartesianGrid strokeDasharray="5 5" stroke="var(--color-gray-100)" vertical={false} />
-                                        <XAxis
-                                            dataKey="period"
-                                            tick={{ fill: "var(--color-gray-400)", fontSize: 13, fontWeight: '600' }}
-                                            stroke="var(--color-gray-200)"
-                                            axisLine={{ stroke: "var(--color-gray-200)" }}
-                                        />
-                                        <YAxis
-                                            tick={{ fill: "var(--color-gray-400)", fontSize: 12 }}
-                                            stroke="var(--color-gray-200)"
-                                            axisLine={{ stroke: "var(--color-gray-200)" }}
-                                            domain={[0, 100]}
-                                        />
-                                        <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: 'white',
-                                                border: 'none',
-                                                borderRadius: '12px',
-                                                padding: '12px 16px',
-                                                boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-                                            }}
-                                            labelStyle={{ fontWeight: '700', color: "var(--color-gray-800)", marginBottom: '8px', fontSize: '14px' }}
-                                            itemStyle={{ fontSize: '13px', padding: '2px 0' }}
-                                        />
-                                        <Legend
-                                            wrapperStyle={{ paddingTop: '24px' }}
-                                            iconType="line"
-                                            iconSize={20}
-                                        />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="재물운"
-                                            stroke="var(--color-amber-500)"
-                                            strokeWidth={3}
-                                            dot={{ fill: "var(--color-amber-500)", r: 5, strokeWidth: 2, stroke: 'white' }}
-                                            activeDot={{ r: 7 }}
-                                        />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="애정운"
-                                            stroke="var(--color-pink-500)"
-                                            strokeWidth={3}
-                                            dot={{ fill: "var(--color-pink-500)", r: 5, strokeWidth: 2, stroke: 'white' }}
-                                            activeDot={{ r: 7 }}
-                                        />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="건강운"
-                                            stroke="var(--color-emerald-500)"
-                                            strokeWidth={3}
-                                            dot={{ fill: "var(--color-emerald-500)", r: 5, strokeWidth: 2, stroke: 'white' }}
-                                            activeDot={{ r: 7 }}
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </GlassCard>
-
-                        <div className="space-y-4">
-                            {FUTURE_PERIODS.map((period, i) => (
-                                <GlassCard
-                                    key={i}
-                                    className="p-6 border-2 border-white/50 bg-white/40 hover:bg-white/60 transition-colors rounded-2xl"
-                                >
-                                    <div className="flex gap-4">
-                                        <div className="w-16 h-16 bg-gray-100 rounded-xl overflow-hidden shrink-0">
-                                            {/* Thumbnail placeholder */}
-                                            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-400">
-                                                {period.age}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div className="flex items-baseline gap-2 mb-1">
-                                                <h5 className="font-bold text-gray-800 text-lg">{period.label}</h5>
-                                                <span className="text-xs font-bold text-brand-green bg-brand-green-muted px-2 py-0.5 rounded-full">{period.age}</span>
-                                            </div>
-                                            <p className="text-sm text-gray-600 leading-relaxed font-hand">
-                                                {period.desc}
-                                            </p>
-                                        </div>
+                                        <span className="text-[9px] font-bold text-brand-green">여권/증명</span>
                                     </div>
-                                </GlassCard>
-                            ))}
+
+                                    {/* Not Good Example */}
+                                    <div className="flex flex-col items-center gap-1.5">
+                                        <div className="relative w-12 h-16 bg-white rounded-lg shadow-sm border border-red-100 flex items-center justify-center overflow-hidden p-0.5">
+                                            <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full flex items-center justify-center z-10 shadow-sm">
+                                                <X size={7} className="text-white" strokeWidth={3} />
+                                            </div>
+                                            <img 
+                                                src={selfieImage} 
+                                                alt="잘못된 예시" 
+                                                className="w-[95%] h-[95%] object-contain rounded-md opacity-60 grayscale blur-[0.5px]"
+                                            />
+                                        </div>
+                                        <span className="text-[9px] font-bold text-red-400">잘못된 예시</span>
+                                    </div>
+                                </div>
+
+                                {/* Running Text Guidance */}
+                                <div className="flex-1 text-left space-y-1.5 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
+                                    <p className="text-[12px] text-gray-700 leading-relaxed break-keep">
+                                        정확한 관상 분석을 위해 <span className="text-brand-green font-bold">여권 사진이나 증명사진</span>처럼 이목구비가 뚜렷하게 나온 정면 사진을 업로드해 주세요. 배경이 깨끗하고 밝은 곳에서 촬영된 사진이 가장 좋습니다.
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 leading-relaxed break-keep">
+                                        다만, 흐릿한 저화질 사진이나 얼굴 일부가 가려진 사진, 조명이 너무 어두운 야외 사진은 인식이 원활하지 않을 수 있으니 주의해 주세요.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <input
+                                type="file"
+                                ref={futureFileInputRef}
+                                onChange={handleFutureImageUpload}
+                                accept="image/*"
+                                className="hidden"
+                            />
+                        </GlassCard>
+                    </div>
+                ) : (
+                    <div className="flex flex-col xl:flex-row gap-12 items-center xl:items-start max-w-5xl w-full">
+                        {/* Photo Strip Frame */}
+                        <div className="flex flex-col gap-6">
+                            <div className="bg-brand-black-light p-8 pb-14 shadow-[20px_20px_60px_rgba(0,0,0,0.4)] max-w-[360px] w-full relative group rounded-sm transform -rotate-1">
+                                <div className="flex justify-between text-white/40 text-[9px] font-mono mb-4 uppercase tracking-[0.3em] font-bold">
+                                    <span>Turtle AI Simulation</span>
+                                    <span>{new Date().toLocaleDateString().replace(/\./g, ' /')}</span>
+                                    <button 
+                                        onClick={() => onFutureImageUpload?.(null)}
+                                        className="hover:text-white transition-colors flex items-center gap-1"
+                                    >
+                                        <X size={10} /> RESET
+                                    </button>
+                                </div>
+
+                                <div className="flex flex-col gap-4 mb-10">
+                                    {FUTURE_PERIODS.map((period, i) => {
+                                        // Use uploaded futureImage for current, unsplash for others for now
+                                        const imgSrc = i === 0 ? futureImage :
+                                            i === 1 ? futureImage :
+                                                i === 2 ? "https://images.unsplash.com/photo-1566616696957-983966fa5d44" :
+                                                    "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91";
+
+                                        const filterClass = i === 0 ? "grayscale contrast-125" :
+                                            i === 1 ? "grayscale sepia-[0.2] brightness-110 blur-[0.5px]" :
+                                                i === 2 ? "grayscale sepia-[0.4] contrast-110 blur-[1px]" :
+                                                    "grayscale sepia-[0.6] contrast-150 brightness-90 blur-[1.5px]";
+
+                                        return (
+                                            <div key={i} className="aspect-[3/4] bg-gray-900 relative overflow-hidden group/item">
+                                                <img src={imgSrc} alt={period.age} className={`w-full h-full object-cover opacity-90 transition-all duration-700 ${filterClass}`} />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                                                <div className="absolute top-2 left-2 text-white/50 text-[8px] font-mono">#{String(i + 1).padStart(2, '0')}</div>
+                                                <div className="absolute bottom-3 right-3 text-white/80 text-[10px] font-mono uppercase tracking-widest bg-black/40 px-2 py-0.5 rounded-sm">
+                                                    {period.age}
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+
+                                <div className="text-center pt-2 border-t border-white/10">
+                                    <h2 className="text-white font-bold text-2xl tracking-tighter font-sans italic">관상네컷</h2>
+                                    <p className="text-white/30 text-[9px] mt-1 tracking-[0.4em] uppercase font-bold">BY TURTLE GURU STUDIO</p>
+                                </div>
+
+                                {/* Film Grain/Dust overlays */}
+                                <div className="absolute inset-0 pointer-events-none opacity-10 mix-blend-screen bg-[url('https://www.transparenttextures.com/patterns/pinstriped-suit.png')]" />
+                            </div>
+
+                            <ActionButton variant="primary" onClick={handleDownload} className="w-full flex items-center justify-center gap-3 py-6 text-base max-w-[360px]">
+                                <Download size={20} /> 나의 미래 사진 저장하기
+                            </ActionButton>
+                        </div>
+
+                        {/* Period Descriptions */}
+                        <div className="flex-1 space-y-6">
+                            <h4 className="text-2xl font-bold text-gray-800 font-display mb-6 flex items-center gap-3">
+                                <TrendingUp className="text-brand-green" />
+                                시대별 인상 변화 풀이
+                            </h4>
+
+                            {/* Chart Section */}
+                            <GlassCard className="p-8 border-4 border-white shadow-clay-md rounded-[32px] bg-white">
+                                <div className="mb-8">
+                                    <h5 className="text-xl font-bold text-gray-800 mb-2 font-display">운세 흐름 그래프</h5>
+                                    <p className="text-sm text-gray-500 font-hand">시간이 흐를수록 변화하는 당신의 운기를 한눈에 확인하세요</p>
+                                </div>
+
+                                <div className="h-[320px] bg-white rounded-2xl p-4">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={FUTURE_CHART_DATA} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+                                            <CartesianGrid strokeDasharray="5 5" stroke="var(--color-gray-100)" vertical={false} />
+                                            <XAxis
+                                                dataKey="period"
+                                                tick={{ fill: "var(--color-gray-400)", fontSize: 13, fontWeight: '600' }}
+                                                stroke="var(--color-gray-200)"
+                                                axisLine={{ stroke: "var(--color-gray-200)" }}
+                                            />
+                                            <YAxis
+                                                tick={{ fill: "var(--color-gray-400)", fontSize: 12 }}
+                                                stroke="var(--color-gray-200)"
+                                                axisLine={{ stroke: "var(--color-gray-200)" }}
+                                                domain={[0, 100]}
+                                            />
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '12px',
+                                                    padding: '12px 16px',
+                                                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                                                }}
+                                                labelStyle={{ fontWeight: '700', color: "var(--color-gray-800)", marginBottom: '8px', fontSize: '14px' }}
+                                                itemStyle={{ fontSize: '13px', padding: '2px 0' }}
+                                            />
+                                            <Legend
+                                                wrapperStyle={{ paddingTop: '24px' }}
+                                                iconType="line"
+                                                iconSize={20}
+                                            />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="재물운"
+                                                stroke="var(--color-amber-500)"
+                                                strokeWidth={3}
+                                                dot={{ fill: "var(--color-amber-500)", r: 5, strokeWidth: 2, stroke: 'white' }}
+                                                activeDot={{ r: 7 }}
+                                            />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="애정운"
+                                                stroke="var(--color-pink-500)"
+                                                strokeWidth={3}
+                                                dot={{ fill: "var(--color-pink-500)", r: 5, strokeWidth: 2, stroke: 'white' }}
+                                                activeDot={{ r: 7 }}
+                                            />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="건강운"
+                                                stroke="var(--color-emerald-500)"
+                                                strokeWidth={3}
+                                                dot={{ fill: "var(--color-emerald-500)", r: 5, strokeWidth: 2, stroke: 'white' }}
+                                                activeDot={{ r: 7 }}
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </GlassCard>
+
+                            <div className="space-y-4">
+                                {FUTURE_PERIODS.map((period, i) => (
+                                    <GlassCard
+                                        key={i}
+                                        className="p-6 border-2 border-white/50 bg-white/40 hover:bg-white/60 transition-colors rounded-2xl"
+                                    >
+                                        <div className="flex gap-4">
+                                            <div className="w-16 h-16 bg-gray-100 rounded-xl overflow-hidden shrink-0">
+                                                {/* Thumbnail placeholder */}
+                                                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-400 overflow-hidden">
+                                                    <img src={i === 0 || i === 1 ? futureImage : 
+                                                            i === 2 ? "https://images.unsplash.com/photo-1566616696957-983966fa5d44" :
+                                                            "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91"} 
+                                                         alt={period.age} 
+                                                         className={`w-full h-full object-cover ${i === 0 ? "grayscale" : "grayscale sepia-[0.3]"}`} 
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="flex items-baseline gap-2 mb-1">
+                                                    <h5 className="font-bold text-gray-800 text-lg">{period.label}</h5>
+                                                    <span className="text-xs font-bold text-brand-green bg-brand-green-muted px-2 py-0.5 rounded-full">{period.age}</span>
+                                                </div>
+                                                <p className="text-sm text-gray-600 leading-relaxed font-hand">
+                                                    {period.desc}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </GlassCard>
+                                ))}
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
             </div>
         );
     }

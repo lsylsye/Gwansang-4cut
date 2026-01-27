@@ -81,6 +81,7 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
     const [currentTab, setCurrentTab] = useState<"physiognomy" | "constitution" | "future">("physiognomy");
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [futureImage, setFutureImage] = useState<string | null>(null);
 
     // Mock QR code URL
     const shareUrl = `${window.location.origin}/result/abc123`;
@@ -196,7 +197,12 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
 
                     {/* --- Tab 2 & 3: Constitution & Future --- */}
                     {(currentTab === "constitution" || currentTab === "future") && (
-                        <StatsAnalysis tab={currentTab} images={images} />
+                        <StatsAnalysis 
+                            tab={currentTab} 
+                            images={images} 
+                            futureImage={futureImage}
+                            onFutureImageUpload={setFutureImage}
+                        />
                     )}
                 </motion.div>
             </AnimatePresence>
