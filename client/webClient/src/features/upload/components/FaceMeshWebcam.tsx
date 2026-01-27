@@ -25,7 +25,7 @@ function getEulerAngles(matrix: any) {
 }
 
 interface FaceMeshWebcamProps {
-  onCapture?: (image: string) => void;
+  onCapture?: (image: string, metadata?: any) => void;
   onClose?: () => void;
   onFaceCountChange?: (count: number) => void;
   maxFaces?: number;
@@ -238,21 +238,20 @@ export const FaceMeshWebcam = ({
           // const minFaces = maxFaces === 1 ? 1 : 2;
           const minFaces = 0; // 개발용 최소 인원 없음
           // const allReady = detectedFaceCount >= minFaces && currentFrameTrackers.every(t => t.isFrontal && (Date.now() - t.startTime >= DURATION));
-          const allReady = detectedFaceCount >= minFaces; // 개발용
+          const allReady = detectedFaceCount >= minFaces;
           
           // 중복 전송 방지: 구성원 중 한 명이라도 아직 'isSent'가 안 된 상태여야 보냄
           // (즉, 이미 다 보냈으면 또 안 보냄)
           const needToSend = allReady && currentFrameTrackers.some(t => !t.isSent);
 
           if (needToSend) {
-            console.log("🚀 모두 3초 정면 응시 성공! 데이터 전송!");
             
             // ✅ 1. 현재 로컬 시간(한국 시간 등)을 ISO 포맷으로 변환
             const now = new Date();
             const offset = now.getTimezoneOffset() * 60000; // 타임존 오프셋 계산 (분 -> 밀리초)
             const localDateTime = new Date(now.getTime() - offset).toISOString().slice(0, -1); // 'Z' 제거
 
-            // ✅ 2. payload 생성
+            // ✅ 2. payload 생성 (백엔드 전송용 메타데이터)
             const payload = {
               timestamp: localDateTime, // "2026-01-19T14:40:25.123" 형식으로 들어감
               faces: currentFrameTrackers.map((tracker, idx) => ({
@@ -267,20 +266,12 @@ export const FaceMeshWebcam = ({
               }))
             };
 
-            fetch("http://i14e208.p.ssafy.io:8080/api/facemesh", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-            }).catch((err) => {
-              console.error("API 전송 실패:", err);
-            });
-
             // 인식 완료(Done) 즉시 다음 단계(사진 확인)로 이동
             if (onCapture && canvasRef.current) {
-              onCapture(canvasRef.current.toDataURL('image/jpeg'));
+              onCapture(canvasRef.current.toDataURL('image/jpeg'), payload);
             }
 
-            // 중복 전송 방지를 위해 상태는 즉시 업데이트
+            // 중복 전송 방지 및 시각화 피드백을 위해 상태 업데이트
             currentFrameTrackers.forEach(t => t.isSent = true);
           }
 
@@ -472,4 +463,4 @@ export const FaceMeshWebcam = ({
       </div>
     </div>
   );
-}
+};
