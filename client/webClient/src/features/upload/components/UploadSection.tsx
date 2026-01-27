@@ -14,7 +14,6 @@ import {
   Users,
   ArrowRight,
   UserCheck,
-  Check,
   Sparkles,
   Calendar,
   Clock,
@@ -41,6 +40,7 @@ import { AnalyzeMode, SajuData, GroupMember } from "@/shared/types";
 import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
 import { ConsentModal } from "./ConsentModal";
 import { FaceMeshWebcam } from "./FaceMeshWebcam";
+import { API_ENDPOINTS } from "@/shared/api/config";
 import profileImage from "@/assets/profile.png";
 import selfieImage from "@/assets/selfie.png";
 
@@ -130,8 +130,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     birthTime: "00:00",
     gender: "male",
     calendarType: "solar",
-    birthTimeUnknown: true,
+    birthTimeUnknown: false,
   });
+  const [faceMeshMetadata, setFaceMeshMetadata] = useState<any>(null);
   const [showSajuInput, setShowSajuInput] = useState(false);
 
   const [groupMembers, setGroupMembers] = useState<
@@ -219,6 +220,23 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         setShowSajuInput(true);
       } else if (showSajuInput) {
         // 사주 정보 입력 완료 후 분석 시작
+        if (faceMeshMetadata) {
+          const finalPayload = {
+            ...faceMeshMetadata,
+            sajuData: sajuData,
+          };
+
+          console.log("🚀 백엔드 전송 데이터 (Personal):", finalPayload);
+
+          fetch(API_ENDPOINTS.FACEMESH_PERSONAL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(finalPayload),
+          }).catch((err) => {
+            console.error("최종 데이터 전송 실패:", err);
+          });
+        }
+
         onAnalyze(
           capturedImages as string[],
           [],
@@ -241,16 +259,19 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     onAnalyze,
     showSajuInput,
     sajuData,
+    faceMeshMetadata,
   ]);
 
   const handleRetake = () => {
     if (mode === "personal") {
       setCapturedImages([null]);
+      setFaceMeshMetadata(null);
       setCurrentStep(0);
       setIsCapturing(true);
       setShowSajuInput(false);
     } else {
       setCapturedImages([null]);
+      setFaceMeshMetadata(null);
       setGroupMembers([]);
       setIsCameraActive(true);
       setIsIndividualPhotoUpload(false);
@@ -311,12 +332,47 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     }
   };
 
+  const handleGroupAnalyze = () => {
+    if (faceMeshMetadata) {
+      // ✅ 백엔드 전송 시 avatar 필드 제외
+      const membersWithoutAvatar = groupMembers.map(({ avatar, ...rest }) => rest);
+      
+      const finalPayload = {
+        ...faceMeshMetadata,
+        groupMembers: membersWithoutAvatar,
+      };
+
+      console.log("🚀 백엔드 전송 데이터 (Group):", finalPayload);
+
+      fetch(API_ENDPOINTS.FACEMESH_GROUP, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(finalPayload),
+      }).catch((err) => {
+        console.error("모임 데이터 전송 실패:", err);
+      });
+    }
+
+    onAnalyze(
+      capturedImages as string[],
+      [],
+      {
+        birthDate: "",
+        birthTime: "00:00",
+        gender: "male",
+        calendarType: "solar",
+        birthTimeUnknown: false,
+      },
+      groupMembers,
+    );
+  };
+
   const isReady =
     mode === "personal"
-      ? capturedImages[0] !== null
+      ? capturedImages[0] !== null && sajuData.birthDate !== ""
       : groupMembers.length >= 2 &&
       groupMembers.every(
-        (m) => m.name.trim() !== "" && m.avatar,
+        (m) => m.name.trim() !== "" && m.avatar && m.birthDate !== "",
       );
 
   // --- Consent Modal ---
@@ -358,7 +414,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               <div className="flex items-center gap-3 mb-6">
                 <Calendar className="w-6 h-6 text-brand-orange" />
                 <h3 className="text-xl font-bold text-gray-800 font-display">
-                  사주 정보 입력 (선택)
+                  사주 정보 입력 (필수)
                 </h3>
               </div>
 
@@ -587,12 +643,14 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             </GlassCard>
           </div>
 
-          {/* Submit Button */}
           <div className="mt-8 flex justify-center">
             <ActionButton
               variant="primary"
               onClick={handleNextStep}
-              className="px-12 py-5 text-lg font-bold flex items-center gap-2"
+              disabled={!sajuData.birthDate}
+              className={`px-12 py-5 text-lg font-bold flex items-center gap-2 transition-all duration-300 ${
+                !sajuData.birthDate ? "opacity-50 grayscale cursor-not-allowed" : "animate-bounce-subtle"
+              }`}
             >
               <Sparkles size={20} />
               거북 도사님께 풀이 받기
@@ -1031,6 +1089,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       birthTime: "",
                       gender: "male",
                       avatar: "",
+                      birthTimeUnknown: false,
                     },
                     {
                       id: Date.now() + 1,
@@ -1039,6 +1098,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       birthTime: "",
                       gender: "female",
                       avatar: "",
+                      birthTimeUnknown: false,
                     },
                   ]);
                   setCapturedImages([
@@ -1193,7 +1253,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           {!hasCapturedImage ? (
             <div className="absolute inset-0">
               <FaceMeshWebcam
-                onCapture={(img) => {
+                onCapture={(img, metadata) => {
                   setCapturedImages((prev) => {
                     const newImages = [...prev];
                     if (mode === "personal") {
@@ -1203,6 +1263,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                     }
                     return newImages;
                   });
+                  if (metadata) {
+                    setFaceMeshMetadata(metadata);
+                  }
                   if (mode === "group") {
                     setIsGroupPhotoConfirming(true);
                   }
@@ -1642,26 +1705,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           </div>
           <ActionButton
             variant="orange-primary"
-            onClick={() =>
-              onAnalyze(
-                capturedImages as string[],
-                [],
-                {
-                  birthDate: "",
-                  birthTime: "00:00",
-                  gender: "male",
-                  calendarType: "solar",
-                  birthTimeUnknown: true,
-                },
-                groupMembers,
-              )
-            }
+            onClick={handleGroupAnalyze}
             disabled={!isReady}
             className={`w-full py-6 mt-6 transition-all duration-300 text-base ${!isReady ? "opacity-50 grayscale cursor-not-allowed" : "animate-bounce-subtle"}`}
           >
             {isReady
               ? "모임 궁합 분석하기"
-              : "모든 멤버의 이름과 얼굴 사진을 등록해주세요"}
+              : "모든 멤버의 정보(이름, 사진, 생년월일)를 입력해주세요"}
           </ActionButton>
         </div>
       </motion.div>
