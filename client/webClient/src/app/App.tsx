@@ -9,18 +9,15 @@ import { AnalyzingSection } from "@/features/upload/components/AnalyzingSection"
 import { AnalysisSection } from "@/features/personal/AnalysisSection";
 import { GroupAnalysisSection } from "@/features/group/GroupAnalysisSection";
 import { RankingSection } from "@/features/ranking/components/RankingSection";
-import { HistorySection } from "@/features/history/components/HistorySection";
 import { PhotoBoothSection } from "@/features/photo/components/PhotoBoothSection";
 import { PhotoGallerySection } from "@/features/photo/components/PhotoGallerySection";
 import { TurtleGuide } from "@/shared/components/TurtleGuide";
 import { AnimatePresence, motion } from "motion/react";
-import { Package } from "lucide-react";
 import { Trophy } from "lucide-react";
 import logoImage from "@/assets/film.png";
 import {
   AnalyzeMode,
   SajuData,
-  HistoryItem,
   GroupMember,
 } from "@/shared/types";
 import { ANALYSIS_LOADING_MS, DEV_SKIP_ANALYZING_FOR_GROUP } from "@/shared/config/analysis";
@@ -38,7 +35,6 @@ export default function App() {
   const [userTeamName, setUserTeamName] = useState("");
   const [groupScore, setGroupScore] = useState(88);
   const [fromAnalysis, setFromAnalysis] = useState(false);
-  const [historyData, setHistoryData] = useState<HistoryItem[]>([]);
   const [analysisDone, setAnalysisDone] = useState(false);
   const pathnameRef = useRef(location.pathname);
 
@@ -54,8 +50,6 @@ export default function App() {
       setMode("group");
     }
   }, [location.pathname]);
-
-  const handleHistory = () => navigate("/history");
 
   const handleStart = (selectedMode: AnalyzeMode) => {
     setMode(selectedMode);
@@ -105,24 +99,6 @@ export default function App() {
 
     // 개발: ANALYSIS_LOADING_MS(10초) 후 “분석 완료”. API 연동 시 실제 응답 시점으로 교체.
     setTimeout(() => {
-      const now = new Date();
-      const date = now.toISOString().split("T")[0];
-      const timestamp = now.toTimeString().split(" ")[0].substring(0, 5);
-      const newHistoryItem: HistoryItem = {
-        id: Date.now().toString(),
-        type: mode,
-        date,
-        timestamp,
-        ...(mode === "personal"
-          ? { images: capturedImages }
-          : {
-              teamName: userTeamName,
-              memberCount: members?.length || 0,
-              score: groupScore,
-              thumbnail: capturedImages[0],
-            }),
-      };
-      setHistoryData((prev) => [newHistoryItem, ...prev]);
       setAnalysisDone(true);
       // 싸피네컷 다 안 찍었는데 분석 끝난 경우: /photo-booth·/photo-gallery에 있으면 /result로 보내지 않음
       if (pathnameRef.current === "/personal/analyzing" || pathnameRef.current === "/group/analyzing") {
@@ -165,8 +141,6 @@ export default function App() {
         return "오호라, 이 모임의 궁합이 아주 예사롭지 않구먼! \n서로의 기운이 어떻게 어우러지는지 내가 정리해 보았네. \n궁금하지 않은가?";
       case "/ranking":
         return "허허, 전국 방방곡곡의 인연들이 다 모였구먼! \n자네들의 모임은 과연 몇 번째 기운을 가졌을꼬?";
-      case "/history":
-        return "자네의 과거 관상 분석 결과라네. \n어떤 결과가 궁금한가?";
       case "/personal/photo-booth":
       case "/group/photo-booth":
         return "허허, 사진 네컷을 찍는구먼! \n기다리는 동안 즐거운 추억을 남기게나.";
@@ -207,19 +181,6 @@ export default function App() {
             <Trophy className="w-4 h-4" />
             모임 랭킹
           </button>
-
-          {/* History Section */}
-          <div className="relative">
-            <button
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-all border border-gray-200"
-              onClick={handleHistory}
-            >
-              <Package className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-bold text-gray-900">
-                나의 기록
-              </span>
-            </button>
-          </div>
         </div>
       </header>
 
@@ -323,26 +284,6 @@ export default function App() {
                   userScore={groupScore}
                   initialTeamName={userTeamName}
                   fromAnalysis={fromAnalysis}
-                />
-              </motion.div>
-            )}
-
-            {pathname === "/history" && (
-              <motion.div
-                key="history"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.4 }}
-                className="w-full h-full"
-              >
-                <HistorySection
-                  historyData={historyData}
-                  onViewResult={(item: HistoryItem) => {
-                    // TODO: Navigate to result page with history data
-                    console.log("View result:", item);
-                  }}
-                  onNewAnalysis={() => navigate("/")}
                 />
               </motion.div>
             )}
