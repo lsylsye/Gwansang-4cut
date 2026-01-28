@@ -1,0 +1,33 @@
+services:
+  jenkins:
+    build:
+      context: .
+      dockerfile: jenkins.Dockerfile
+    container_name: jenkins
+    restart: always
+    ports:
+      - "8989:8080"
+    volumes:
+      # 1. 데이터 저장 (플러그인/계정 유지)
+      - ./jenkins_home:/var/jenkins_home
+
+      # 2. Docker in Docker (빌드용)
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
+
+      # 3. Nginx 설정 변경 (Blue/Green 전환용)
+      - ./nginx/conf.d:/etc/nginx/conf.d
+
+    environment:
+      - TZ=Asia/Seoul       # 로그 시간 한국 시간으로
+
+    # Prod, Test망 모두 접속
+    networks:
+      - prod-net
+      - test-net
+
+networks:
+  prod-net:
+    external: true
+  test-net:
+    external: true
