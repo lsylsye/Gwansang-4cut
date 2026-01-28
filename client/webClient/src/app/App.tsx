@@ -46,19 +46,20 @@ export default function App() {
     pathnameRef.current = location.pathname;
   }, [location.pathname]);
 
-  // /upload 진입 시 URL의 mode 쿼리와 state 동기화
+  // /upload 진입 시 URL의 mode path와 state 동기화
   useEffect(() => {
-    if (location.pathname === "/upload") {
-      const m = searchParams.get("mode");
-      if (m === "personal" || m === "group") setMode(m);
+    if (location.pathname === "/personal/upload") {
+      setMode("personal");
+    } else if (location.pathname === "/group/upload") {
+      setMode("group");
     }
-  }, [location.pathname, searchParams]);
+  }, [location.pathname]);
 
   const handleHistory = () => navigate("/history");
 
   const handleStart = (selectedMode: AnalyzeMode) => {
     setMode(selectedMode);
-    navigate(`/upload?mode=${selectedMode}`);
+    navigate(`/${selectedMode}/upload`);
   };
 
   const handleAnalyze = (
@@ -75,7 +76,7 @@ export default function App() {
       setGroupMembers(members);
       setUserTeamName("기운찬 도사님들의 모임");
     }
-    navigate("/analyzing");
+    navigate(mode === "personal" ? "/personal/analyzing" : "/group/analyzing");
 
     // 개발: ANALYSIS_LOADING_MS(10초) 후 “분석 완료”. API 연동 시 실제 응답 시점으로 교체.
     setTimeout(() => {
@@ -99,8 +100,8 @@ export default function App() {
       setHistoryData((prev) => [newHistoryItem, ...prev]);
       setAnalysisDone(true);
       // 싸피네컷 다 안 찍었는데 분석 끝난 경우: /photo-booth·/photo-gallery에 있으면 /result로 보내지 않음
-      if (pathnameRef.current === "/analyzing") {
-        navigate("/result");
+      if (pathnameRef.current === "/personal/analyzing" || pathnameRef.current === "/group/analyzing") {
+        navigate(mode === "personal" ? "/personal/result" : "/group/result");
       }
     }, ANALYSIS_LOADING_MS);
   };
@@ -126,23 +127,26 @@ export default function App() {
     switch (pathname) {
       case "/":
         return "허허, 어서 오시게! \n천기를 읽는 거북도사가 자네를 기다리고 있었다네. \n어떤 관상이 궁금하여 나를 찾아왔는가?";
-      case "/upload":
-        return mode === "personal"
-          ? "자네의 얼굴에 삼라만상이 담겨 있구먼. \n내 신통한 거울에 얼굴을 비추어 보게나. \n숨겨진 운명을 내가 낱낱이 읽어보리다."
-          : "허허, 무리들의 합을 보러 왔구먼! \n사진을 주거나, 직접 한 자리에 모여 보게. \n자네들 사이의 기운을 내가 한 번 짚어보리다.";
-      case "/analyzing":
+      case "/personal/upload":
+        return "자네의 얼굴에 삼라만상이 담겨 있구먼. \n내 신통한 거울에 얼굴을 비추어 보게나. \n숨겨진 운명을 내가 낱낱이 읽어보리다.";
+      case "/group/upload":
+        return "허허, 무리들의 합을 보러 왔구먼! \n사진을 주거나, 직접 한 자리에 모여 보게. \n자네들 사이의 기운을 내가 한 번 짚어보리다.";
+      case "/personal/analyzing":
+      case "/group/analyzing":
         return "음... 가만있어 보자... \n천기를 스르지 않고 기운을 읽는 중이니, \n잠시만 정적을 지켜주시게나.";
-      case "/result":
-        return mode === "personal"
-          ? "허허! 역시 내 눈은 틀리지 않았어. \n자네의 관상에 이런 놀라운 기운이 숨어있을 줄이야! \n결과를 한 번 찬찬히 살펴보게나."
-          : "오호라, 이 모임의 궁합이 아주 예사롭지 않구먼! \n서로의 기운이 어떻게 어우러지는지 내가 정리해 보았네. \n궁금하지 않은가?";
+      case "/personal/result":
+        return "허허! 역시 내 눈은 틀리지 않았어. \n자네의 관상에 이런 놀라운 기운이 숨어있을 줄이야! \n결과를 한 번 찬찬히 살펴보게나.";
+      case "/group/result":
+        return "오호라, 이 모임의 궁합이 아주 예사롭지 않구먼! \n서로의 기운이 어떻게 어우러지는지 내가 정리해 보았네. \n궁금하지 않은가?";
       case "/ranking":
         return "허허, 전국 방방곡곡의 인연들이 다 모였구먼! \n자네들의 모임은 과연 몇 번째 기운을 가졌을꼬?";
       case "/history":
         return "자네의 과거 관상 분석 결과라네. \n어떤 결과가 궁금한가?";
-      case "/photo-booth":
+      case "/personal/photo-booth":
+      case "/group/photo-booth":
         return "허허, 사진 네컷을 찍는구먼! \n기다리는 동안 즐거운 추억을 남기게나.";
-      case "/photo-gallery":
+      case "/personal/photo-gallery":
+      case "/group/photo-gallery":
         return "찍은 사진들을 모아두었구먼. \n예쁘게 나왔는지 한 번 확인해보게나.";
       default:
         return "";
@@ -210,7 +214,7 @@ export default function App() {
               </motion.div>
             )}
 
-            {pathname === "/upload" && (
+            {(pathname === "/personal/upload" || pathname === "/group/upload") && (
               <motion.div
                 key="upload"
                 initial={{ opacity: 0, y: 20 }}
@@ -226,7 +230,7 @@ export default function App() {
               </motion.div>
             )}
 
-            {pathname === "/analyzing" && (
+            {(pathname === "/personal/analyzing" || pathname === "/group/analyzing") && (
               <motion.div
                 key="analyzing"
                 initial={{ opacity: 0 }}
@@ -236,37 +240,46 @@ export default function App() {
               >
                 <AnalyzingSection
                   onNavigateToPhotoBooth={() =>
-                    navigate("/photo-booth", { state: { from: "analyzing" } })
+                    navigate(mode === "personal" ? "/personal/photo-booth" : "/group/photo-booth", { state: { from: "analyzing" } })
                   }
                 />
               </motion.div>
             )}
 
-            {pathname === "/result" && (
+            {pathname === "/personal/result" && (
               <motion.div
-                key="result"
+                key="personal-result"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4 }}
                 className="w-full h-full"
               >
-                {mode === "personal" ? (
-                  <AnalysisSection
-                    images={images}
-                    onRestart={handleRestart}
-                    onNavigateToPhotoGallery={() =>
-                      navigate("/photo-gallery", { state: { from: "result" } })
-                    }
-                  />
-                ) : (
-                  <GroupAnalysisSection
-                    groupMembers={groupMembers}
-                    groupImage={images[0]}
-                    onRestart={handleRestart}
-                    onViewRanking={handleViewRanking}
-                  />
-                )}
+                <AnalysisSection
+                  images={images}
+                  onRestart={handleRestart}
+                  onNavigateToPhotoGallery={() =>
+                    navigate("/personal/photo-gallery", { state: { from: "result" } })
+                  }
+                />
+              </motion.div>
+            )}
+
+            {pathname === "/group/result" && (
+              <motion.div
+                key="group-result"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4 }}
+                className="w-full h-full"
+              >
+                <GroupAnalysisSection
+                  groupMembers={groupMembers}
+                  groupImage={images[0]}
+                  onRestart={handleRestart}
+                  onViewRanking={handleViewRanking}
+                />
               </motion.div>
             )}
 
@@ -280,7 +293,7 @@ export default function App() {
                 className="w-full h-full"
               >
                 <RankingSection
-                  onBack={() => navigate("/result")}
+                  onBack={() => navigate("/group/result")}
                   onHome={handleRestart}
                   userScore={groupScore}
                   initialTeamName={userTeamName}
@@ -309,7 +322,7 @@ export default function App() {
               </motion.div>
             )}
 
-            {pathname === "/photo-booth" && (
+            {(pathname === "/personal/photo-booth" || pathname === "/group/photo-booth") && (
               <motion.div
                 key="photo-booth"
                 initial={{ opacity: 0, y: 20 }}
@@ -322,8 +335,8 @@ export default function App() {
                   mode={mode}
                   onBack={() => {
                     if (location.state?.from === "photo-gallery")
-                      navigate("/photo-gallery");
-                    else navigate("/analyzing");
+                      navigate(mode === "personal" ? "/personal/photo-gallery" : "/group/photo-gallery");
+                    else navigate(mode === "personal" ? "/personal/analyzing" : "/group/analyzing");
                   }}
                   onComplete={(photos) => {
                     // 싸피네컷 완료 → photoBoothSets에 저장 → /photo-gallery에서 조회
@@ -347,16 +360,16 @@ export default function App() {
                     }
                     // 싸피네컷 다 찍었을 때: 분석 끝남 → /result, 아니면 → /analyzing
                     if (analysisDone) {
-                      navigate("/result");
+                      navigate(mode === "personal" ? "/personal/result" : "/group/result");
                     } else {
-                      navigate("/analyzing");
+                      navigate(mode === "personal" ? "/personal/analyzing" : "/group/analyzing");
                     }
                   }}
                 />
               </motion.div>
             )}
 
-            {pathname === "/photo-gallery" && (
+            {(pathname === "/personal/photo-gallery" || pathname === "/group/photo-gallery") && (
               <motion.div
                 key="photo-gallery"
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -369,11 +382,11 @@ export default function App() {
                   mode={mode}
                   onBack={() => {
                     if (location.state?.from === "result")
-                      navigate("/result");
-                    else navigate("/analyzing");
+                      navigate(mode === "personal" ? "/personal/result" : "/group/result");
+                    else navigate(mode === "personal" ? "/personal/analyzing" : "/group/analyzing");
                   }}
                   onNavigateToPhotoBooth={() =>
-                    navigate("/photo-booth", { state: { from: "photo-gallery" } })
+                    navigate(mode === "personal" ? "/personal/photo-booth" : "/group/photo-booth", { state: { from: "photo-gallery" } })
                   }
                 />
               </motion.div>
@@ -385,7 +398,7 @@ export default function App() {
       {/* Global Floating Turtle Guide */}
       <TurtleGuide
         message={getGuideMessage()}
-        isThinking={pathname === "/analyzing"}
+        isThinking={pathname === "/personal/analyzing" || pathname === "/group/analyzing"}
       />
     </Layout>
   );
