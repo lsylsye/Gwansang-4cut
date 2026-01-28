@@ -1,0 +1,42 @@
+# test 서버
+
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  # 1. 데이터베이스 설정
+  datasource:
+    url: jdbc:mysql://mysql-test:3306/gs4cutdb?createDatabaseIfNotExist=true&characterEncoding=UTF-8&serverTimezone=UTC
+    username: admin
+    password: 12481428
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # 2. JPA 설정
+  jpa:
+    hibernate:
+      ddl-auto: update  # 일단 update
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
+
+  # 3. Redis 설정
+  data:
+    redis:
+      host: redis-test
+      port: 6379
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+app:
+  cors:
+    allowedOrigins: http://localhost:3000,http://localhost:8080,http://localhost:5173,https://i14e208.p.ssafy.io
+
+minio:
+  url: http://minio-test:9000
+  access-key: admin
+  secret-key: 12481428
+  bucket-name: my-bucket
