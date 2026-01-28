@@ -52,6 +52,8 @@ services:
       - redis-test
     networks:
       - test-net
+    env_file:
+      - .env
 
   was-test-green:
     container_name: was-test-green
@@ -64,6 +66,8 @@ services:
       - redis-test
     networks:
       - test-net
+    env_file:
+      - .env
 
 networks:
   test-net:
