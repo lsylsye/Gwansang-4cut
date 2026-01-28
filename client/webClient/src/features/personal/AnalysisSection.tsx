@@ -364,7 +364,7 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
     };
 
     return (
-        <div className="w-full max-w-6xl mx-auto pb-20" id="analysis-result-container">
+        <div className="w-full max-w-7xl mx-auto pb-20" id="analysis-result-container">
             {/* Tab Navigation */}
             <div className="flex justify-center mb-10 no-capture">
                 <div className="bg-white/80 backdrop-blur-md p-2 rounded-3xl flex gap-1.5 shadow-clay-sm border-4 border-white">
