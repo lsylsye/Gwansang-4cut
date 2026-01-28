@@ -12,6 +12,8 @@ interface DatePickerProps {
   placeholder?: string;
   themeColor?: 'green' | 'orange';
   className?: string;
+  /** 오늘 이후 날짜 선택 불가 (미래 날짜 비활성화) */
+  maxDate?: Date;
 }
 
 export const DatePicker: React.FC<DatePickerProps> = ({
@@ -20,6 +22,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   placeholder = 'YYYY.MM.DD',
   themeColor = 'orange',
   className = '',
+  maxDate,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -95,6 +98,11 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       const date = new Date(year, month - 1, day);
       // 유효한 날짜인지 확인
       if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
+        // maxDate: 오늘 이후는 선택 불가
+        if (maxDate) {
+          const maxDay = new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate());
+          if (date > maxDay) return;
+        }
         onChange(toStorageFormat(formatted));
       }
     }
@@ -299,8 +307,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                 prev2Label="«"
                 next2Label="»"
                 minDetail="decade"
-                maxDetail="decade"
+                maxDetail="month"
                 defaultView="decade"
+                maxDate={maxDate}
               />
             </div>
           </motion.div>
