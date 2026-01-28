@@ -16,6 +16,8 @@ services:
     networks:
       - prod-net
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    env_file:
+      - .env
 
   redis-prod:
     container_name: redis-prod
@@ -40,6 +42,8 @@ services:
     networks:
       - prod-net
     command: server /data
+    env_file:
+      - .env
 
   was-prod-blue:
     container_name: was-prod-blue
