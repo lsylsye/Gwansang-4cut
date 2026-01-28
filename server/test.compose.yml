@@ -16,6 +16,8 @@ services:
     networks:
       - test-net
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    env_file:
+      - .env
 
   redis-test:
     container_name: redis-test
@@ -40,6 +42,8 @@ services:
     networks:
       - test-net
     command: server /data
+    env_file:
+      - .env
 
   was-test-blue:
     container_name: was-test-blue
