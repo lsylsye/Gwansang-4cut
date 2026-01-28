@@ -52,6 +52,9 @@ services:
       - redis-prod
     networks:
       - prod-net
+    env_file:
+      - .env
+
 
   was-prod-green:
     container_name: was-prod-green
@@ -64,6 +67,8 @@ services:
       - redis-prod
     networks:
       - prod-net
+    env_file:
+      - .env
 
 networks:
   prod-net:
