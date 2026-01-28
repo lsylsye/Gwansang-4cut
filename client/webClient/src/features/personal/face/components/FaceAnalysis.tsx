@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
-import { Sparkles, ChevronDown, ChevronUp, X } from "lucide-react";
-import { ResultCharts } from "@/features/personal/stats/components/ResultCharts";
+import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
+import { Sparkles, X, Calendar, ScanFace, Briefcase, Heart } from "lucide-react";
 
 // --- Types ---
 interface AnalysisSection {
@@ -19,12 +19,25 @@ interface FaceAnalysisProps {
     totalAnalysis: AnalysisSection[];
 }
 
-// --- Historical Match Mock Data ---
-const HISTORICAL_MATCH = {
-    name: "세종대왕",
-    desc: "학문을 사랑하고 백성을 위해 헌신한 세종대왕과 비슷한 관상입니다. 지도력과 창의성이 뛰어납니다.",
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/King_Sejong_statue_Gwanghwamun.jpg/220px-King_Sejong_statue_Gwanghwamun.jpg",
+// 거북 도사의 총평 2x2 카드: 아이콘·설명·스타일 (이미지 가이드 기준)
+const FORTUNE_CARD_EXTRA: Record<string, { desc: string; Icon: React.ComponentType<{ size?: number }>; iconBoxClass: string }> = {
+    saju: { desc: "타고난 기운과 사주 구조를 알아보세요", Icon: Calendar, iconBoxClass: "bg-amber-50 border-2 border-amber-400 text-amber-800" },
+    integration: { desc: "관상과 사주의 종합 해석", Icon: ScanFace, iconBoxClass: "bg-green-50 border-2 border-green-600 text-green-800" },
+    job: { desc: "직업·이직·승진에 대한 조언", Icon: Briefcase, iconBoxClass: "bg-blue-50 border-2 border-blue-400 text-blue-800" },
+    love: { desc: "연애와 관계에 대한 운세", Icon: Heart, iconBoxClass: "bg-pink-50 border-2 border-pink-400 text-pink-800" },
 };
+
+// 총평 두괄식: 한 줄 핵심 → 결론(LEAD) → 소제목 있는 전개(BODY)
+const TOTAL_REVIEW_HEAD = "올해의 핵심: 속도 조절과 관계를 돌아보는 해";
+const TOTAL_REVIEW_LEAD = `올해는 너무 앞만 보고 달리기보다, 중간중간 속도를 조절하며 사람 관계와 자신의 행동을 한 번 더 돌아보는 태도가 운의 흐름을 부드럽게 합니다. 이성 관계에서는 억지로 감정을 정리하거나 밀착시키기보다, 숨 쉴 수 있는 거리를 두고 차분하게 마음을 정리하는 것이 도움이 됩니다.`;
+
+const TOTAL_REVIEW_BODY: { sub?: string; text: string }[] = [
+    { sub: "올해 흐름", text: `올해는 선생님께서 자연스럽게 관심사가 넓어지고, 이것저것 손을 대게 되는 분주한 흐름 속에 놓이게 됩니다. 에너지가 안에서부터 차오르듯 "이건 해볼 만하다"는 생각이 자주 떠오를 수 있겠네요.` },
+    { text: `특히 연초에는 스스로에게 기대하는 수준이 높아지고, 경쟁심과 의욕이 함께 살아나며 여러 목표를 동시에 세워 열심히 움직이려는 모습이 보입니다. 일이나 재물에 대한 욕심이 커지는 것도 이 시기의 특징입니다.` },
+    { sub: "주의할 점", text: `다만, 앞서 나가려는 힘이 강해질수록 발걸음이 빨라져 주변을 돌아볼 여유가 줄어들 수 있습니다. "내가 지금 어떤 선택을 하고 있는지", "이게 정말 나에게 맞는 방향인지"를 점검하지 못하고 지나칠 가능성도 있습니다.` },
+    { text: `그래서 이 시기에는 의도하지 않은 실수나 작은 판단 착오로 아쉬운 손실을 경험할 수도 있고, 생각보다 복잡한 일에 휘말리는 순간이 생길 수 있겠습니다.` },
+    { sub: "이성 관계", text: `이성 관계는 올해 감정의 파장이 평소보다 커지는 시기라, 연인이 있는 경우 경쟁 구도가 생기거나 거리감이 느껴지기도 하고, 스스로 사람을 밀어내는 태도를 보이게 될 수도 있습니다. 전반적으로 외로움을 느끼기 쉬운 때이니, 감정이 흔들릴수록 충동적인 판단보다 차분하게 마음을 정리하는 시간이 필요해 보입니다.` },
+];
 
 // highlightIndex: 0=얼굴형(공통·얼굴형), 1=이마, 2=눈, 3=코, 4=입, 5=턱
 const HIGHLIGHT_ORDER = 6;
@@ -32,9 +45,8 @@ const HIGHLIGHT_DURATION_MS = 2800;
 
 export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, features, totalAnalysis }) => {
     const [activeFeature, setActiveFeature] = useState<string | null>(null);
-    const [isDetailOpen, setIsDetailOpen] = useState(true);
     const [highlightIndex, setHighlightIndex] = useState(0);
-    const [activeChapterIndex, setActiveChapterIndex] = useState(0);
+    const [fortuneModalId, setFortuneModalId] = useState<string | null>(null);
 
     // 순차 하이라이트: 아무 것도 선택되지 않았을 때만 부위를 바꿔 가며 테두리 빛 표시
     useEffect(() => {
@@ -814,10 +826,66 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
     ];
 
     return (
-        <div className="flex flex-col lg:flex-row gap-10">
-            <div className="w-full lg:w-5/12 space-y-8">
-                <div className="relative">
-                    <GlassCard className="w-full aspect-square flex items-center justify-center p-0 overflow-hidden relative shadow-clay-lg bg-white/40 border-[10px] border-white rounded-[48px] group">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-stretch max-w-6xl mx-auto w-full">
+            {/* 텍스트 영역 lg:w-1/2 — 총평·사주·관상 상시 노출 (상세해석은 부위 클릭 시 모달) */}
+            <div className="w-full lg:w-1/2 min-w-0 flex flex-col gap-6">
+                <GlassCard className="w-full min-w-0 flex flex-col p-6 sm:p-8 border-4 border-white rounded-[32px] shadow-clay-md bg-white/50">
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="w-10 h-10 bg-brand-green/10 border-2 border-brand-green rounded-xl flex items-center justify-center">🐢</div>
+                        <h3 className="font-bold text-xl sm:text-2xl text-gray-800">거북 도사의 총평</h3>
+                    </div>
+
+                    <p className="text-brand-green font-bold text-base mb-3 flex-shrink-0">{TOTAL_REVIEW_HEAD}</p>
+                    <div className="pl-4 border-l-4 border-brand-green py-1 mb-5 flex-shrink-0">
+                        <p className="text-gray-800 font-bold text-base leading-[1.7]">{TOTAL_REVIEW_LEAD}</p>
+                    </div>
+
+                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 space-y-4 max-h-[50vh]">
+                        {TOTAL_REVIEW_BODY.map((item, i) => (
+                            <div key={i}>
+                                {item.sub != null && <h4 className="text-gray-800 font-bold text-base mb-1.5">{item.sub}</h4>}
+                                <p className="text-gray-700 text-base leading-[1.75]">{item.text}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    <section className="mt-5 pt-4 border-t border-gray-100 flex-shrink-0">
+                        <h4 className="text-sm font-bold text-gray-600 mb-1.5">상세</h4>
+                        <p className="text-gray-600 text-sm leading-relaxed">이마, 눈, 코, 입, 턱, 얼굴형 중 궁금한 부위를 눌러 부위별 상세해석을 확인해 보세요.</p>
+                    </section>
+                </GlassCard>
+
+                <GlassCard className="p-8 border-4 border-white rounded-[40px] shadow-clay-md bg-white/40 font-sans">
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="w-10 h-10 bg-brand-green/10 border-2 border-brand-green rounded-xl flex items-center justify-center">🐢</div>
+                        <h3 className="font-bold text-[22px] sm:text-[24px] text-gray-800 font-sans">사주·관상 더 알아보기</h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                        {totalAnalysis.filter((ch) => ch.id === "saju" || ch.id === "integration").map((ch) => {
+                            const extra = FORTUNE_CARD_EXTRA[ch.id ?? ""];
+                            const Icon = extra?.Icon;
+                            return (
+                                <button key={ch.id} type="button" onClick={() => setFortuneModalId(ch.id ?? null)} className="flex items-center gap-3 p-4 rounded-2xl border-2 border-gray-100 bg-white shadow-sm hover:border-brand-green/25 hover:shadow-clay-xs transition-all duration-200 text-left group">
+                                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center flex-shrink-0 ${extra?.iconBoxClass ?? "bg-gray-50 border-2 border-gray-200 text-gray-600"}`}>{Icon ? <Icon size={22} /> : null}</div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-bold text-gray-800 text-base sm:text-lg">{ch.label ?? ch.title}</p>
+                                        <p className="text-gray-500 text-xs sm:text-sm mt-0.5 line-clamp-2">{extra?.desc ?? ""}</p>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
+                        {totalAnalysis.filter((ch) => ch.id === "job" || ch.id === "love").map((ch) => (
+                            <button key={ch.id} type="button" onClick={() => setFortuneModalId(ch.id ?? null)} className="px-3 py-2 rounded-xl text-sm font-medium text-gray-600 bg-gray-50/80 hover:bg-gray-100 hover:text-gray-800 border border-gray-100 transition-colors">{ch.label ?? ch.title}</button>
+                        ))}
+                    </div>
+                </GlassCard>
+            </div>
+
+            {/* 궁금한 부위(얼굴) lg:w-1/2 — 상세해석은 upper depth로 이 영역을 가림 */}
+            <div className="w-full lg:w-1/2 min-w-0 relative">
+                <GlassCard className="w-full aspect-square flex items-center justify-center p-0 overflow-hidden relative shadow-clay-lg bg-white/40 border-[10px] border-white rounded-[48px] group">
                         <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-black/5" />
 
                         {/* 안내 문구 - 카드 내부 상단 */}
@@ -969,176 +1037,78 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                             })}
                         </svg>
 
-                    </GlassCard>
-                </div>
-                <GlassCard className="w-full p-8 shadow-clay-sm border-4 border-white rounded-[32px]">
-                    <h4 className="font-bold text-gray-800 mb-4 font-display text-2xl">운세 그래프</h4>
-                    <ResultCharts data={scores} />
                 </GlassCard>
-            </div>
 
-            <div className="w-full lg:w-7/12 flex flex-col gap-6">
-                {/* 총평 위 인라인 상세해석 박스 — 부위 클릭 시 표시, 총평을 아래로 밀어냄 */}
+                {/* 상세해석 overlay — 궁금한 부위 영역을 upper depth로 가림, 부드럽게 등장/퇴장 */}
                 <AnimatePresence>
                     {activeFeature && (
                         <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="overflow-hidden"
+                            key="detail-overlay"
+                            initial={{ opacity: 0, scale: 0.97 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.97 }}
+                            transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+                            className="absolute inset-0 z-20 flex flex-col"
                         >
-                            <GlassCard className="p-6 border-4 border-white rounded-[32px] shadow-clay-md bg-white/50 mb-2">
-                                <div className="flex justify-between items-center mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-brand-green rounded-xl flex items-center justify-center text-xl shadow-clay-xs">🐢</div>
-                                        <div>
-                                            <h3 className="font-bold text-3xl text-gray-800 font-sans">거북 도사의 상세해석</h3>
-                                            <p className="text-lg text-brand-green font-medium">{FEATURE_LABELS[activeFeature] ?? activeFeature}</p>
+                            <GlassCard className="flex-1 min-h-0 flex flex-col p-4 sm:p-5 border-2 border-white rounded-2xl shadow-clay-lg bg-white/95 overflow-hidden">
+                                <div className="flex justify-between items-start gap-3 mb-3 flex-shrink-0">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <div className="w-8 h-8 bg-brand-green rounded-lg flex items-center justify-center text-base flex-shrink-0">🐢</div>
+                                        <div className="min-w-0">
+                                            <h3 className="font-bold text-lg text-gray-800">거북 도사의 상세해석</h3>
+                                            <p className="text-brand-green font-bold text-sm truncate">{FEATURE_LABELS[activeFeature] ?? activeFeature}</p>
                                         </div>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setActiveFeature(null)}
-                                        className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-                                        aria-label="접기"
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors flex-shrink-0"
+                                        aria-label="닫기"
                                     >
-                                        <X size={20} />
+                                        <X size={18} />
                                     </button>
                                 </div>
-                                <div className="bg-white/80 p-7 rounded-2xl border border-white/80 shadow-inner max-h-[55vh] overflow-y-auto custom-scrollbar space-y-4 font-sans leading-relaxed text-[20px]">
+                                <div className="detail-card-content flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 text-base leading-relaxed [&_>div]:text-base [&_h4]:text-base [&_h4]:font-bold [&_h4]:border-b [&_h4]:border-brand-green/20 [&_h4]:pb-1.5 [&_h4]:mt-4 [&_h4]:first:mt-0 [&_h5]:text-base [&_h5]:font-bold [&_h5]:mt-3 [&_h5]:mb-1.5 [&_p]:leading-[1.7] [&_p]:text-base [&_ul]:space-y-1 [&_ul]:pl-4 [&_li]:text-gray-700">
                                     {activeFeature === "commonAndFaceShape" && renderCommonAndFaceShape(features.common, features.faceShape)}
-                                    {activeFeature === "forehead" && features.forehead && (features.forehead as any).oneLineSummary && (
-                                        <div className="text-[20px]">{renderForeheadBlock(features.forehead)}</div>
-                                    )}
-                                    {activeFeature === "forehead" && features.forehead && !(features.forehead as any).oneLineSummary && (
-                                        <div className="text-[20px]">{renderBlock(features.forehead)}</div>
-                                    )}
-                                    {activeFeature === "eyes" && features.eyes && (features.eyes as any).oneLineSummary && (
-                                        <div className="text-[20px]">{renderEyesBlock(features.eyes)}</div>
-                                    )}
-                                    {activeFeature === "eyes" && features.eyes && !(features.eyes as any).oneLineSummary && (
-                                        <div className="text-[20px]">{renderBlock(features.eyes)}</div>
-                                    )}
-                                    {activeFeature === "nose" && features.nose && (features.nose as any).oneLineSummary && (
-                                        <div className="text-[20px]">{renderNoseBlock(features.nose)}</div>
-                                    )}
-                                    {activeFeature === "nose" && features.nose && !(features.nose as any).oneLineSummary && (
-                                        <div className="text-[20px]">{renderBlock(features.nose)}</div>
-                                    )}
-                                    {activeFeature === "mouth" && features.mouth && (features.mouth as any).oneLineSummary && (
-                                        <div className="text-[20px]">{renderMouthBlock(features.mouth)}</div>
-                                    )}
-                                    {activeFeature === "mouth" && features.mouth && !(features.mouth as any).oneLineSummary && (
-                                        <div className="text-[20px]">{renderBlock(features.mouth)}</div>
-                                    )}
-                                    {activeFeature === "chin" && features.chin && (features.chin as any).oneLineSummary && (
-                                        <div className="text-[20px]">{renderChinBlock(features.chin)}</div>
-                                    )}
-                                    {activeFeature === "chin" && features.chin && !(features.chin as any).oneLineSummary && (
-                                        <div className="text-[20px]">{renderBlock(features.chin)}</div>
-                                    )}
+                                    {activeFeature === "forehead" && features.forehead && (features.forehead as any).oneLineSummary && renderForeheadBlock(features.forehead)}
+                                    {activeFeature === "forehead" && features.forehead && !(features.forehead as any).oneLineSummary && renderBlock(features.forehead)}
+                                    {activeFeature === "eyes" && features.eyes && (features.eyes as any).oneLineSummary && renderEyesBlock(features.eyes)}
+                                    {activeFeature === "eyes" && features.eyes && !(features.eyes as any).oneLineSummary && renderBlock(features.eyes)}
+                                    {activeFeature === "nose" && features.nose && (features.nose as any).oneLineSummary && renderNoseBlock(features.nose)}
+                                    {activeFeature === "nose" && features.nose && !(features.nose as any).oneLineSummary && renderBlock(features.nose)}
+                                    {activeFeature === "mouth" && features.mouth && (features.mouth as any).oneLineSummary && renderMouthBlock(features.mouth)}
+                                    {activeFeature === "mouth" && features.mouth && !(features.mouth as any).oneLineSummary && renderBlock(features.mouth)}
+                                    {activeFeature === "chin" && features.chin && (features.chin as any).oneLineSummary && renderChinBlock(features.chin)}
+                                    {activeFeature === "chin" && features.chin && !(features.chin as any).oneLineSummary && renderBlock(features.chin)}
                                 </div>
                             </GlassCard>
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                <GlassCard className="flex-1 p-10 border-4 border-white rounded-[40px] shadow-clay-md bg-white/40 font-sans">
-                    <div className="flex justify-between items-center mb-4 cursor-pointer select-none" onClick={() => setIsDetailOpen(!isDetailOpen)}>
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-brand-green rounded-2xl flex items-center justify-center text-2xl shadow-clay-xs">🐢</div>
-                            <h3 className="font-bold text-[28px] text-gray-800 font-sans">거북 도사의 총평</h3>
-                        </div>
-                        {isDetailOpen ? <ChevronUp size={28} className="text-gray-400" /> : <ChevronDown size={28} className="text-gray-400" />}
-                    </div>
-                    {/* 챕터 버튼 4개: 접기/펼치기와 관계없이 항상 노출 */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                        {totalAnalysis.map((ch, idx) => (
-                            <button
-                                key={ch.id ?? idx}
-                                type="button"
-                                onClick={() => setActiveChapterIndex(idx)}
-                                className={`px-4 py-2.5 rounded-xl text-[15px] font-semibold font-sans transition-all duration-200 ${
-                                    activeChapterIndex === idx
-                                        ? "bg-brand-green text-white shadow-clay-xs"
-                                        : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
-                                }`}
-                            >
-                                {ch.label ?? ch.title}
-                            </button>
-                        ))}
-                    </div>
-                    <AnimatePresence>
-                        {isDetailOpen && (
-                            <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden"
-                            >
-                                <div className="bg-white/80 p-8 rounded-[32px] border-2 border-white shadow-inner font-sans">
-                                    {/* 선택된 챕터만 표시 */}
-                                    {totalAnalysis.length > 0 && (() => {
-                                        const curr = totalAnalysis[activeChapterIndex] ?? totalAnalysis[0];
-                                        return (
-                                            <div key={activeChapterIndex} className="max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
-                                                <div className="flex items-center gap-3 mb-4 ml-1">
-                                                    <div className="w-1.5 h-5 bg-brand-green rounded-full shadow-[0_0_8px_rgba(0,137,123,0.3)]" />
-                                                    <h4 className="text-2xl font-bold text-gray-800 font-sans tracking-tight">
-                                                        {curr.title}
-                                                    </h4>
-                                                </div>
-                                                <p className="text-gray-700 leading-relaxed whitespace-pre-line font-sans text-[21px] pl-4 border-l-2 border-brand-green/10">
-                                                    {curr.content}
-                                                </p>
-                                            </div>
-                                        );
-                                    })()}
-                                </div>
-                                <div className="mt-8 grid grid-cols-2 gap-4 font-sans">
-                                    <div className="bg-brand-green-muted p-4 rounded-2xl shadow-clay-xs border border-white">
-                                        <p className="text-base text-brand-green font-bold mb-1">행운의 색상</p>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 rounded-full bg-brand-green shadow-inner" />
-                                            <span className="text-lg font-bold text-gray-700">에메랄드 그린</span>
-                                        </div>
-                                    </div>
-                                    <div className="bg-brand-orange-muted p-4 rounded-2xl shadow-clay-xs border border-white">
-                                        <p className="text-base text-brand-orange-dark font-bold mb-1">행운의 숫자</p>
-                                        <span className="text-xl font-bold text-gray-700">4, 8</span>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </GlassCard>
-
-                {/* 역사적 인물 매칭 */}
-                <GlassCard className="p-8 border-4 border-white rounded-[40px] shadow-clay-md bg-gradient-to-br from-amber-50/80 to-white/40">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-2xl shadow-clay-xs">👑</div>
-                        <h3 className="font-bold text-[26px] text-gray-800 font-display">닮은 역사적 인물</h3>
-                    </div>
-                    <div className="flex gap-6 items-center">
-                        <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white shadow-clay-sm flex-shrink-0">
-                            <img 
-                                src={HISTORICAL_MATCH.image} 
-                                alt={HISTORICAL_MATCH.name}
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-                        <div>
-                            <p className="font-bold text-2xl text-amber-800 mb-2 font-display">
-                                {HISTORICAL_MATCH.name}
-                            </p>
-                            <p className="text-gray-600 text-lg leading-relaxed">
-                                {HISTORICAL_MATCH.desc}
-                            </p>
-                        </div>
-                    </div>
-                </GlassCard>
             </div>
+
+            {/* 운세 상세 모달 (사주, 관상+사주, 취업운, 연애운) — 텍스트가 많아 화면을 많이 쓰는 큰 모달 */}
+            {(() => {
+                const chosen = totalAnalysis.find((c) => (c.id ?? "") === fortuneModalId);
+                return (
+                    <Modal
+                        isOpen={!!fortuneModalId}
+                        onClose={() => setFortuneModalId(null)}
+                        size="xl"
+                    >
+                        {chosen && (
+                            <>
+                                <ModalHeader>{chosen.label ?? chosen.title}</ModalHeader>
+                                <ModalBody>
+                                    <p className="text-gray-700 leading-relaxed whitespace-pre-line font-sans text-[17px] sm:text-[19px]">
+                                        {chosen.content}
+                                    </p>
+                                </ModalBody>
+                            </>
+                        )}
+                    </Modal>
+                );
+            })()}
         </div>
     );
 };
