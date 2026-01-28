@@ -23,7 +23,7 @@ import {
   HistoryItem,
   GroupMember,
 } from "@/shared/types";
-import { ANALYSIS_LOADING_MS } from "@/shared/config/analysis";
+import { ANALYSIS_LOADING_MS, DEV_SKIP_ANALYZING_FOR_GROUP } from "@/shared/config/analysis";
 
 export default function App() {
   const navigate = useNavigate();
@@ -76,6 +76,31 @@ export default function App() {
       setGroupMembers(members);
       setUserTeamName("기운찬 도사님들의 모임");
     }
+
+    // ----- [개발용] 단체 모드: /analyzing 생략, 바로 /result. DEV_SKIP_ANALYZING_FOR_GROUP=false 시 아래 원래 흐름 사용 -----
+    if (mode === "group" && DEV_SKIP_ANALYZING_FOR_GROUP) {
+      const now = new Date();
+      const date = now.toISOString().split("T")[0];
+      const timestamp = now.toTimeString().split(" ")[0].substring(0, 5);
+      setHistoryData((prev) => [
+        {
+          id: Date.now().toString(),
+          type: "group",
+          date,
+          timestamp,
+          teamName: userTeamName,
+          memberCount: members?.length || 0,
+          score: groupScore,
+          thumbnail: capturedImages[0],
+        },
+        ...prev,
+      ]);
+      setAnalysisDone(true);
+      navigate("/group/result");
+      return;
+    }
+
+    // ----- [원래] 그룹 포함 모든 모드: /analyzing 이동 → ANALYSIS_LOADING_MS 후 /result (그룹은 위 분기에서 return 시 아래 생략) -----
     navigate(mode === "personal" ? "/personal/analyzing" : "/group/analyzing");
 
     // 개발: ANALYSIS_LOADING_MS(10초) 후 “분석 완료”. API 연동 시 실제 응답 시점으로 교체.
