@@ -109,13 +109,13 @@ export const TurtleGuide: React.FC<TurtleGuideProps> = ({ message, isThinking })
                 </motion.div>
               )}
             </AnimatePresence>
-            <motion.button
-              key="turtle-closed"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
+          <motion.button
+            key="turtle-closed"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
               onClick={() => {
                 setIsOpen(true);
                 setIsHovered(false);
@@ -123,14 +123,14 @@ export const TurtleGuide: React.FC<TurtleGuideProps> = ({ message, isThinking })
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
               className="w-16 h-16 md:w-20 md:h-20 bg-white hover:bg-gray-50 text-brand-green rounded-full flex items-center justify-center shadow-2xl transition-all pointer-events-auto overflow-hidden border-4 border-brand-green/20"
-              title="도사님 보기"
-            >
+            title="도사님 보기"
+          >
               <img
                 src={turtleShellImage}
                 alt="도사님 보기"
                 className="w-full h-full object-contain p-2"
               />
-            </motion.button>
+          </motion.button>
           </div>
         )}
       </AnimatePresence>

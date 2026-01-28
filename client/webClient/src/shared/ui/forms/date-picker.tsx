@@ -122,7 +122,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   const brandColorHex = themeColor === 'green' ? '#00897B' : '#FF7043';
 
   return (
-    <div ref={containerRef} className={`relative ${className}`} style={{ zIndex: isOpen ? 1000 : 'auto' }}>
+    <div ref={containerRef} className={`relative ${className}`}>
       {/* Input Field */}
       <div
         className={`
@@ -158,31 +158,31 @@ export const DatePicker: React.FC<DatePickerProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-full left-0 mb-2 z-[1000]"
+            className="absolute top-full left-0 right-0 mt-2 z-50"
           >
-            <div className="bg-white rounded-xl shadow-2xl border-2 border-gray-200 overflow-hidden max-w-[320px]">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
               <style>{`
                 .custom-calendar {
                   width: 100%;
                   border: none;
                   font-family: 'Pretendard', sans-serif;
                   background: white;
-                  padding: 12px;
+                  padding: 16px;
                 }
                 
                 .custom-calendar .react-calendar__navigation {
                   display: flex;
-                  margin-bottom: 8px;
+                  margin-bottom: 12px;
                 }
                 
                 .custom-calendar .react-calendar__navigation button {
                   background: none;
                   border: none;
-                  font-size: 14px;
+                  font-size: 16px;
                   font-weight: 700;
                   color: #374151;
-                  padding: 6px 10px;
-                  border-radius: 6px;
+                  padding: 8px 12px;
+                  border-radius: 8px;
                   cursor: pointer;
                   transition: all 0.15s;
                 }
@@ -197,10 +197,10 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                 
                 .custom-calendar .react-calendar__month-view__weekdays {
                   text-align: center;
-                  font-size: 11px;
+                  font-size: 12px;
                   font-weight: 600;
                   color: #9ca3af;
-                  margin-bottom: 6px;
+                  margin-bottom: 8px;
                 }
                 
                 .custom-calendar .react-calendar__month-view__weekdays abbr {
@@ -210,11 +210,11 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                 .custom-calendar .react-calendar__tile {
                   background: none;
                   border: none;
-                  padding: 8px;
-                  font-size: 13px;
+                  padding: 10px;
+                  font-size: 14px;
                   font-weight: 500;
                   color: #374151;
-                  border-radius: 6px;
+                  border-radius: 8px;
                   cursor: pointer;
                   transition: all 0.15s;
                 }
@@ -250,42 +250,16 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                 .custom-calendar .react-calendar__decade-view__years__year,
                 .custom-calendar .react-calendar__year-view__months__month,
                 .custom-calendar .react-calendar__century-view__decades__decade {
-                  padding: 8px 4px;
-                  font-size: 13px;
-                  font-weight: 600;
-                  border-radius: 6px;
-                  line-height: 1.1;
-                  white-space: nowrap;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                }
-                
-                .custom-calendar .react-calendar__decade-view__years__year abbr,
-                .custom-calendar .react-calendar__year-view__months__month abbr,
-                .custom-calendar .react-calendar__century-view__decades__decade abbr {
-                  text-decoration: none;
-                  display: inline-block;
-                  line-height: 1;
+                  padding: 16px 8px;
+                  font-size: 14px;
+                  font-weight: 500;
+                  border-radius: 12px;
                 }
                 
                 .custom-calendar .react-calendar__decade-view__years__year:hover,
                 .custom-calendar .react-calendar__year-view__months__month:hover,
                 .custom-calendar .react-calendar__century-view__decades__decade:hover {
                   background: #f3f4f6;
-                }
-                
-                .custom-calendar .react-calendar__decade-view__years__year--active {
-                  background: ${brandColorHex} !important;
-                  color: white !important;
-                  font-weight: 700;
-                }
-                
-                .custom-calendar .react-calendar__decade-view__years__year--active:hover {
-                  background: ${brandColorHex} !important;
-                  opacity: 0.9;
                 }
               `}</style>
               <Calendar
@@ -294,12 +268,10 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                 onChange={handleDateChange}
                 locale="ko-KR"
                 formatDay={(locale, date) => date.getDate().toString()}
-                formatYear={(locale, date) => date.getFullYear().toString()}
                 calendarType="gregory"
                 prev2Label="«"
                 next2Label="»"
                 minDetail="decade"
-                maxDetail="decade"
                 defaultView="decade"
               />
             </div>

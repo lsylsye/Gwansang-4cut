@@ -14,6 +14,7 @@ import {
   Users,
   ArrowRight,
   UserCheck,
+  Check,
   Sparkles,
   Calendar,
   Clock,
@@ -40,7 +41,6 @@ import { AnalyzeMode, SajuData, GroupMember } from "@/shared/types";
 import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
 import { ConsentModal } from "./ConsentModal";
 import { FaceMeshWebcam } from "./FaceMeshWebcam";
-import { API_ENDPOINTS } from "@/shared/api/config";
 import profileImage from "@/assets/profile.png";
 import selfieImage from "@/assets/selfie.png";
 
@@ -130,9 +130,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     birthTime: "00:00",
     gender: "male",
     calendarType: "solar",
-    birthTimeUnknown: false,
+    birthTimeUnknown: true,
   });
-  const [faceMeshMetadata, setFaceMeshMetadata] = useState<any>(null);
   const [showSajuInput, setShowSajuInput] = useState(false);
 
   const [groupMembers, setGroupMembers] = useState<
@@ -220,23 +219,6 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         setShowSajuInput(true);
       } else if (showSajuInput) {
         // 사주 정보 입력 완료 후 분석 시작
-        if (faceMeshMetadata) {
-          const finalPayload = {
-            ...faceMeshMetadata,
-            sajuData: sajuData,
-          };
-
-          console.log("🚀 백엔드 전송 데이터 (Personal):", finalPayload);
-
-          fetch(API_ENDPOINTS.FACEMESH_PERSONAL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(finalPayload),
-          }).catch((err) => {
-            console.error("최종 데이터 전송 실패:", err);
-          });
-        }
-
         onAnalyze(
           capturedImages as string[],
           [],
@@ -259,19 +241,16 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     onAnalyze,
     showSajuInput,
     sajuData,
-    faceMeshMetadata,
   ]);
 
   const handleRetake = () => {
     if (mode === "personal") {
       setCapturedImages([null]);
-      setFaceMeshMetadata(null);
       setCurrentStep(0);
       setIsCapturing(true);
       setShowSajuInput(false);
     } else {
       setCapturedImages([null]);
-      setFaceMeshMetadata(null);
       setGroupMembers([]);
       setIsCameraActive(true);
       setIsIndividualPhotoUpload(false);
@@ -332,47 +311,12 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     }
   };
 
-  const handleGroupAnalyze = () => {
-    if (faceMeshMetadata) {
-      // ✅ 백엔드 전송 시 avatar 필드 제외
-      const membersWithoutAvatar = groupMembers.map(({ avatar, ...rest }) => rest);
-      
-      const finalPayload = {
-        ...faceMeshMetadata,
-        groupMembers: membersWithoutAvatar,
-      };
-
-      console.log("🚀 백엔드 전송 데이터 (Group):", finalPayload);
-
-      fetch(API_ENDPOINTS.FACEMESH_GROUP, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(finalPayload),
-      }).catch((err) => {
-        console.error("모임 데이터 전송 실패:", err);
-      });
-    }
-
-    onAnalyze(
-      capturedImages as string[],
-      [],
-      {
-        birthDate: "",
-        birthTime: "00:00",
-        gender: "male",
-        calendarType: "solar",
-        birthTimeUnknown: false,
-      },
-      groupMembers,
-    );
-  };
-
   const isReady =
     mode === "personal"
-      ? capturedImages[0] !== null && sajuData.birthDate !== ""
+      ? capturedImages[0] !== null
       : groupMembers.length >= 2 &&
       groupMembers.every(
-        (m) => m.name.trim() !== "" && m.avatar && m.birthDate !== "",
+        (m) => m.name.trim() !== "" && m.avatar,
       );
 
   // --- Consent Modal ---
@@ -414,7 +358,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               <div className="flex items-center gap-3 mb-6">
                 <Calendar className="w-6 h-6 text-brand-orange" />
                 <h3 className="text-xl font-bold text-gray-800 font-display">
-                  사주 정보 입력 (필수)
+                  사주 정보 입력 (선택)
                 </h3>
               </div>
 
@@ -518,16 +462,16 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                     </label>
                   </div>
                   {!sajuData.birthTimeUnknown ? (
-                    <div className="grid grid-cols-3 gap-2 w-full">
-                      <div className="relative min-w-0">
-                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange pointer-events-none z-10" />
+                    <div className="flex gap-2">
+                      <div className="relative w-28">
+                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-orange pointer-events-none z-10" />
                         <Select
                           value={
                             sajuData.birthTime
                               ? parseInt(sajuData.birthTime.split(":")[0]) >= 12
                                 ? "PM"
                                 : "AM"
-                              : "AM"
+                              : ""
                           }
                           onValueChange={(value) => {
                             const currentTime = sajuData.birthTime || "00:00";
@@ -546,12 +490,12 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                             });
                           }}
                         >
-                          <SelectTrigger className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all pl-9 pr-3 text-sm w-full min-w-0">
-                            <SelectValue placeholder="AM/PM" />
+                          <SelectTrigger className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-12 rounded-xl transition-all pl-11">
+                            <SelectValue placeholder="오전/오후" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="AM">AM</SelectItem>
-                            <SelectItem value="PM">PM</SelectItem>
+                            <SelectItem value="AM">오전</SelectItem>
+                            <SelectItem value="PM">오후</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -584,7 +528,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                           });
                         }}
                       >
-                        <SelectTrigger className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm px-3">
+                        <SelectTrigger className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-12 rounded-xl transition-all w-24">
                           <SelectValue placeholder="시" />
                         </SelectTrigger>
                         <SelectContent>
@@ -613,7 +557,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                           });
                         }}
                       >
-                        <SelectTrigger className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm px-3">
+                        <SelectTrigger className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-12 rounded-xl transition-all w-24">
                           <SelectValue placeholder="분" />
                         </SelectTrigger>
                         <SelectContent>
@@ -631,9 +575,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       </Select>
                     </div>
                   ) : (
-                    <div className="relative w-full min-w-0">
-                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
-                      <div className="bg-gray-100/50 border-2 border-gray-100 h-10 rounded-lg flex items-center pl-9 text-gray-400 text-sm">
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none z-10" />
+                      <div className="bg-gray-100/50 border-2 border-gray-100 h-12 rounded-xl flex items-center pl-11 text-gray-400 text-sm">
                         시간 정보 없음
                       </div>
                     </div>
@@ -643,14 +587,12 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             </GlassCard>
           </div>
 
+          {/* Submit Button */}
           <div className="mt-8 flex justify-center">
             <ActionButton
               variant="primary"
               onClick={handleNextStep}
-              disabled={!sajuData.birthDate}
-              className={`px-12 py-5 text-lg font-bold flex items-center gap-2 transition-all duration-300 ${
-                !sajuData.birthDate ? "opacity-50 grayscale cursor-not-allowed" : "animate-bounce-subtle"
-              }`}
+              className="px-12 py-5 text-lg font-bold flex items-center gap-2"
             >
               <Sparkles size={20} />
               거북 도사님께 풀이 받기
@@ -1047,87 +989,85 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
         {/* Group Upload Mode Selection Modal */}
         {mode === "group" && (
-          <Modal
-            isOpen={isUploadTypeModalOpen}
-            onClose={() => setIsUploadTypeModalOpen(false)}
-            size="md"
-          >
-            <ModalHeader description="업로드할 사진의 종류를 선택해주세요.">
-              사진 선택 방식
-            </ModalHeader>
+        <Modal
+          isOpen={isUploadTypeModalOpen}
+          onClose={() => setIsUploadTypeModalOpen(false)}
+          size="md"
+        >
+          <ModalHeader description="업로드할 사진의 종류를 선택해주세요.">
+            사진 선택 방식
+          </ModalHeader>
 
-            <ModalBody>
-              <div className="grid grid-cols-1 gap-4">
-                <button
-                  onClick={() =>
-                    groupFileInputRef.current?.click()
-                  }
-                  className="group relative w-full text-left"
-                >
-                  <div className="p-6 bg-orange-50 rounded-2xl border-2 border-orange-100 hover:border-brand-orange transition-all flex items-center gap-6 hover:shadow-md">
-                    <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center text-brand-orange shadow-sm">
-                      <Users size={28} />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-bold text-gray-800 font-display mb-1">
-                        단체 사진 등록
-                      </h4>
-                      <p className="text-sm text-gray-500 font-sans">
-                        한 장의 사진에서 인물들을 자동 추출합니다.
-                      </p>
-                    </div>
+          <ModalBody>
+            <div className="grid grid-cols-1 gap-4">
+              <button
+                onClick={() =>
+                  groupFileInputRef.current?.click()
+                }
+                className="group relative w-full text-left"
+              >
+                <div className="p-6 bg-orange-50 rounded-2xl border-2 border-orange-100 hover:border-brand-orange transition-all flex items-center gap-6 hover:shadow-md">
+                  <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center text-brand-orange shadow-sm">
+                    <Users size={28} />
                   </div>
-                </button>
+                  <div>
+                    <h4 className="text-lg font-bold text-gray-800 font-display mb-1">
+                      단체 사진 등록
+                    </h4>
+                    <p className="text-sm text-gray-500 font-sans">
+                      한 장의 사진에서 인물들을 자동 추출합니다.
+                    </p>
+                  </div>
+                </div>
+              </button>
 
-                <button
-                  onClick={() => {
-                    setGroupMembers([
-                      {
-                        id: Date.now(),
-                        name: "",
-                        birthDate: "",
-                        birthTime: "",
-                        gender: "male",
-                        avatar: "",
-                        birthTimeUnknown: false,
-                      },
-                      {
-                        id: Date.now() + 1,
-                        name: "",
-                        birthDate: "",
-                        birthTime: "",
-                        gender: "female",
-                        avatar: "",
-                        birthTimeUnknown: false,
-                      },
-                    ]);
-                    setCapturedImages([
-                      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY4TcAAAAASUVORK5CYII=",
-                      null,
-                      null,
-                    ]);
-                    setIsUploadTypeModalOpen(false);
-                    setIsIndividualPhotoUpload(true);
-                  }}
-                  className="group relative w-full text-left"
-                >
-                  <div className="p-6 bg-teal-50 rounded-2xl border-2 border-teal-100 hover:border-teal-500 transition-all flex items-center gap-6 hover:shadow-md">
-                    <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center text-teal-600 shadow-sm">
-                      <UserCheck size={28} />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-bold text-gray-800 font-display mb-1">
-                        멤버별 개인 사진 등록
-                      </h4>
-                      <p className="text-sm text-gray-500 font-sans">
-                        각 멤버의 사진을 개별적으로 등록합니다.
-                      </p>
-                    </div>
+              <button
+                onClick={() => {
+                  setGroupMembers([
+                    {
+                      id: Date.now(),
+                      name: "",
+                      birthDate: "",
+                      birthTime: "",
+                      gender: "male",
+                      avatar: "",
+                    },
+                    {
+                      id: Date.now() + 1,
+                      name: "",
+                      birthDate: "",
+                      birthTime: "",
+                      gender: "female",
+                      avatar: "",
+                    },
+                  ]);
+                  setCapturedImages([
+                    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY4TcAAAAASUVORK5CYII=",
+                    null,
+                    null,
+                  ]);
+                  setIsUploadTypeModalOpen(false);
+                  setIsIndividualPhotoUpload(true);
+                }}
+                className="group relative w-full text-left"
+              >
+                <div className="p-6 bg-teal-50 rounded-2xl border-2 border-teal-100 hover:border-teal-500 transition-all flex items-center gap-6 hover:shadow-md">
+                  <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center text-teal-600 shadow-sm">
+                    <UserCheck size={28} />
                   </div>
-                </button>
-              </div>
-            </ModalBody>
-          </Modal>
+                  <div>
+                    <h4 className="text-lg font-bold text-gray-800 font-display mb-1">
+                      멤버별 개인 사진 등록
+                    </h4>
+                    <p className="text-sm text-gray-500 font-sans">
+                      각 멤버의 사진을 개별적으로 등록합니다.
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </ModalBody>
+        </Modal>
         )}
 
         <input
@@ -1253,7 +1193,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           {!hasCapturedImage ? (
             <div className="absolute inset-0">
               <FaceMeshWebcam
-                onCapture={(img, metadata) => {
+                onCapture={(img) => {
                   setCapturedImages((prev) => {
                     const newImages = [...prev];
                     if (mode === "personal") {
@@ -1263,9 +1203,6 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                     }
                     return newImages;
                   });
-                  if (metadata) {
-                    setFaceMeshMetadata(metadata);
-                  }
                   if (mode === "group") {
                     setIsGroupPhotoConfirming(true);
                   }
@@ -1381,7 +1318,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         className="w-full"
       >
         <div className="w-full">
-          <div className="w-full p-10 bg-white/90 backdrop-blur-sm rounded-[32px] shadow-clay-md border-4 border-white relative">
+          <div className="w-full p-10 bg-white/90 backdrop-blur-sm rounded-[32px] shadow-clay-md border-4 border-white overflow-hidden relative">
             {/* Decorative background element */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-brand-orange-muted rounded-full -mr-16 -mt-16 opacity-50 blur-2xl"></div>
 
@@ -1414,7 +1351,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               </div>
             </div>
 
-            <div className="space-y-6 relative z-10">
+            <div className="space-y-6 max-h-[600px] overflow-y-auto pr-3 scrollbar-hide mb-8 custom-scrollbar">
               <AnimatePresence>
                 {groupMembers.map((member, index) => {
                   // AI가 감지한 이미지인지 확인 (MOCK_AVATARS에 포함되어 있으면 AI 감지)
@@ -1427,14 +1364,14 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       key={member.id}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="flex flex-col sm:flex-row gap-8 items-start bg-white/60 backdrop-blur-sm p-8 rounded-3xl border-2 border-gray-100 shadow-lg hover:shadow-xl hover:border-brand-orange/40 transition-all duration-300 relative group"
+                      className="flex flex-col sm:flex-row gap-6 bg-white/50 p-6 rounded-[24px] border-2 border-gray-100 shadow-clay-xs relative overflow-hidden group hover:border-brand-orange/30 transition-all"
                     >
                       {/* Member Avatar Upload */}
-                      <div className="shrink-0 flex flex-col items-center sm:items-start">
+                      <div className="shrink-0 flex flex-col items-center gap-3">
                         <div
-                          className={`w-40 h-40 sm:w-44 sm:h-44 rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-gray-50 transition-all duration-300 relative group/avatar flex items-center justify-center ${isAIDetected
+                          className={`w-24 h-24 rounded-[20px] overflow-hidden shadow-clay-sm border-4 border-white bg-gray-50 transition-all relative group/avatar flex items-center justify-center overflow-hidden ${isAIDetected
                             ? "cursor-default"
-                            : "cursor-pointer hover:scale-105 hover:shadow-2xl"
+                            : "cursor-pointer group-hover:bg-gray-100"
                             }`}
                           onClick={() =>
                             !isAIDetected &&
@@ -1453,20 +1390,20 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                                 className="w-full h-full object-cover"
                               />
                               {!isAIDetected && (
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center text-white backdrop-blur-sm">
-                                  <Camera size={28} className="mb-2" />
-                                  <span className="text-sm font-bold">
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex flex-col items-center justify-center text-white backdrop-blur-[2px]">
+                                  <Camera size={20} />
+                                  <span className="text-[10px] font-bold mt-1">
                                     사진 변경
                                   </span>
                                 </div>
                               )}
                             </>
                           ) : (
-                            <div className="flex flex-col items-center justify-center text-gray-400 gap-3">
-                              <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center shadow-inner">
-                                <Camera size={32} />
+                            <div className="flex flex-col items-center justify-center text-gray-300 gap-2">
+                              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                <Camera size={24} />
                               </div>
-                              <span className="text-xs font-bold text-center leading-tight">
+                              <span className="text-[10px] font-bold text-center leading-tight">
                                 얼굴 사진
                                 <br />
                                 비추기
@@ -1488,141 +1425,106 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                             />
                           )}
                         </div>
+                        <div className="bg-brand-orange-muted px-3 py-1 rounded-full text-[11px] font-bold text-brand-orange-dark shadow-sm">
+                          제 {index + 1} 인물
+                        </div>
                       </div>
 
-                      <div className="flex-1 flex flex-col gap-5 min-w-0 w-full">
-                        <div className="w-full">
-                          <Input
-                            placeholder="성함을 입력하세요."
-                            className="h-12 w-full text-base bg-white/90 border-2 border-gray-200 focus:bg-white focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 transition-all rounded-2xl font-semibold px-5 placeholder:text-gray-400 shadow-sm"
-                            value={member.name && !member.name.startsWith('멤버 ') ? member.name : ''}
-                            onChange={(e) =>
-                              updateGroupMember(
-                                member.id,
-                                "name",
-                                e.target.value,
-                              )
-                            }
-                          />
+                      <div className="flex-1 space-y-4">
+                        <div className="flex gap-3 items-center">
+                          <div className="flex-1 relative">
+                            <Input
+                              placeholder="인물의 성함"
+                              className="h-12 text-base bg-white/80 border-2 border-gray-100 focus:bg-white focus:border-brand-orange transition-all rounded-2xl font-bold px-4"
+                              value={member.name}
+                              onChange={(e) =>
+                                updateGroupMember(
+                                  member.id,
+                                  "name",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start w-full min-w-0">
-                          <div className="flex flex-col gap-2 w-full min-w-0">
-                            <div className="min-h-[1.75rem] flex items-center">
-                              <Label className="text-sm font-bold text-gray-700 ml-1.5">
-                                생년월일
-                              </Label>
-                            </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-bold text-gray-600 ml-1">
+                              생년월일
+                            </Label>
                             <DatePicker
                               value={member.birthDate}
                               onChange={(value) => updateGroupMember(member.id, "birthDate", value)}
                               placeholder="YYYY.MM.DD"
                               themeColor="orange"
-                              className="w-full"
                             />
                           </div>
-                          <div className="flex flex-col gap-2 w-full min-w-0">
-                            <div className="min-h-[1.75rem] flex items-center">
-                              <Label className="text-sm font-bold text-gray-700 ml-1.5">
-                                성별
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <Label className="text-sm font-bold text-gray-600 ml-1">
+                                태어난 시간
                               </Label>
-                            </div>
-                            <ToggleGroup
-                              type="single"
-                              value={member.gender}
-                              onValueChange={(val) =>
-                                val &&
-                                updateGroupMember(
-                                  member.id,
-                                  "gender",
-                                  val,
-                                )
-                              }
-                              variant="outline"
-                              className="w-full [&>button]:h-12"
-                            >
-                              <ToggleGroupItem
-                                value="male"
-                                className="flex-1 text-xs font-bold"
-                              >
-                                남성
-                              </ToggleGroupItem>
-                              <ToggleGroupItem
-                                value="female"
-                                className="flex-1 text-xs font-bold"
-                              >
-                                여성
-                              </ToggleGroupItem>
-                            </ToggleGroup>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2 w-full min-w-0">
-                          <div className="flex justify-between items-center min-h-[1.75rem]">
-                            <Label className="text-sm font-bold text-gray-700 ml-1.5">
-                              태어난 시간
-                            </Label>
-                            <label className="flex items-center gap-2 cursor-pointer group">
-                              <Checkbox
-                                checked={member.birthTimeUnknown || false}
-                                onCheckedChange={(checked) => {
-                                  const isChecked = checked === true;
-                                  setGroupMembers(
-                                    groupMembers.map((m) =>
-                                      m.id === member.id
-                                        ? {
+                              <label className="flex items-center gap-2 cursor-pointer group">
+                                <Checkbox
+                                  checked={member.birthTimeUnknown || false}
+                                  onCheckedChange={(checked) => {
+                                    const isChecked = checked === true;
+                                    setGroupMembers(
+                                      groupMembers.map((m) =>
+                                        m.id === member.id
+                                          ? {
                                             ...m,
                                             birthTimeUnknown: isChecked,
                                             birthTime: isChecked ? "" : "00:00",
                                           }
-                                        : m
-                                    )
-                                  );
-                                }}
-                              />
-                              <span className="text-sm font-medium text-gray-600 group-hover:text-brand-orange transition-colors">모름</span>
-                            </label>
-                          </div>
-                          {!member.birthTimeUnknown ? (
-                            <div className="grid grid-cols-3 gap-2 w-full min-w-0">
-                              <div className="relative min-w-0">
-                                <Clock
-                                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange pointer-events-none z-10"
-                                />
-                                <Select
-                                  value={(() => {
-                                    if (!member.birthTime) return "AM";
-                                    const [hours] = member.birthTime.split(":");
-                                    return parseInt(hours) >= 12 ? "PM" : "AM";
-                                  })()}
-                                  onValueChange={(value) => {
-                                    const currentTime = member.birthTime || "00:00";
-                                    const [hours, minutes] = currentTime.split(":");
-                                    let hour = parseInt(hours);
-
-                                    if (value === "PM" && hour < 12) {
-                                      hour += 12;
-                                    } else if (value === "AM" && hour >= 12) {
-                                      hour -= 12;
-                                    }
-
-                                    updateGroupMember(
-                                      member.id,
-                                      "birthTime",
-                                      `${hour.toString().padStart(2, "0")}:${minutes}`
+                                          : m
+                                      )
                                     );
                                   }}
-                                >
-                                    <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all pl-9 pr-3 text-sm w-full min-w-0 [&>span]:!line-clamp-none">
-                                      <SelectValue placeholder="AM/PM" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="AM">AM</SelectItem>
-                                    <SelectItem value="PM">PM</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                                />
+                                <span className="text-sm font-medium text-gray-600 group-hover:text-brand-orange transition-colors">모름</span>
+                              </label>
+                            </div>
+                            {!member.birthTimeUnknown ? (
+                              <div className="flex gap-2">
+                                <div className="relative w-28">
+                                  <Clock
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-orange pointer-events-none z-10"
+                                  />
+                                  <Select
+                                    value={(() => {
+                                      if (!member.birthTime) return "";
+                                      const [hours] = member.birthTime.split(":");
+                                      return parseInt(hours) >= 12 ? "PM" : "AM";
+                                    })()}
+                                    onValueChange={(value) => {
+                                      const currentTime = member.birthTime || "00:00";
+                                      const [hours, minutes] = currentTime.split(":");
+                                      let hour = parseInt(hours);
 
-                              <div className="min-w-0">
+                                      if (value === "PM" && hour < 12) {
+                                        hour += 12;
+                                      } else if (value === "AM" && hour >= 12) {
+                                        hour -= 12;
+                                      }
+
+                                      updateGroupMember(
+                                        member.id,
+                                        "birthTime",
+                                        `${hour.toString().padStart(2, "0")}:${minutes}`
+                                      );
+                                    }}
+                                  >
+                                    <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-12 rounded-xl transition-all pl-11">
+                                      <SelectValue placeholder="오전/오후" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="AM">오전</SelectItem>
+                                      <SelectItem value="PM">오후</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
                                 <Select
                                   value={(() => {
                                     if (!member.birthTime) return "";
@@ -1652,8 +1554,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                                     );
                                   }}
                                 >
-                                    <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm px-3">
-                                      <SelectValue placeholder="시" />
+                                  <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-12 rounded-xl transition-all w-24">
+                                    <SelectValue placeholder="시" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {Array.from({ length: 12 }, (_, i) => i + 1).map((hour) => (
@@ -1663,9 +1565,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                                     ))}
                                   </SelectContent>
                                 </Select>
-                              </div>
 
-                              <div className="min-w-0">
                                 <Select
                                   value={(() => {
                                     if (!member.birthTime) return "";
@@ -1682,8 +1582,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                                     );
                                   }}
                                 >
-                                    <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm px-3">
-                                      <SelectValue placeholder="분" />
+                                  <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-12 rounded-xl transition-all w-24">
+                                    <SelectValue placeholder="분" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {Array.from({ length: 12 }, (_, i) => i * 5).map((minute) => (
@@ -1694,18 +1594,45 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                                   </SelectContent>
                                 </Select>
                               </div>
-                            </div>
-                          ) : (
-                            <div className="relative w-full min-w-0">
-                              <Clock
-                                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10"
-                              />
-                              <div className="bg-gray-100/50 border-2 border-gray-100 h-10 rounded-lg flex items-center pl-9 text-gray-400 text-sm w-full">
-                                시간 정보 없음
+                            ) : (
+                              <div className="relative">
+                                <Clock
+                                  className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none z-10"
+                                />
+                                <div className="bg-gray-100/50 border-2 border-gray-100 h-12 rounded-xl flex items-center pl-11 text-gray-400 text-sm">
+                                  시간 정보 없음
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
+                        <ToggleGroup
+                          type="single"
+                          value={member.gender}
+                          onValueChange={(val) =>
+                            val &&
+                            updateGroupMember(
+                              member.id,
+                              "gender",
+                              val,
+                            )
+                          }
+                          variant="outline"
+                          className="w-full"
+                        >
+                          <ToggleGroupItem
+                            value="male"
+                            className="flex-1 text-xs font-bold"
+                          >
+                            남성
+                          </ToggleGroupItem>
+                          <ToggleGroupItem
+                            value="female"
+                            className="flex-1 text-xs font-bold"
+                          >
+                            여성
+                          </ToggleGroupItem>
+                        </ToggleGroup>
                       </div>
                     </motion.div>
                   );
@@ -1715,13 +1642,26 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           </div>
           <ActionButton
             variant="orange-primary"
-            onClick={handleGroupAnalyze}
+            onClick={() =>
+              onAnalyze(
+                capturedImages as string[],
+                [],
+                {
+                  birthDate: "",
+                  birthTime: "00:00",
+                  gender: "male",
+                  calendarType: "solar",
+                  birthTimeUnknown: true,
+                },
+                groupMembers,
+              )
+            }
             disabled={!isReady}
             className={`w-full py-6 mt-6 transition-all duration-300 text-base ${!isReady ? "opacity-50 grayscale cursor-not-allowed" : "animate-bounce-subtle"}`}
           >
             {isReady
               ? "모임 궁합 분석하기"
-              : "모든 멤버의 정보(이름, 사진, 생년월일)를 입력해주세요"}
+              : "모든 멤버의 이름과 얼굴 사진을 등록해주세요"}
           </ActionButton>
         </div>
       </motion.div>

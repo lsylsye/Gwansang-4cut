@@ -1,9 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { motion, AnimatePresence } from "motion/react";
-import { Sparkles, Search, Brain, Loader2, Camera } from "lucide-react";
-import { ActionButton } from "@/shared/ui/core/ActionButton";
-import { ANALYSIS_STEP_INTERVAL_MS } from "@/shared/config/analysis";
+import { Sparkles, Search, Brain, Loader2 } from "lucide-react";
 
 interface AnalyzingSectionProps {
   ragData?: {
@@ -14,7 +12,6 @@ interface AnalyzingSectionProps {
     chin?: string;
     combination?: string;
   };
-  onNavigateToPhotoBooth?: () => void;
 }
 
 // 줌 위치 정의 (거북도사의 신비로운 거울 컨셉)
@@ -36,7 +33,7 @@ const ANALYSIS_STEPS = [
   { text: "삼라만상의 조화를 갈무리하는 중...", icon: <Brain className="w-5 h-5" />, target: 5, label: "조합" },
 ];
 
-export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ ragData, onNavigateToPhotoBooth }) => {
+export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ ragData }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const faceContainerRef = useRef<HTMLDivElement>(null);
@@ -65,10 +62,10 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ ragData, onN
       ease: "power1.inOut",
     });
 
-    // 3. Step Transition (ANALYSIS_STEP_INTERVAL_MS에 맞춰 스텝 순환)
+    // 3. Step Transition (5초마다 한 단계씩 이동하여 30초 확보)
     const stepInterval = setInterval(() => {
       setCurrentStep((prev) => (prev + 1) % ANALYSIS_STEPS.length);
-    }, ANALYSIS_STEP_INTERVAL_MS);
+    }, 5000);
 
     return () => {
       clearInterval(stepInterval);
@@ -250,9 +247,9 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ ragData, onN
                     {(currentStep === 0 || currentStep === 5) && (
                       <motion.circle 
                         initial={{ opacity: 0, scale: 0 }}
-                        animate={{ opacity: 1, scale: [1, 1.4, 1] }}
+                        animate={{ opacity: 1, scale: 1, r: [2, 5, 2] }}
                         exit={{ opacity: 0, scale: 0 }}
-                        transition={{ duration: 0.5, scale: { duration: 1.5, repeat: Infinity } }}
+                        transition={{ duration: 0.5, r: { duration: 1.5, repeat: Infinity } }}
                         cx="100" cy="60" r="3" fill="#FF9800" 
                       />
                     )}
@@ -262,16 +259,16 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ ragData, onN
                       <>
                         <motion.circle 
                           initial={{ opacity: 0, scale: 0 }}
-                          animate={{ opacity: 1, scale: [1, 1.4, 1] }}
+                          animate={{ opacity: 1, scale: 1, r: [2, 5, 2] }}
                           exit={{ opacity: 0, scale: 0 }}
-                          transition={{ duration: 0.5, scale: { duration: 1.5, repeat: Infinity, delay: 0.2 } }}
+                          transition={{ duration: 0.5, r: { duration: 1.5, repeat: Infinity, delay: 0.2 } }}
                           cx="70" cy="100" r="3" fill="#00F0FF" 
                         />
                         <motion.circle 
                           initial={{ opacity: 0, scale: 0 }}
-                          animate={{ opacity: 1, scale: [1, 1.4, 1] }}
+                          animate={{ opacity: 1, scale: 1, r: [2, 5, 2] }}
                           exit={{ opacity: 0, scale: 0 }}
-                          transition={{ duration: 0.5, scale: { duration: 1.5, repeat: Infinity, delay: 0.4 } }}
+                          transition={{ duration: 0.5, r: { duration: 1.5, repeat: Infinity, delay: 0.4 } }}
                           cx="130" cy="100" r="3" fill="#00F0FF" 
                         />
                       </>
@@ -281,9 +278,9 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ ragData, onN
                     {(currentStep === 2 || currentStep === 5) && (
                       <motion.circle 
                         initial={{ opacity: 0, scale: 0 }}
-                        animate={{ opacity: 1, scale: [1, 1.4, 1] }}
+                        animate={{ opacity: 1, scale: 1, r: [2, 5, 2] }}
                         exit={{ opacity: 0, scale: 0 }}
-                        transition={{ duration: 0.5, scale: { duration: 1.5, repeat: Infinity, delay: 0.3 } }}
+                        transition={{ duration: 0.5, r: { duration: 1.5, repeat: Infinity, delay: 0.3 } }}
                         cx="100" cy="125" r="3" fill="#FFEB3B" 
                       />
                     )}
@@ -292,9 +289,9 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ ragData, onN
                     {(currentStep === 3 || currentStep === 5) && (
                       <motion.circle 
                         initial={{ opacity: 0, scale: 0 }}
-                        animate={{ opacity: 1, scale: [1, 1.4, 1] }}
+                        animate={{ opacity: 1, scale: 1, r: [2, 5, 2] }}
                         exit={{ opacity: 0, scale: 0 }}
-                        transition={{ duration: 0.5, scale: { duration: 1.5, repeat: Infinity, delay: 0.5 } }}
+                        transition={{ duration: 0.5, r: { duration: 1.5, repeat: Infinity, delay: 0.5 } }}
                         cx="100" cy="145" r="3" fill="#00F0FF" 
                       />
                     )}
@@ -303,9 +300,9 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ ragData, onN
                     {(currentStep === 4 || currentStep === 5) && (
                       <motion.circle 
                         initial={{ opacity: 0, scale: 0 }}
-                        animate={{ opacity: 1, scale: [1, 1.4, 1] }}
+                        animate={{ opacity: 1, scale: 1, r: [2, 5, 2] }}
                         exit={{ opacity: 0, scale: 0 }}
-                        transition={{ duration: 0.5, scale: { duration: 1.5, repeat: Infinity, delay: 0.7 } }}
+                        transition={{ duration: 0.5, r: { duration: 1.5, repeat: Infinity, delay: 0.7 } }}
                         cx="100" cy="180" r="3" fill="#FF5722" 
                       />
                     )}
@@ -378,35 +375,14 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ ragData, onN
               </span>
             </div>
             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden border border-gray-200 relative">
-              {/* 개발용: duration 0초 (운영 시 28초로 변경) */}
               <motion.div 
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
-                transition={{ duration: 0, ease: "linear" }}
+                transition={{ duration: 28, ease: "linear" }}
                 className="h-full bg-gradient-to-r from-brand-green via-brand-orange to-brand-green bg-[length:200%_100%] animate-[gradient_5s_linear_infinite] shadow-[0_0_20px_rgba(0,137,123,0.3)]"
               />
             </div>
           </div>
-
-          {/* Photo Booth Button - Only shown during analyzing */}
-          {onNavigateToPhotoBooth && (
-            <div className="flex justify-center mb-10 no-capture">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1 }}
-              >
-                <ActionButton
-                  variant="secondary"
-                  onClick={onNavigateToPhotoBooth}
-                  className="flex items-center gap-3 px-6 py-4"
-                >
-                  <Camera size={20} />
-                  사진 네컷 찍기
-                </ActionButton>
-              </motion.div>
-            </div>
-          )}
         </div>
       </div>
     </div>
