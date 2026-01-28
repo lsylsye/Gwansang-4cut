@@ -65,7 +65,7 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ ragData, onN
       ease: "power1.inOut",
     });
 
-    // 3. Step Transition (ANALYSIS_LOADING_MS에 맞춰 스텝 순환)
+    // 3. Step Transition (ANALYSIS_STEP_INTERVAL_MS에 맞춰 스텝 순환)
     const stepInterval = setInterval(() => {
       setCurrentStep((prev) => (prev + 1) % ANALYSIS_STEPS.length);
     }, ANALYSIS_STEP_INTERVAL_MS);
@@ -378,10 +378,11 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ ragData, onN
               </span>
             </div>
             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden border border-gray-200 relative">
+              {/* 개발용: duration 0초 (운영 시 28초로 변경) */}
               <motion.div 
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
-                transition={{ duration: 28, ease: "linear" }}
+                transition={{ duration: 0, ease: "linear" }}
                 className="h-full bg-gradient-to-r from-brand-green via-brand-orange to-brand-green bg-[length:200%_100%] animate-[gradient_5s_linear_infinite] shadow-[0_0_20px_rgba(0,137,123,0.3)]"
               />
             </div>
