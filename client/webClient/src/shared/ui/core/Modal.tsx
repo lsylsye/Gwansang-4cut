@@ -7,7 +7,9 @@ interface ModalProps {
   onClose: () => void;
   children: React.ReactNode;
   className?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
+  /** 모달을 위쪽 정렬 (예: 얼굴 영역 위쪽에 띄울 때) */
+  align?: "center" | "top";
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -15,12 +17,15 @@ export const Modal: React.FC<ModalProps> = ({
   onClose,
   children,
   className = "",
-  size = "md"
+  size = "md",
+  align = "center"
 }) => {
-  const sizeClasses = {
+  const sizeClasses: Record<string, string> = {
     sm: "sm:max-w-md",
     md: "sm:max-w-xl",
-    lg: "sm:max-w-3xl"
+    lg: "sm:max-w-3xl",
+    xl: "sm:max-w-4xl sm:w-[95vw]",
+    "2xl": "sm:max-w-5xl sm:w-[90vw]"
   };
 
   React.useEffect(() => {
@@ -34,10 +39,13 @@ export const Modal: React.FC<ModalProps> = ({
     };
   }, [isOpen]);
 
+  const alignClasses = align === "top" ? "sm:items-start sm:pt-6 sm:pb-6" : "sm:items-center";
+  const maxHeightClass = (size === "xl" || size === "2xl") ? "sm:max-h-[90vh]" : "sm:max-h-[85vh]";
+
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center sm:p-4">
+        <div className={`fixed inset-0 z-50 flex items-stretch justify-center sm:p-4 ${alignClasses}`}>
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -49,13 +57,13 @@ export const Modal: React.FC<ModalProps> = ({
           
           {/* Modal Content */}
           <motion.div
-            initial={{ opacity: 0, y: 100 }}
+            initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 100 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className={`relative w-full h-full sm:h-auto ${sizeClasses[size]} bg-white 
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className={`relative w-full h-full sm:h-auto ${sizeClasses[size] ?? sizeClasses.md} bg-white 
               sm:rounded-3xl shadow-2xl 
-              sm:max-h-[85vh] overflow-hidden flex flex-col
+              ${maxHeightClass} overflow-hidden flex flex-col
               ${className}`}
           >
             {/* Close Button */}
