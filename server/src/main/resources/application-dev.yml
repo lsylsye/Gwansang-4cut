@@ -7,7 +7,7 @@ spring:
 
   # 1. 데이터베이스 설정
   datasource:
-    url: jdbc:mysql://mysql-test:3307/gs4cutdb?createDatabaseIfNotExist=true&characterEncoding=UTF-8&serverTimezone=UTC
+    url: jdbc:mysql://mysql-test:3306/gs4cutdb?createDatabaseIfNotExist=true&characterEncoding=UTF-8&serverTimezone=UTC
     username: admin
     password: 12481428
     driver-class-name: com.mysql.cj.jdbc.Driver
