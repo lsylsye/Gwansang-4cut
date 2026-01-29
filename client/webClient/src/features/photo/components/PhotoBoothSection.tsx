@@ -560,7 +560,7 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
             className="flex h-full"
           >
             <Card
-              className={`flex-1 cursor-pointer overflow-hidden border-none shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:shadow-[0_40px_80px_rgba(0,0,0,0.15)] transition-all duration-500 rounded-[2.5rem] flex flex-col items-center p-10 bg-white group`}
+              className="flex-1 cursor-pointer overflow-hidden border-2 border-transparent hover:border-[#BFE7FF] shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:shadow-md transition-all duration-500 rounded-[2.5rem] flex flex-col items-center p-10 bg-white hover:bg-white/90 group"
               onClick={() => setFrameType("vertical")}
             >
               <div className="w-full aspect-[4/3] mb-8 rounded-3xl bg-white border border-gray-100 flex items-center justify-center group-hover:bg-gray-50 transition-colors overflow-hidden p-6">
@@ -588,7 +588,7 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
             className="flex h-full"
           >
             <Card
-              className={`flex-1 cursor-pointer overflow-hidden border-none shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:shadow-[0_40px_80px_rgba(0,0,0,0.15)] transition-all duration-500 rounded-[2.5rem] flex flex-col items-center p-10 bg-white group`}
+              className="flex-1 cursor-pointer overflow-hidden border-2 border-transparent hover:border-[#D9D9D9] shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:shadow-md transition-all duration-500 rounded-[2.5rem] flex flex-col items-center p-10 bg-white hover:bg-white/90 group"
               onClick={() => setFrameType("horizontal")}
             >
               <div className="w-full aspect-[4/3] mb-8 rounded-3xl bg-white border border-gray-100 flex items-center justify-center group-hover:bg-gray-50 transition-colors overflow-hidden p-6">
