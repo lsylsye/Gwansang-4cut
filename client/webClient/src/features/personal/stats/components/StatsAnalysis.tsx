@@ -1,22 +1,130 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
-import { Heart, AlertTriangle, Utensils, Snowflake, Brain, Sparkles, Clock, TrendingUp, Download, Camera, Upload, X, CheckCircle2 } from "lucide-react";
+import { Utensils, Sparkles, TrendingUp, Download, Upload, X, CheckCircle2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { SajuAnalysisResponse } from "@/shared/api/sajuApi";
 import profileImage from "@/assets/profile.png";
 import selfieImage from "@/assets/selfie.png";
+import turtleImage from "@/assets/turtle.png";
+import { FiveElementsDisplay, type OhengCounts } from "./FiveElementsDisplay";
 
-// --- Constants (Moved from AnalysisSection) ---
+/** 한 글자씩 채워지는 타이핑 효과. skipToEnd 시 애니 없이 전체 텍스트 즉시 노출 (복귀 시용) */
+function useTypewriter(
+    fullText: string,
+    options?: { speedMs?: number; onComplete?: () => void; enabled?: boolean; skipToEnd?: boolean }
+) {
+    const [text, setText] = useState("");
+    const [isComplete, setIsComplete] = useState(false);
+    const { speedMs = 70, onComplete, enabled = true, skipToEnd = false } = options ?? {};
+
+    useEffect(() => {
+        if (!enabled || !fullText) {
+            if (!enabled) {
+                setText("");
+                setIsComplete(false);
+            }
+            return;
+        }
+        if (skipToEnd) {
+            setText(fullText);
+            setIsComplete(true);
+            onComplete?.();
+            return;
+        }
+        setText("");
+        setIsComplete(false);
+        let i = 0;
+        const id = setInterval(() => {
+            if (i >= fullText.length) {
+                clearInterval(id);
+                setText(fullText);
+                setIsComplete(true);
+                onComplete?.();
+                return;
+            }
+            setText(fullText.slice(0, i + 1));
+            i += 1;
+        }, speedMs);
+        return () => clearInterval(id);
+    }, [fullText, enabled, speedMs, skipToEnd]);
+
+    return { text, isComplete };
+}
+
+// 체질 분석 게임 단계 (상위에서 상태 유지 시 탭 전환 후 복귀 시 마지막 뷰 유지용)
+export type ConstitutionPhase = "intro" | "select" | "result" | "constitution";
+
+// --- 체질 풀이 데이터 (백 연동 시 API 응답으로 교체) ---
+export interface ConstitutionSajuSection {
+    sub?: string;
+    text: string;
+}
+
+/** 지금 대운 + 꼭 챙기면 좋은 음식 (마지막 블록) */
+export interface ConstitutionDaeunAndFoods {
+    title: string;
+    body: string;
+    /** 꼭 챙기면 좋은 음식 요약 (짧은 리스트) */
+    priorityFoods: string[];
+}
+
+export interface ConstitutionSajuData {
+    type: string;
+    head: string;
+    /** 일간 설명 한 줄 (예: 丁火) */
+    ilganSummary?: string;
+    /** 오행 개수 — FiveElementsDisplay에 그대로 전달 */
+    oheng: OhengCounts;
+    sections: ConstitutionSajuSection[];
+    daeunAndFoods: ConstitutionDaeunAndFoods;
+}
+
 const CONSTITUTION_DATA = {
-    type: "소음인 (수분 부족형)",
-    desc: "몸이 차고 소화기관이 약한 편입니다. 기운이 안으로 갈무리되는 성질을 가지고 있어 세심하고 꼼꼼하지만, 스트레스를 받으면 소화력이 급격히 떨어질 수 있습니다.",
-    badFoods: ["돼지고기", "밀가루", "찬 우유", "빙수", "생맥주"],
-    goodFoods: ["닭고기", "마늘", "생강차", "따뜻한 쌀밥", "대추차"],
-    symptoms: ["손발이 차고 추위를 잘 탐", "소화불량이 잦음", "생각이 많고 예민함"],
-    habits: "한 번에 과식하기보다 소량씩 자주 식사하고, 차가운 물보다는 미지근한 물을 즐기세요.",
-    vulnerable: ["위장 (소화기)", "신장 (배설기)"],
+    type: "불과 흙이 중심인 체질 (丁火·土多)",
+    recommendedMenuIndex: 0,
+};
+
+/** 사주 기반 체질 풀이 — 구조화된 데이터 (백에서 동일 shape로 내려주면 그대로 사용) */
+const CONSTITUTION_SAJU_DATA: ConstitutionSajuData = {
+    type: "불과 흙이 중심인 체질 (丁火·土多)",
+    head: "불과 흙이 중심인 체질",
+    ilganSummary: "마른  한가운데 호롱불이 빛나고 있는 사주",
+    oheng: { wood: 1, fire: 2, earth: 3, metal: 1, water: 1 },
+    sections: [
+        {
+            sub: "전체적인 체질 특성",
+            text: "사주를 보면 토(土)가 가장 많고, 그다음이 화(火)입니다. 이는 기본 체질이 열과 건조, 그리고 소화기 중심으로 돌아간다는 뜻입니다. 따라서 건강을 볼 때도 차갑고 축축한 병보다는 열이나 염증, 소화기 질환, 순환 장애, 긴장성 질환 쪽을 먼저 살펴보아야 합니다.",
+        },
+        {
+            sub: "이 체질이 나타내는 건강상 주의점",
+            text: "정화 일간은 몸으로 치면 심장과 혈관, 혈압, 자율신경과 연결되며 눈과 머리, 신경계와도 관련이 깊습니다. 스트레스가 쌓이면 불면이나 두근거림, 예민함으로 바로 나타나는 특징이 있습니다. 특히 이 사주는 丁이 두 개(일주와 시주)가 있어 불씨가 하나가 아니라 두 개의 촛불이 동시에 타는 구조입니다. 그래서 평소에는 괜찮다가도 스트레스를 받으면 한 번에 확 무너지는 타입이라고 볼 수 있습니다. 잠은 자는데 개운하지 않거나 긴장하면 심장이 빨리 뛰는 증상, 눈이 쉽게 피로해지거나 속은 더부룩한데 열은 위로 치미는 증상을 겪을 수 있습니다.",
+        },
+        {
+            sub: "토(土)가 많은 사주와 소화기 건강",
+            text: "이 사주는 토가 3으로 가장 강합니다. 토는 몸에서 위장과 비장, 장, 면역력, 살과 근육을 의미합니다. 좋은 쪽으로 보자면 기본 체력은 있는 편이며 잘 버티는 몸으로 쉽게 쓰러지는 타입은 아닙니다. 그러나 주의해야 할 점은 소화기에 과부하가 걸리기 쉽고 더부룩함이나 체기가 생기기 쉬우며, 살이 쉽게 붙거나 잘 빠지지 않는 체질일 수 있다는 것입니다. 또한 스트레스를 받으면 위장부터 반응하는 경향이 있습니다. 이 사주는 火에서 土로 기운이 계속 흐르는 구조라 불이 흙을 계속 데우게 되므로 위염이나 역류성 식도염, 장 트러블, 과식 후 컨디션 급저하 같은 패턴이 생기기 쉽습니다.",
+        },
+        {
+            sub: "수(水)가 약한 구조와 회복력",
+            text: "수는 딱 1로 매우 약합니다. 수는 몸에서 신장과 방광, 수면, 회복력, 호르몬 밸런스를 담당합니다. 불과 흙은 강한데 이를 식혀주고 조절해 줄 물 기운이 약하다는 것이 핵심입니다. 이로 인해 피로 회복이 느리고 밤에 생각이 많아지며, 자도 자도 피곤하고 물을 적게 마시는 습관이 생길 수 있습니다. 이 사주는 타고난 병보다는 관리를 하지 않으면 점차 쌓이는 병 쪽에 해당한다고 볼 수 있습니다.",
+        },
+        {
+            sub: "건강 관리를 위해 꼭 챙기면 좋은 것들",
+            text: "이러한 체질적 특성을 고려할 때 평소 물을 자주 마시는 습관을 들이는 것이 가장 중요합니다. 보리차나 옥수수차, 미역국이나 다시마국처럼 열을 식혀주고 수분을 보충해 주는 음식이 좋습니다. 소화기를 편안하게 해주는 흰죽이나 누룽지, 고구마, 바나나도 도움이 됩니다. 오이와 배추, 토마토, 연근 같은 채소류는 익혀서 먹는 것이 좋으며, 무엇보다 수면 관리와 규칙적인 식사 습관을 유지하는 것이 장기적인 건강을 지키는 데 핵심이 됩니다.",
+        },
+    ],
+    daeunAndFoods: {
+        title: "꼭 챙기면 좋은 음식",
+        body: "",
+        priorityFoods: [
+            "물 (자주 마시기)",
+            "보리차, 옥수수차, 미역국·다시마국",
+            "흰죽, 누룽지, 고구마, 바나나",
+            "오이, 배추, 토마토, 연근 (익혀서)",
+            "수면 관리, 규칙적인 식사",
+        ],
+    },
 };
 
 const SSABAP_MENUS = [
@@ -178,30 +286,161 @@ interface FutureImages {
     year_50: string | null;
 }
 
+/** 사주 기반 체질 풀이 블록 — data는 백에서 받아서 교체 가능 */
+function ConstitutionSajuBlock({ data }: { data: ConstitutionSajuData }) {
+    const { head, ilganSummary, oheng, sections, daeunAndFoods } = data;
+    return (
+        <div className="pt-4">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6 font-display text-center">당신의 체질 풀이</h3>
+
+            <GlassCard className="w-full max-w-4xl mx-auto p-6 sm:p-8 border-4 border-white rounded-[32px] shadow-clay-md bg-white/50 mb-6">
+                <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 bg-brand-green/10 border-2 border-brand-green rounded-xl flex items-center justify-center">🐢</div>
+                    <h3 className="font-bold text-xl sm:text-2xl text-gray-800 font-display">사주 기반 체질 풀이</h3>
+                </div>
+
+                <div className="mb-5">
+                    <FiveElementsDisplay counts={oheng} title="오행 분포" />
+                </div>
+
+                <div className="space-y-4 max-h-[45vh] overflow-y-auto custom-scrollbar pr-1">
+                    {sections.map((item, i) => (
+                        <div key={i}>
+                            {item.sub != null && <h4 className="text-gray-800 font-bold text-base mb-1.5 font-display">{item.sub}</h4>}
+                            <p className="text-gray-700 text-base leading-[1.75] whitespace-pre-line">{item.text}</p>
+                        </div>
+                    ))}
+                </div>
+            </GlassCard>
+
+            {/* 마지막: 지금 대운 + 꼭 챙기면 좋은 음식 */}
+            <GlassCard className="w-full max-w-4xl mx-auto p-6 sm:p-8 border-4 border-white rounded-[32px] shadow-clay-md bg-green-50/40">
+                <h4 className="font-bold text-green-800 mb-3 font-display flex items-center gap-2">
+                    <Utensils size={18} /> {daeunAndFoods.title}
+                </h4>
+                <p className="text-gray-700 text-base leading-[1.75] whitespace-pre-line mb-4">{daeunAndFoods.body}</p>
+                <ul className="text-sm text-gray-700 space-y-1">
+                    {daeunAndFoods.priorityFoods.map((item, i) => (
+                        <li key={i} className="flex items-start gap-1.5"><span className="text-green-500">•</span> {item}</li>
+                    ))}
+                </ul>
+            </GlassCard>
+        </div>
+    );
+}
+
 interface StatsAnalysisProps {
     tab: "constitution" | "future";
     images: string[];
     futureImage?: string | null;
     onFutureImageUpload?: (image: string | null) => void;
-    sajuAnalysisResult?: SajuAnalysisResponse | null;
+    /** 체질 분석 단계 (상위에서 넘기면 탭 전환 후 복귀 시 마지막 뷰 유지) */
+    constitutionPhase?: ConstitutionPhase;
+    onConstitutionPhaseChange?: (phase: ConstitutionPhase) => void;
+    constitutionSelectedMenuIdx?: number | null;
+    onConstitutionSelectedMenuIdxChange?: (idx: number | null) => void;
 }
 
 // FastAPI 서버 URL (환경변수 또는 기본값)
 const API_BASE_URL = import.meta.env.VITE_AI_SERVER_URL || "http://localhost:8000";
 
-export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ 
-    tab, 
-    images, 
+export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
+    tab,
+    images,
     futureImage = null,
     onFutureImageUpload,
-    sajuAnalysisResult
+    constitutionPhase: constitutionPhaseProp,
+    onConstitutionPhaseChange,
+    constitutionSelectedMenuIdx: constitutionSelectedMenuIdxProp,
+    onConstitutionSelectedMenuIdxChange,
 }) => {
-    // TODO: 테스트 후 아래 줄 삭제하고 _futureImage를 futureImage로 되돌리기
-    // const futureImage = "test"; // 로딩 화면 테스트용
-    const [selectedMenuIdx, setSelectedMenuIdx] = useState(0);
+    const [internalPhase, setInternalPhase] = useState<ConstitutionPhase>("intro");
+    const [internalMenuIdx, setInternalMenuIdx] = useState<number | null>(null);
+
+    const isControlled =
+        onConstitutionPhaseChange !== undefined && onConstitutionSelectedMenuIdxChange !== undefined;
+
+    const constitutionPhase = isControlled ? (constitutionPhaseProp ?? "intro") : internalPhase;
+    const setConstitutionPhase = isControlled ? onConstitutionPhaseChange! : setInternalPhase;
+    const selectedMenuIdx = isControlled ? (constitutionSelectedMenuIdxProp ?? null) : internalMenuIdx;
+    const setSelectedMenuIdx = isControlled ? onConstitutionSelectedMenuIdxChange! : setInternalMenuIdx;
+
     const [selectedCampus, setSelectedCampus] = useState<Campus>("부울경");
     const futureFileInputRef = useRef<HTMLInputElement>(null);
-    
+
+    // 마운트 시점의 체질 phase (다른 탭 갔다가 복귀 시 마운트면 select/result일 수 있음)
+    const initialConstitutionPhaseRef = useRef<ConstitutionPhase | null>(null);
+    if (tab === "constitution" && initialConstitutionPhaseRef.current === null) {
+        initialConstitutionPhaseRef.current = constitutionPhase;
+    }
+
+    // 체질 탭을 벗어날 때(다른 탭으로 전환) result였으면 true → 복귀 시에만 타입라이터 스킵
+    const hasBeenOnResultViewRef = useRef(false);
+    const prevTabRef = useRef(tab);
+    useEffect(() => {
+        if (prevTabRef.current === "constitution" && tab !== "constitution" && constitutionPhase === "result") {
+            hasBeenOnResultViewRef.current = true;
+        }
+        prevTabRef.current = tab;
+    }, [tab, constitutionPhase]);
+
+    // 복귀 시에만 타입라이터 생략: (1) 마운트 시 이미 select/result였거나 (2) result 뷰를 이미 본 적 있음
+    const isConstitutionReturning =
+        isControlled &&
+        (constitutionPhase === "result" || constitutionPhase === "select") &&
+        (initialConstitutionPhaseRef.current === "result" ||
+            initialConstitutionPhaseRef.current === "select" ||
+            hasBeenOnResultViewRef.current);
+
+    // 부울경 메뉴만 사용 (체질 게임) — 타입라이터 훅보다 위에 정의
+    const buulgyeongMenus = CAMPUS_MENUS["부울경"];
+    const recommendedMenu = buulgyeongMenus[CONSTITUTION_DATA.recommendedMenuIndex];
+
+    // 거북 도사 인트로 대사 (한 글자씩 타이핑)
+    const introLine =
+        "옛 선인들은 말했소. '약식동원(藥食同源)'이라고...\n\n음식과 약은 근본이 같고, 사람마다 타고난 체질이 다르다는 뜻이오.\n\n지금부터 당신의 체질에 맞는 오늘의 식단을 찾으러 가보지 않겠소?";
+    const { text: introText, isComplete: introTextComplete } = useTypewriter(introLine, {
+        enabled: constitutionPhase === "intro",
+        speedMs: 60,
+        skipToEnd: isConstitutionReturning,
+    });
+
+    // 메뉴 선택 단계 멘트 타이핑
+    const selectLine = "오늘의 싸밥, 무엇을 먹을지……\n네 마음이 끌리는 것을 하나 골라 보거라.";
+    const { text: selectText } = useTypewriter(selectLine, {
+        enabled: constitutionPhase === "select",
+        speedMs: 60,
+        skipToEnd: isConstitutionReturning,
+    });
+
+    // 결과 단계 거북 도사 긴 대사 (동적 메시지)
+    const resultTurtleMessage =
+        constitutionPhase === "result" && selectedMenuIdx !== null
+            ? (() => {
+                  const userPickedMenu = buulgyeongMenus[selectedMenuIdx];
+                  const isSame = userPickedMenu.name === recommendedMenu.name;
+                  return isSame
+                      ? `오늘 너에게 가장 추천하는 메뉴는 「${recommendedMenu.name}」이오.\n\n"${recommendedMenu.reason}"`
+                      : `네가 고른 ${userPickedMenu.name}도 나쁘지 않다. 다만, 너의 몸에 가장 이로운 것은 다른 것이니……\n\n오늘 너에게 가장 추천하는 메뉴는 「${recommendedMenu.name}」이오.\n\n"${recommendedMenu.reason}"`;
+              })()
+            : "";
+    const { text: resultMessageText, isComplete: resultMessageComplete } = useTypewriter(resultTurtleMessage, {
+        enabled: constitutionPhase === "result" && selectedMenuIdx !== null,
+        speedMs: 50,
+        skipToEnd: isConstitutionReturning,
+    });
+
+    // 결과 단계 진입 시 거북 도사 대사 카드를 화면 중앙으로 스크롤
+    const turtleMessageCardRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (constitutionPhase === "result" && selectedMenuIdx !== null && turtleMessageCardRef.current) {
+            const t = setTimeout(() => {
+                turtleMessageCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 100);
+            return () => clearTimeout(t);
+        }
+    }, [constitutionPhase, selectedMenuIdx]);
+
     // 미래 이미지 생성 관련 상태
     const [futureImages, setFutureImages] = useState<FutureImages>({
         current: null,
@@ -283,141 +522,133 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
 
     if (tab === "constitution") {
         return (
-            <div className="space-y-10">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                    <GlassCard className="p-10 border-8 border-white rounded-[40px] shadow-clay-md bg-white/60">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-16 h-16 bg-brand-teal rounded-3xl flex items-center justify-center shadow-clay-xs">
-                                <Heart className="text-white w-8 h-8" />
+            <div className="relative min-h-[60vh] pb-24">
+                {/* 인트로: 거북 도사 중앙 + 대사 + 시작하기 */}
+                {constitutionPhase === "intro" && (
+                    <div className="flex flex-col items-center justify-center py-12 px-4">
+                        <GlassCard className="max-w-2xl w-full p-10 border-8 border-white rounded-[40px] shadow-clay-lg bg-white/70 flex flex-col items-center text-center">
+                            <div className="w-32 h-32 md:w-40 md:h-40 mb-8 drop-shadow-2xl animate-[float_4s_ease-in-out_infinite]">
+                                <img src={turtleImage} alt="거북 도사" className="w-full h-full object-contain" />
                             </div>
-                            <div>
-                                <h3 className="text-3xl font-bold text-brand-green font-display">{CONSTITUTION_DATA.type}</h3>
-                                <p className="text-sm text-gray-500 font-bold">체질 기반 사주 풀이</p>
+                            <div className="bg-white/80 backdrop-blur-sm rounded-[28px] px-8 py-6 border-4 border-white shadow-clay-sm mb-8 w-full max-w-lg min-h-[4.5rem]">
+                                <p className="text-base md:text-lg text-gray-800 font-hand leading-tight break-keep whitespace-pre-line">
+                                    {introText}
+                                    {!introTextComplete && <span className="animate-pulse">|</span>}
+                                </p>
                             </div>
-                        </div>
-                        <p className="text-xl text-gray-700 font-hand leading-relaxed mb-8 bg-white/60 p-6 rounded-3xl border-2 border-white shadow-inner">
-                            {CONSTITUTION_DATA.desc}
-                        </p>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-red-50 p-5 rounded-3xl border-4 border-white shadow-clay-xs">
-                                <h4 className="flex items-center gap-2 font-bold text-red-600 mb-3 text-sm">
-                                    <AlertTriangle size={16} /> 피할 음식
-                                </h4>
-                                <div className="flex flex-wrap gap-2">
-                                    {CONSTITUTION_DATA.badFoods.map((food, i) => (
-                                        <span key={i} className="px-3 py-1 bg-white rounded-xl text-xs font-bold text-gray-500 shadow-clay-xs">{food}</span>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="bg-green-50 p-5 rounded-3xl border-4 border-white shadow-clay-xs">
-                                <h4 className="flex items-center gap-2 font-bold text-green-600 mb-3 text-sm">
-                                    <Utensils size={16} /> 추천 음식
-                                </h4>
-                                <div className="flex flex-wrap gap-2">
-                                    {CONSTITUTION_DATA.goodFoods.map((food, i) => (
-                                        <span key={i} className="px-3 py-1 bg-white rounded-xl text-xs font-bold text-gray-600 shadow-clay-xs">{food}</span>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </GlassCard>
-
-                    <div className="grid grid-cols-2 gap-6">
-                        <GlassCard className="p-8 flex flex-col items-center shadow-clay-sm border-4 border-white rounded-[32px] bg-blue-50/40">
-                            <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mb-4 shadow-clay-xs">
-                                <Snowflake className="text-blue-500 w-8 h-8" />
-                            </div>
-                            <h4 className="font-bold text-gray-800 mb-3 font-display">주요 증상</h4>
-                            <ul className="text-base text-gray-600 space-y-2 font-hand font-bold w-full text-left">
-                                {CONSTITUTION_DATA.symptoms.map((sym, i) => <li key={i} className="flex items-start gap-2"><span>•</span> {sym}</li>)}
-                            </ul>
-                        </GlassCard>
-                        <GlassCard className="p-8 flex flex-col items-center shadow-clay-sm border-4 border-white rounded-[32px] bg-purple-50/40">
-                            <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-4 shadow-clay-xs">
-                                <Brain className="text-purple-500 w-8 h-8" />
-                            </div>
-                            <h4 className="font-bold text-gray-800 mb-3 font-display">취약 장기</h4>
-                            <ul className="text-base text-gray-600 space-y-2 font-hand font-bold w-full text-left">
-                                {CONSTITUTION_DATA.vulnerable.map((org, i) => <li key={i} className="flex items-start gap-2"><span>•</span> {org}</li>)}
-                            </ul>
-                        </GlassCard>
-                        <GlassCard className="col-span-2 p-8 flex items-center gap-6 shadow-clay-sm border-4 border-white rounded-[32px] bg-orange-50/40">
-                            <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center shadow-clay-xs shrink-0">
-                                <Sparkles className="text-orange-500 w-10 h-10" />
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-gray-800 mb-1 font-display">거북 도사의 생활 지침</h4>
-                                <p className="text-base text-gray-600 font-hand leading-relaxed font-bold">{CONSTITUTION_DATA.habits}</p>
-                            </div>
-                        </GlassCard>
-                    </div>
-                </div>
-
-                <div className="pt-10">
-                    <div className="text-center mb-10">
-                        <h3 className="text-3xl font-bold text-gray-900 mb-3 font-display">🍽️ 오늘 싸밥 뭐먹지?</h3>
-                        <p className="text-gray-500 font-hand text-lg">당신의 체질에 꼭 맞는 맞춤형 식단을 추천해드립니다.</p>
-                    </div>
-
-                    <div className="flex justify-center mb-8">
-                        <div className="bg-white/80 backdrop-blur-md p-2 rounded-3xl flex gap-2 shadow-clay-sm border-4 border-white flex-wrap justify-center">
-                            {CAMPUS_LIST.map((campus) => {
-                                const isActive = selectedCampus === campus;
-                                return (
+                            {introTextComplete && (
+                                <div className="animate-[fadeInUp_0.5s_ease-out_forwards]">
                                     <button
-                                        key={campus}
-                                        onClick={() => {
-                                            setSelectedCampus(campus);
-                                            setSelectedMenuIdx(0);
-                                        }}
-                                        className={`
-                                            px-6 py-2.5 rounded-2xl transition-all duration-300 font-bold font-display text-sm
-                                            ${isActive
-                                                ? "bg-brand-green text-white shadow-clay-xs scale-105"
-                                                : "hover:bg-gray-100 text-gray-400 hover:text-gray-700"}
-                                        `}
+                                        type="button"
+                                        onClick={() => setConstitutionPhase("select")}
+                                        className="px-10 py-4 text-lg font-bold font-display rounded-2xl bg-brand-green text-white shadow-clay-md border-4 border-white hover:bg-brand-green-deep hover:scale-[1.02] active:scale-[0.98] transition-all"
                                     >
-                                        {campus}
+                                        도사의 추천 받기
                                     </button>
+                                </div>
+                            )}
+                        </GlassCard>
+                    </div>
+                )}
+
+                {/* 메뉴 선택: 거북 도사 대화박스 + 부울경 4개 메뉴 */}
+                {constitutionPhase === "select" && (
+                    <div className="space-y-10">
+                        <GlassCard className="max-w-2xl mx-auto p-6 md:p-8 border-8 border-white rounded-[32px] shadow-clay-md bg-white/80">
+                            <div className="flex gap-4 items-start">
+                                <div className="w-16 h-16 shrink-0">
+                                    <img src={turtleImage} alt="거북 도사" className="w-full h-full object-contain" />
+                                </div>
+                                <div className="flex-1 min-h-[3rem]">
+                                    <p className="text-base md:text-lg text-gray-800 font-hand leading-relaxed whitespace-pre-line">
+                                        {selectText}
+                                        {selectText.length < selectLine.length && <span className="animate-pulse">|</span>}
+                                    </p>
+                                </div>
+                            </div>
+                        </GlassCard>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+                            {buulgyeongMenus.map((menu, i) => (
+                                <GlassCard
+                                    key={i}
+                                    onClick={() => {
+                                        setSelectedMenuIdx(i);
+                                        setConstitutionPhase("result");
+                                    }}
+                                    className="p-4 flex flex-col items-center text-center transition-all cursor-pointer rounded-[32px] border-4 border-white bg-white/60 hover:bg-white hover:border-brand-green/30 hover:scale-[1.02] active:scale-[0.98] shadow-clay-sm"
+                                >
+                                    <div className="w-full aspect-square rounded-2xl overflow-hidden mb-3 shadow-inner border-2 border-white/50">
+                                        <ImageWithFallback src={menu.image} alt={menu.name} className="w-full h-full object-cover" />
+                                    </div>
+                                    <h4 className="font-bold text-gray-800 font-display text-sm">{menu.name}</h4>
+                                    <p className="text-[10px] text-gray-400 font-bold">{menu.desc}</p>
+                                </GlassCard>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* 결과: 위쪽 메뉴 카드 → 중앙 거북 도사 대사 → 체질 풀이 */}
+                {constitutionPhase === "result" && selectedMenuIdx !== null && (
+                    <div className="space-y-10">
+                        {/* 4개 메뉴 카드 (상단에 고정해 두고, 스크롤 시 위쪽에 보이도록) */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+                            {buulgyeongMenus.map((menu, i) => {
+                                const isUserChoice = i === selectedMenuIdx;
+                                const isTurtleRecommend = i === CONSTITUTION_DATA.recommendedMenuIndex;
+                                return (
+                                    <div key={i} className="relative">
+                                        <GlassCard
+                                            className={`
+                                                p-4 flex flex-col items-center text-center rounded-[32px] border-4 shadow-clay-sm overflow-hidden
+                                                ${isUserChoice ? "border-brand-orange/60 bg-orange-50/40" : ""}
+                                                ${isTurtleRecommend ? "border-brand-green ring-2 ring-brand-green/30" : "border-white bg-white/60"}
+                                            `}
+                                        >
+                                            <div className="w-full aspect-square rounded-2xl overflow-hidden mb-3 shadow-inner border-2 border-white/50 relative">
+                                                <ImageWithFallback src={menu.image} alt={menu.name} className="w-full h-full object-cover" />
+                                                {isTurtleRecommend && (
+                                                    <div className="absolute bottom-0 left-0 right-0 bg-brand-green/85 py-2 flex items-center justify-center">
+                                                        <span className="text-white font-bold font-display text-xs md:text-sm text-center drop-shadow-md">
+                                                            거북 도사의 오늘 추천
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <h4 className="font-bold text-gray-800 font-display text-sm">{menu.name}</h4>
+                                            <p className="text-[10px] text-gray-400 font-bold">{menu.desc}</p>
+                                            {isUserChoice && (
+                                                <div className="mt-2 px-2 py-1 bg-brand-orange/90 text-white text-[10px] font-bold font-display rounded-lg">
+                                                    네가 고른 메뉴
+                                                </div>
+                                            )}
+                                        </GlassCard>
+                                    </div>
                                 );
                             })}
                         </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                        <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {CAMPUS_MENUS[selectedCampus].map((menu, i) => {
-                                const isActive = selectedMenuIdx === i;
-                                return (
-                                    <GlassCard
-                                        key={i}
-                                        onClick={() => setSelectedMenuIdx(i)}
-                                        className={`
-                                            p-4 flex flex-col items-center text-center transition-all cursor-pointer relative overflow-hidden rounded-[32px] border-4
-                                            ${isActive ? "border-brand-green bg-brand-green-muted shadow-clay-md scale-105" : "border-white bg-white/60 hover:bg-white shadow-clay-sm"}
-                                        `}
-                                    >
-                                        <div className="w-full aspect-square rounded-2xl overflow-hidden mb-4 shadow-inner border-2 border-white/50">
-                                            <ImageWithFallback src={menu.image} alt={menu.name} className="w-full h-full object-cover" />
-                                        </div>
-                                        <h4 className="font-bold text-gray-800 mb-1 font-display text-sm">{menu.name}</h4>
-                                        <p className="text-[10px] text-gray-400 font-bold">{menu.desc}</p>
-                                    </GlassCard>
-                                )
-                            })}
-                        </div>
-                        <div className="lg:col-span-1">
-                            <GlassCard className="h-full p-6 border-4 border-white rounded-[32px] shadow-clay-sm bg-brand-green text-white flex flex-col justify-center">
-                                <h5 className="font-bold text-lg mb-2 flex items-center gap-2">
-                                    <Clock size={18} /> 추천 사유
-                                </h5>
-                                <p className="text-sm font-hand leading-relaxed opacity-90 italic">
-                                    "{CAMPUS_MENUS[selectedCampus][selectedMenuIdx].reason}"
-                                </p>
+                        {/* 거북 도사 대사 (한 글자씩 타이핑) — 스크롤 시 화면 중앙에 오도록 ref */}
+                        <div ref={turtleMessageCardRef} className="scroll-mt-[35vh]">
+                            <GlassCard className="max-w-2xl mx-auto p-6 md:p-8 border-8 border-white rounded-[32px] shadow-clay-md bg-white/80">
+                                <div className="flex gap-4 items-start">
+                                    <div className="w-16 h-16 shrink-0">
+                                        <img src={turtleImage} alt="거북 도사" className="w-full h-full object-contain" />
+                                    </div>
+                                    <div className="flex-1 min-h-[6rem]">
+                                        <p className="text-base md:text-lg text-gray-800 font-hand leading-relaxed whitespace-pre-line">
+                                            {resultMessageText}
+                                            {!resultMessageComplete && <span className="animate-pulse">|</span>}
+                                        </p>
+                                    </div>
+                                </div>
                             </GlassCard>
                         </div>
+
+                        {/* 체험자 체질 풀이 — 사주 기반 (백 연동 시 CONSTITUTION_SAJU_DATA만 교체) */}
+                        <ConstitutionSajuBlock data={CONSTITUTION_SAJU_DATA} />
                     </div>
-                </div>
+                )}
             </div>
         );
     }
