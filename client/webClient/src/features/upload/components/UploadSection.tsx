@@ -240,6 +240,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         setShowSajuInput(true);
       } else if (showSajuInput) {
         // 사주 정보 입력 완료 후 분석 시작
+        // 이전 싸피네컷 사진 캐시 삭제 (백엔드 POST 전에 삭제)
+        try {
+          localStorage.removeItem("photoBoothSets");
+        } catch (error) {
+          console.error("이전 촬영 데이터 삭제 실패:", error);
+        }
+
         if (faceMeshMetadata) {
           const finalPayload = {
             ...faceMeshMetadata,
@@ -355,6 +362,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   };
 
   const handleGroupAnalyze = () => {
+    // 이전 싸피네컷 사진 캐시 삭제 (백엔드 POST 전에 삭제)
+    try {
+      localStorage.removeItem("photoBoothSets");
+    } catch (error) {
+      console.error("이전 촬영 데이터 삭제 실패:", error);
+    }
+
     if (faceMeshMetadata) {
       // ✅ 백엔드 전송 시 avatar 필드 제외
       const membersWithoutAvatar = groupMembers.map(({ avatar, ...rest }) => rest);

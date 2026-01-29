@@ -10,8 +10,8 @@ import { AnalysisSection } from "@/features/personal/AnalysisSection";
 import { GroupAnalysisSection } from "@/features/group/GroupAnalysisSection";
 import { RankingSection } from "@/features/ranking/components/RankingSection";
 import { PhotoBoothSection } from "@/features/photo/components/PhotoBoothSection";
-import { PhotoGallerySection } from "@/features/photo/components/PhotoGallerySection";
 import { TurtleGuide } from "@/shared/components/TurtleGuide";
+import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { AnimatePresence, motion } from "motion/react";
 import { Trophy } from "lucide-react";
 import logoImage from "@/assets/film.png";
@@ -36,7 +36,19 @@ export default function App() {
   const [groupScore, setGroupScore] = useState(88);
   const [fromAnalysis, setFromAnalysis] = useState(false);
   const [analysisDone, setAnalysisDone] = useState(false);
+  const [frameImageState, setFrameImageState] = useState<string | null>(null);
+  const [fromPhotoBoothState, setFromPhotoBoothState] = useState(false);
   const pathnameRef = useRef(location.pathname);
+
+  // location.state 변경 감지
+  useEffect(() => {
+    if (location.state?.frameImage) {
+      setFrameImageState(location.state.frameImage);
+    }
+    if (location.state?.fromPhotoBooth) {
+      setFromPhotoBoothState(location.state.fromPhotoBooth);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     pathnameRef.current = location.pathname;
@@ -76,33 +88,25 @@ export default function App() {
       const now = new Date();
       const date = now.toISOString().split("T")[0];
       const timestamp = now.toTimeString().split(" ")[0].substring(0, 5);
-      setHistoryData((prev) => [
-        {
-          id: Date.now().toString(),
-          type: "group",
-          date,
-          timestamp,
-          teamName: userTeamName,
-          memberCount: members?.length || 0,
-          score: groupScore,
-          thumbnail: capturedImages[0],
-        },
-        ...prev,
-      ]);
+      const newHistoryItem: HistoryItem = {
+        id: Date.now().toString(),
+        type: mode,
+        date,
+        timestamp,
+        ...(mode === "personal"
+          ? { images: capturedImages }
+          : {
+            teamName: userTeamName,
+            memberCount: members?.length || 0,
+            score: groupScore,
+            thumbnail: capturedImages[0],
+          }),
+      };
+      setHistoryData((prev) => [newHistoryItem, ...prev]);
       setAnalysisDone(true);
-      navigate("/group/result");
-      return;
-    }
-
-    // ----- [원래] 그룹 포함 모든 모드: /analyzing 이동 → ANALYSIS_LOADING_MS 후 /result (그룹은 위 분기에서 return 시 아래 생략) -----
-    navigate(mode === "personal" ? "/personal/analyzing" : "/group/analyzing");
-
-    // 개발: ANALYSIS_LOADING_MS(10초) 후 “분석 완료”. API 연동 시 실제 응답 시점으로 교체.
-    setTimeout(() => {
-      setAnalysisDone(true);
-      // 싸피네컷 다 안 찍었는데 분석 끝난 경우: /photo-booth·/photo-gallery에 있으면 /result로 보내지 않음
-      if (pathnameRef.current === "/personal/analyzing" || pathnameRef.current === "/group/analyzing") {
-        navigate(mode === "personal" ? "/personal/result" : "/group/result");
+      // 싸피네컷 다 안 찍었는데 분석 끝난 경우: /photo-booth에 있으면 /result로 보내지 않음
+      if (pathnameRef.current === "/analyzing") {
+        navigate("/result");
       }
     }, ANALYSIS_LOADING_MS);
   };
@@ -144,17 +148,17 @@ export default function App() {
       case "/personal/photo-booth":
       case "/group/photo-booth":
         return "허허, 사진 네컷을 찍는구먼! \n기다리는 동안 즐거운 추억을 남기게나.";
-      case "/personal/photo-gallery":
-      case "/group/photo-gallery":
-        return "찍은 사진들을 모아두었구먼. \n예쁘게 나왔는지 한 번 확인해보게나.";
       default:
         return "";
     }
   };
 
+  const isPhotoBooth = location.pathname === "/photo-booth";
+
   return (
     <Layout>
-      <header className="w-full h-16 px-6 flex justify-between items-center bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40">
+      {!isPhotoBooth && (
+        <header className="w-full h-16 px-6 flex justify-between items-center bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40">
         <div
           className="flex items-center gap-0.5 cursor-pointer"
           onClick={() => navigate("/")}
@@ -183,6 +187,7 @@ export default function App() {
           </button>
         </div>
       </header>
+      )}
 
       <main className="flex-grow w-full relative">
         <div className="container mx-auto px-4 py-8 min-h-[calc(100vh-64px)]">
@@ -241,31 +246,24 @@ export default function App() {
                 transition={{ duration: 0.4 }}
                 className="w-full h-full"
               >
-                <AnalysisSection
-                  images={images}
-                  onRestart={handleRestart}
-                  onNavigateToPhotoGallery={() =>
-                    navigate("/personal/photo-gallery", { state: { from: "result" } })
-                  }
-                />
-              </motion.div>
-            )}
-
-            {pathname === "/group/result" && (
-              <motion.div
-                key="group-result"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4 }}
-                className="w-full h-full"
-              >
-                <GroupAnalysisSection
-                  groupMembers={groupMembers}
-                  groupImage={images[0]}
-                  onRestart={handleRestart}
-                  onViewRanking={handleViewRanking}
-                />
+                {mode === "personal" ? (
+                  <AnalysisSection
+                    images={images}
+                    onRestart={handleRestart}
+                    onNavigateToPhotoBooth={() =>
+                      navigate("/photo-booth", { state: { from: "result" } })
+                    }
+                    frameImage={frameImageState || location.state?.frameImage}
+                    fromPhotoBooth={fromPhotoBoothState || location.state?.fromPhotoBooth}
+                  />
+                ) : (
+                  <GroupAnalysisSection
+                    groupMembers={groupMembers}
+                    groupImage={images[0]}
+                    onRestart={handleRestart}
+                    onViewRanking={handleViewRanking}
+                  />
+                )}
               </motion.div>
             )}
 
@@ -300,12 +298,15 @@ export default function App() {
                 <PhotoBoothSection
                   mode={mode}
                   onBack={() => {
-                    if (location.state?.from === "photo-gallery")
-                      navigate(mode === "personal" ? "/personal/photo-gallery" : "/group/photo-gallery");
-                    else navigate(mode === "personal" ? "/personal/analyzing" : "/group/analyzing");
+                    // analyzing이 완료된 상태면 결과창으로, 진행 중이면 analyzing으로
+                    if (analysisDone) {
+                      navigate("/result");
+                    } else {
+                      navigate("/analyzing");
+                    }
                   }}
                   onComplete={(photos) => {
-                    // 싸피네컷 완료 → photoBoothSets에 저장 → /photo-gallery에서 조회
+                    // 싸피네컷 완료 → photoBoothSets에 저장
                     const newSet = {
                       id: Date.now().toString(),
                       photos: photos,
@@ -335,37 +336,17 @@ export default function App() {
               </motion.div>
             )}
 
-            {(pathname === "/personal/photo-gallery" || pathname === "/group/photo-gallery") && (
-              <motion.div
-                key="photo-gallery"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.4 }}
-                className="w-full h-full"
-              >
-                <PhotoGallerySection
-                  mode={mode}
-                  onBack={() => {
-                    if (location.state?.from === "result")
-                      navigate(mode === "personal" ? "/personal/result" : "/group/result");
-                    else navigate(mode === "personal" ? "/personal/analyzing" : "/group/analyzing");
-                  }}
-                  onNavigateToPhotoBooth={() =>
-                    navigate(mode === "personal" ? "/personal/photo-booth" : "/group/photo-booth", { state: { from: "photo-gallery" } })
-                  }
-                />
-              </motion.div>
-            )}
           </AnimatePresence>
         </div>
       </main>
 
       {/* Global Floating Turtle Guide */}
-      <TurtleGuide
-        message={getGuideMessage()}
-        isThinking={pathname === "/personal/analyzing" || pathname === "/group/analyzing"}
-      />
+      {pathname !== "/photo-booth" && (
+        <TurtleGuide
+          message={getGuideMessage()}
+          isThinking={pathname === "/analyzing"}
+        />
+      )}
     </Layout>
   );
 }
