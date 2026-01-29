@@ -584,18 +584,24 @@ def generate_saju():
 
 
 # ============================================================
-# 관상 분석 API (Rule-based) - LLM 사용 안 함
+# 관상 분석 + 사주 총평 통합 API
 # ============================================================
 from face_analysis_service import analyze_face
+from saju_summary_service import (
+    build_saju_summary_prompt,
+    build_saju_user_prompt_for_summary,
+    parse_birth_info,
+    parse_total_review
+)
 
 
 @app.route("/test-api/facemesh/personal", methods=["POST"])
 def analyze_face_api():
     """
-    관상 분석 데이터 생성 API (Rule-based)
+    관상 분석 + 사주 총평 통합 API
     
-    LLM을 사용하지 않고 순수 알고리즘으로 관상 분석 데이터를 생성합니다.
-    rules.md에 정의된 수식을 사용하여 각 부위별 측정값과 해석을 계산합니다.
+    관상 분석 (Rule-based)과 사주 총평 (LLM-based)을 함께 수행하여 
+    한 번의 요청으로 모든 결과를 반환합니다.
     
     요청 형식:
     {
@@ -610,13 +616,20 @@ def analyze_face_api():
                 ]
             }
         ],
-        "sajuData": { ... }  // 사주 데이터 (이 API에서는 사용하지 않음)
+        "sajuData": {
+            "gender": "male",
+            "calendarType": "solar",
+            "birthDate": "1995-05-15",
+            "birthTime": "14:30",
+            "birthTimeUnknown": false
+        }
     }
     
     응답 형식:
     {
         "success": true,
         "timestamp": "...",
+        "faceIndex": 1,
         "faceAnalysis": {
             "faceShape": { ... },
             "forehead": { ... },
@@ -624,6 +637,23 @@ def analyze_face_api():
             "nose": { ... },
             "mouth": { ... },
             "chin": { ... }
+        },
+        "meta": {
+            "headRoll": 0,
+            "qualityNote": "...",
+            "overallSymmetry": 0.95
+        },
+        "totalReview": {
+            "harmony": "...",
+            "comprehensive": "...",
+            "improvement": "..."
+        },
+        "sajuInfo": {
+            "yearPillar": "...",
+            "monthPillar": "...",
+            "dayPillar": "...",
+            "hourPillar": "...",
+            ...
         }
     }
     """
@@ -636,7 +666,9 @@ def analyze_face_api():
                 "error": "요청 데이터가 없습니다."
             }), 400
         
-        # faces 배열 확인
+        # ============================================================
+        # 1. 관상 분석 (Rule-based)
+        # ============================================================
         faces = data.get("faces", [])
         if not faces or len(faces) == 0:
             return jsonify({
@@ -644,7 +676,6 @@ def analyze_face_api():
                 "error": "faces 배열이 비어있습니다."
             }), 400
         
-        # 첫 번째 얼굴 분석 (향후 다중 얼굴 지원 가능)
         face = faces[0]
         landmarks = face.get("landmarks", [])
         
@@ -664,7 +695,100 @@ def analyze_face_api():
         
         print(f"✅ 관상 분석 완료 - 품질: {meta.get('qualityNote', 'N/A')}")
         
-        return jsonify({
+        # ============================================================
+        # 2. 사주 총평 생성 (LLM-based)
+        # ============================================================
+        saju_data = data.get("sajuData", {})
+        total_review = None
+        saju_info = None
+        
+        if saju_data and saju_data.get("birthDate"):
+            try:
+                print(f"🔮 사주 총평 생성 시작...")
+                print(f"   성별: {saju_data.get('gender')}")
+                print(f"   생년월일: {saju_data.get('birthDate')}")
+                print(f"   시간: {saju_data.get('birthTime', '미상')}")
+                
+                # 1) 생년월일시 파싱
+                birth_info = parse_birth_info(saju_data)
+                
+                # 2) 사주 계산
+                print("   1단계: 사주 계산 중...")
+                saju = calculate_saju(birth_info)
+                print(f"      연주: {saju['yearPillar']}, 월주: {saju['monthPillar']}, 일주: {saju['dayPillar']}, 시주: {saju['hourPillar']}")
+                
+                # 3) 명리 분석
+                print("   2단계: 명리 분석 중...")
+                myeongri = calculate_myeongri(saju)
+                
+                # 4) 총평용 사주 데이터 구성
+                enhanced_saju_data = {
+                    **saju_data,
+                    "yearPillar": saju['yearPillar'],
+                    "monthPillar": saju['monthPillar'],
+                    "dayPillar": saju['dayPillar'],
+                    "hourPillar": saju['hourPillar'],
+                    "dayStem": saju['dayStem'],
+                    "fiveElements": myeongri['fiveElements']
+                }
+                
+                # 5) 프롬프트 생성
+                print("   3단계: 프롬프트 생성 중...")
+                system_prompt = build_saju_summary_prompt(enhanced_saju_data)
+                user_prompt = build_saju_user_prompt_for_summary(enhanced_saju_data)
+                
+                # 6) GMS API 호출 (LLM)
+                print("   4단계: LLM 호출 중...")
+                model = data.get("model", "gpt-5-mini")
+                timeout = data.get("timeout", 300)
+                
+                result = call_gms_api(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    model=model,
+                    timeout=timeout
+                )
+                
+                # 7) LLM 응답 파싱
+                print("   5단계: 응답 파싱 중...")
+                total_review = parse_total_review(result)
+                
+                # 8) 사주 정보 구성
+                saju_info = {
+                    "yearPillar": saju['yearPillar'],
+                    "monthPillar": saju['monthPillar'],
+                    "dayPillar": saju['dayPillar'],
+                    "hourPillar": saju['hourPillar'],
+                    "yearStem": saju['yearStem'],
+                    "yearBranch": saju['yearBranch'],
+                    "monthStem": saju['monthStem'],
+                    "monthBranch": saju['monthBranch'],
+                    "dayStem": saju['dayStem'],
+                    "dayBranch": saju['dayBranch'],
+                    "hourStem": saju['hourStem'],
+                    "hourBranch": saju['hourBranch'],
+                    "solarTerm": saju['solarTerm'],
+                    "fiveElements": myeongri['fiveElements']
+                }
+                
+                print("✅ 사주 총평 생성 완료")
+                
+            except Exception as e:
+                print(f"⚠️ 사주 총평 생성 중 오류 (관상 분석은 정상): {e}")
+                import traceback
+                traceback.print_exc()
+                total_review = {
+                    "harmony": "사주 총평 생성 중 오류가 발생했습니다.",
+                    "comprehensive": "사주 총평 생성 중 오류가 발생했습니다.",
+                    "improvement": "사주 총평 생성 중 오류가 발생했습니다."
+                }
+        else:
+            print("⚠️ sajuData가 없거나 birthDate가 없어 사주 총평을 생성하지 않습니다.")
+        
+        # ============================================================
+        # 3. 통합 응답 반환
+        # ============================================================
+        response = {
             "success": True,
             "timestamp": data.get("timestamp", ""),
             "faceIndex": face.get("faceIndex", 1),
@@ -674,7 +798,15 @@ def analyze_face_api():
                 "qualityNote": meta.get("qualityNote", ""),
                 "overallSymmetry": meta.get("symmetry", 0)
             }
-        })
+        }
+        
+        # 사주 총평이 있으면 추가
+        if total_review:
+            response["totalReview"] = total_review
+        if saju_info:
+            response["sajuInfo"] = saju_info
+        
+        return jsonify(response)
         
     except Exception as e:
         print(f"❌ 관상 분석 중 오류: {e}")
@@ -684,17 +816,6 @@ def analyze_face_api():
             "success": False,
             "error": f"관상 분석 오류: {str(e)}"
         }), 500
-
-
-# ============================================================
-# 사주 총평 생성 API (LLM-based)
-# ============================================================
-from saju_summary_service import (
-    build_saju_summary_prompt,
-    build_saju_user_prompt_for_summary,
-    parse_birth_info,
-    parse_total_review
-)
 
 
 @app.route("/api/saju/summary", methods=["POST"])
@@ -886,8 +1007,8 @@ if __name__ == "__main__":
     print(f"   텍스트 생성: http://{host}:{port}/api/generate")
     print(f"   사주 분석 (간단): http://{host}:{port}/api/saju/analyze")
     print(f"   사주 분석 (상세): http://{host}:{port}/api/saju/generate")
-    print(f"   관상 분석 (Rule-based): http://{host}:{port}/test-api/facemesh/personal")
-    print(f"   사주 총평 (LLM-based): http://{host}:{port}/api/saju/summary")
+    print(f"   관상+사주 통합 분석: http://{host}:{port}/test-api/facemesh/personal")
+    print(f"   사주 총평 (단독): http://{host}:{port}/api/saju/summary")
     print(f"\n⚠️  서버를 중지하려면 Ctrl+C를 누르세요.\n")
     
     app.run(host=host, port=port, debug=debug)
