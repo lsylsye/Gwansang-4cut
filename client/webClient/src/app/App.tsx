@@ -85,30 +85,14 @@ export default function App() {
 
     // ----- [개발용] 단체 모드: /analyzing 생략, 바로 /result. DEV_SKIP_ANALYZING_FOR_GROUP=false 시 아래 원래 흐름 사용 -----
     if (mode === "group" && DEV_SKIP_ANALYZING_FOR_GROUP) {
-      const now = new Date();
-      const date = now.toISOString().split("T")[0];
-      const timestamp = now.toTimeString().split(" ")[0].substring(0, 5);
-      const newHistoryItem: HistoryItem = {
-        id: Date.now().toString(),
-        type: mode,
-        date,
-        timestamp,
-        ...(mode === "personal"
-          ? { images: capturedImages }
-          : {
-            teamName: userTeamName,
-            memberCount: members?.length || 0,
-            score: groupScore,
-            thumbnail: capturedImages[0],
-          }),
-      };
-      setHistoryData((prev) => [newHistoryItem, ...prev]);
-      setAnalysisDone(true);
-      // 싸피네컷 다 안 찍었는데 분석 끝난 경우: /photo-booth에 있으면 /result로 보내지 않음
-      if (pathnameRef.current === "/analyzing") {
-        navigate("/result");
-      }
-    }, ANALYSIS_LOADING_MS);
+      setTimeout(() => {
+        setAnalysisDone(true);
+        // 싸피네컷 다 안 찍었는데 분석 끝난 경우: /photo-booth에 있으면 /result로 보내지 않음
+        if (pathnameRef.current === "/personal/analyzing" || pathnameRef.current === "/group/analyzing") {
+          navigate("/group/result");
+        }
+      }, ANALYSIS_LOADING_MS);
+    }
   };
 
   const handleViewRanking = (score?: number, name?: string) => {
