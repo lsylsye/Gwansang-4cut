@@ -21,6 +21,15 @@ import {
   GroupMember,
 } from "@/shared/types";
 import { ANALYSIS_LOADING_MS, DEV_SKIP_ANALYZING_FOR_GROUP } from "@/shared/config/analysis";
+import {
+  ROUTES,
+  getUploadPath,
+  getAnalyzingPath,
+  getResultPath,
+  getPhotoBoothPath,
+  isPhotoBoothPath,
+  isAnalyzingPath,
+} from "@/shared/config/routes";
 
 export default function App() {
   const navigate = useNavigate();
@@ -56,16 +65,16 @@ export default function App() {
 
   // /upload 진입 시 URL의 mode path와 state 동기화
   useEffect(() => {
-    if (location.pathname === "/personal/upload") {
+    if (location.pathname === ROUTES.PERSONAL_UPLOAD) {
       setMode("personal");
-    } else if (location.pathname === "/group/upload") {
+    } else if (location.pathname === ROUTES.GROUP_UPLOAD) {
       setMode("group");
     }
   }, [location.pathname]);
 
   const handleStart = (selectedMode: AnalyzeMode) => {
     setMode(selectedMode);
-    navigate(`/${selectedMode}/upload`);
+    navigate(getUploadPath(selectedMode));
   };
 
   const handleAnalyze = (
@@ -88,8 +97,8 @@ export default function App() {
       setTimeout(() => {
         setAnalysisDone(true);
         // 싸피네컷 다 안 찍었는데 분석 끝난 경우: /photo-booth에 있으면 /result로 보내지 않음
-        if (pathnameRef.current === "/personal/analyzing" || pathnameRef.current === "/group/analyzing") {
-          navigate("/group/result");
+        if (isAnalyzingPath(pathnameRef.current)) {
+          navigate(ROUTES.GROUP_RESULT);
         }
       }, ANALYSIS_LOADING_MS);
     }
@@ -99,7 +108,7 @@ export default function App() {
     if (score !== undefined) setGroupScore(score);
     if (name) setUserTeamName(name);
     setFromAnalysis(true);
-    navigate("/ranking");
+    navigate(ROUTES.RANKING);
   };
 
   const handleRestart = () => {
@@ -108,36 +117,36 @@ export default function App() {
     setSaju(null);
     setGroupMembers([]);
     setAnalysisDone(false);
-    navigate("/");
+    navigate(ROUTES.HOME);
   };
 
   const pathname = location.pathname;
   const getGuideMessage = () => {
     switch (pathname) {
-      case "/":
+      case ROUTES.HOME:
         return "허허, 어서 오시게! \n천기를 읽는 거북도사가 자네를 기다리고 있었다네. \n어떤 관상이 궁금하여 나를 찾아왔는가?";
-      case "/personal/upload":
+      case ROUTES.PERSONAL_UPLOAD:
         return "자네의 얼굴에 삼라만상이 담겨 있구먼. \n내 신통한 거울에 얼굴을 비추어 보게나. \n숨겨진 운명을 내가 낱낱이 읽어보리다.";
-      case "/group/upload":
+      case ROUTES.GROUP_UPLOAD:
         return "허허, 모임 관상을 보러 왔구먼! \n사진을 주거나, 직접 한 자리에 모여 보게. \n자네들 사이의 기운을 내가 한 번 짚어보리다.";
-      case "/personal/analyzing":
-      case "/group/analyzing":
+      case ROUTES.PERSONAL_ANALYZING:
+      case ROUTES.GROUP_ANALYZING:
         return "음... 가만있어 보자... \n천기를 스르지 않고 기운을 읽는 중이니, \n잠시만 정적을 지켜주시게나.";
-      case "/personal/result":
+      case ROUTES.PERSONAL_RESULT:
         return "허허! 역시 내 눈은 틀리지 않았어. \n자네의 관상에 이런 놀라운 기운이 숨어있을 줄이야! \n결과를 한 번 찬찬히 살펴보게나.";
-      case "/group/result":
+      case ROUTES.GROUP_RESULT:
         return "오호라, 이 모임의 궁합이 아주 예사롭지 않구먼! \n서로의 기운이 어떻게 어우러지는지 내가 정리해 보았네. \n궁금하지 않은가?";
-      case "/ranking":
+      case ROUTES.RANKING:
         return "허허, 전국 방방곡곡의 인연들이 다 모였구먼! \n자네들의 모임은 과연 몇 번째 기운을 가졌을꼬?";
-      case "/personal/photo-booth":
-      case "/group/photo-booth":
+      case ROUTES.PERSONAL_PHOTO_BOOTH:
+      case ROUTES.GROUP_PHOTO_BOOTH:
         return "허허, 사진 네컷을 찍는구먼! \n기다리는 동안 즐거운 추억을 남기게나.";
       default:
         return "";
     }
   };
 
-  const isPhotoBooth = location.pathname === "/photo-booth";
+  const isPhotoBooth = isPhotoBoothPath(pathname);
 
   return (
     <Layout>
@@ -145,7 +154,7 @@ export default function App() {
         <header className="w-full h-16 px-6 flex justify-between items-center bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40">
         <div
           className="flex items-center gap-0.5 cursor-pointer"
-          onClick={() => navigate("/")}
+          onClick={() => navigate(ROUTES.HOME)}
         >
           <img
             src={logoImage}
@@ -162,7 +171,7 @@ export default function App() {
           <button
             onClick={() => {
               setFromAnalysis(false);
-              navigate("/ranking");
+              navigate(ROUTES.RANKING);
             }}
             className="flex items-center gap-2 px-4 py-2 rounded-full bg-white hover:bg-gray-50 transition-all font-bold text-gray-900 text-sm shadow-sm hover:shadow-md border border-gray-200"
           >
@@ -176,7 +185,7 @@ export default function App() {
       <main className="flex-grow w-full relative">
         <div className="container mx-auto px-4 py-8 min-h-[calc(100vh-64px)]">
           <AnimatePresence mode="wait">
-            {pathname === "/" && (
+            {pathname === ROUTES.HOME && (
               <motion.div
                 key="intro"
                 initial={{ opacity: 0, y: 20 }}
@@ -189,7 +198,7 @@ export default function App() {
               </motion.div>
             )}
 
-            {(pathname === "/personal/upload" || pathname === "/group/upload") && (
+            {(pathname === ROUTES.PERSONAL_UPLOAD || pathname === ROUTES.GROUP_UPLOAD) && (
               <motion.div
                 key="upload"
                 initial={{ opacity: 0, y: 20 }}
@@ -205,7 +214,7 @@ export default function App() {
               </motion.div>
             )}
 
-            {(pathname === "/personal/analyzing" || pathname === "/group/analyzing") && (
+            {(pathname === ROUTES.PERSONAL_ANALYZING || pathname === ROUTES.GROUP_ANALYZING) && (
               <motion.div
                 key="analyzing"
                 initial={{ opacity: 0 }}
@@ -215,13 +224,13 @@ export default function App() {
               >
                 <AnalyzingSection
                   onNavigateToPhotoBooth={() =>
-                    navigate(mode === "personal" ? "/personal/photo-booth" : "/group/photo-booth", { state: { from: "analyzing" } })
+                    navigate(getPhotoBoothPath(mode), { state: { from: "analyzing" } })
                   }
                 />
               </motion.div>
             )}
 
-            {pathname === "/personal/result" && (
+            {pathname === ROUTES.PERSONAL_RESULT && (
               <motion.div
                 key="personal-result"
                 initial={{ opacity: 0, y: 20 }}
@@ -235,7 +244,7 @@ export default function App() {
                     images={images}
                     onRestart={handleRestart}
                     onNavigateToPhotoBooth={() =>
-                      navigate("/photo-booth", { state: { from: "result" } })
+                      navigate(getPhotoBoothPath(mode), { state: { from: "result" } })
                     }
                     frameImage={frameImageState || location.state?.frameImage}
                     fromPhotoBooth={fromPhotoBoothState || location.state?.fromPhotoBooth}
@@ -251,7 +260,7 @@ export default function App() {
               </motion.div>
             )}
 
-            {pathname === "/ranking" && (
+            {pathname === ROUTES.RANKING && (
               <motion.div
                 key="ranking"
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -261,7 +270,7 @@ export default function App() {
                 className="w-full h-full"
               >
                 <RankingSection
-                  onBack={() => navigate("/group/result")}
+                  onBack={() => navigate(ROUTES.GROUP_RESULT)}
                   onHome={handleRestart}
                   userScore={groupScore}
                   initialTeamName={userTeamName}
@@ -270,7 +279,7 @@ export default function App() {
               </motion.div>
             )}
 
-            {(pathname === "/personal/photo-booth" || pathname === "/group/photo-booth") && (
+            {(pathname === ROUTES.PERSONAL_PHOTO_BOOTH || pathname === ROUTES.GROUP_PHOTO_BOOTH) && (
               <motion.div
                 key="photo-booth"
                 initial={{ opacity: 0, y: 20 }}
@@ -284,9 +293,9 @@ export default function App() {
                   onBack={() => {
                     // analyzing이 완료된 상태면 결과창으로, 진행 중이면 analyzing으로
                     if (analysisDone) {
-                      navigate("/result");
+                      navigate(getResultPath(mode));
                     } else {
-                      navigate("/analyzing");
+                      navigate(getAnalyzingPath(mode));
                     }
                   }}
                   onComplete={(photos) => {
@@ -311,9 +320,9 @@ export default function App() {
                     }
                     // 싸피네컷 다 찍었을 때: 분석 끝남 → /result, 아니면 → /analyzing
                     if (analysisDone) {
-                      navigate(mode === "personal" ? "/personal/result" : "/group/result");
+                      navigate(getResultPath(mode));
                     } else {
-                      navigate(mode === "personal" ? "/personal/analyzing" : "/group/analyzing");
+                      navigate(getAnalyzingPath(mode));
                     }
                   }}
                 />
@@ -325,10 +334,10 @@ export default function App() {
       </main>
 
       {/* Global Floating Turtle Guide */}
-      {pathname !== "/photo-booth" && (
+      {!isPhotoBooth && (
         <TurtleGuide
           message={getGuideMessage()}
-          isThinking={pathname === "/analyzing"}
+          isThinking={isAnalyzingPath(pathname)}
         />
       )}
     </Layout>
