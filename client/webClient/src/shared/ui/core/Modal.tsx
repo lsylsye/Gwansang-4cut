@@ -7,7 +7,9 @@ interface ModalProps {
   onClose: () => void;
   children: React.ReactNode;
   className?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
+  /** 모달을 위쪽 정렬 (예: 얼굴 영역 위쪽에 띄울 때) */
+  align?: "center" | "top";
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -15,12 +17,15 @@ export const Modal: React.FC<ModalProps> = ({
   onClose,
   children,
   className = "",
-  size = "md"
+  size = "md",
+  align = "center"
 }) => {
-  const sizeClasses = {
-    sm: "max-w-md",
-    md: "max-w-xl",
-    lg: "max-w-3xl"
+  const sizeClasses: Record<string, string> = {
+    sm: "sm:max-w-md",
+    md: "sm:max-w-xl",
+    lg: "sm:max-w-3xl",
+    xl: "sm:max-w-4xl sm:w-[95vw]",
+    "2xl": "sm:max-w-5xl sm:w-[90vw]"
   };
 
   React.useEffect(() => {
@@ -34,10 +39,13 @@ export const Modal: React.FC<ModalProps> = ({
     };
   }, [isOpen]);
 
+  const alignClasses = align === "top" ? "sm:items-start sm:pt-6 sm:pb-6" : "sm:items-center";
+  const maxHeightClass = (size === "xl" || size === "2xl") ? "sm:max-h-[90vh]" : "sm:max-h-[85vh]";
+
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className={`fixed inset-0 z-50 flex items-stretch justify-center sm:p-4 ${alignClasses}`}>
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -49,21 +57,33 @@ export const Modal: React.FC<ModalProps> = ({
           
           {/* Modal Content */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ duration: 0.2 }}
-            className={`relative w-full ${sizeClasses[size]} bg-white rounded-3xl shadow-2xl p-8 ${className}`}
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className={`relative w-full h-full sm:h-auto ${sizeClasses[size] ?? sizeClasses.md} bg-white 
+              sm:rounded-3xl shadow-2xl 
+              ${maxHeightClass} overflow-hidden flex flex-col
+              ${className}`}
           >
             {/* Close Button */}
             <button
-              onClick={onClose}
-              className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
+              className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all z-50 bg-white/80"
             >
               <X size={20} />
             </button>
 
-            {children}
+            {/* Scrollable Content - 패딩을 안쪽에서 처리 */}
+            <div className="overflow-y-auto flex-1 pt-14 sm:pt-16 modal-scrollbar">
+              <div className="px-6 sm:px-8 pb-6 sm:pb-8">
+                {children}
+              </div>
+            </div>
           </motion.div>
         </div>
       )}
@@ -77,8 +97,8 @@ interface ModalHeaderProps {
 }
 
 export const ModalHeader: React.FC<ModalHeaderProps> = ({ children, description }) => (
-  <div className="text-center mb-8">
-    <h3 className="text-2xl font-bold text-gray-900 mb-2 font-display">{children}</h3>
+  <div className="text-center mb-6 sm:mb-8">
+    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 font-display">{children}</h3>
     {description && <p className="text-gray-500 font-sans text-sm">{description}</p>}
   </div>
 );
@@ -95,8 +115,14 @@ export const ModalBody: React.FC<ModalBodyProps> = ({ children, className = "" }
 interface ModalFooterProps {
   children: React.ReactNode;
   className?: string;
+  sticky?: boolean;
 }
 
-export const ModalFooter: React.FC<ModalFooterProps> = ({ children, className = "" }) => (
-  <div className={`mt-6 flex flex-col sm:flex-row gap-3 ${className}`}>{children}</div>
+export const ModalFooter: React.FC<ModalFooterProps> = ({ children, className = "", sticky = true }) => (
+  <div className={`
+    ${sticky ? 'sticky bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 sm:p-0 sm:border-0 sm:bg-transparent sm:static sm:mt-6' : 'mt-6'}
+    flex flex-col sm:flex-row gap-3 ${className}
+  `}>
+    {children}
+  </div>
 );

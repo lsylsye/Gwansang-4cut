@@ -71,7 +71,6 @@ interface RankingSectionProps {
   userScore: number;
   initialTeamName: string;
   fromAnalysis?: boolean; // 분석 완료 후 랭킹으로 왔는지 여부
-  isLoggedIn?: boolean; // 로그인 상태
 }
 
 export const RankingSection: React.FC<RankingSectionProps> = ({
@@ -79,8 +78,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
   onHome,
   userScore,
   initialTeamName,
-  fromAnalysis = false,
-  isLoggedIn = false
+  fromAnalysis = false
 }) => {
   const [teamName, setTeamName] = useState(initialTeamName);
   const [isFixed, setIsFixed] = useState(false);
@@ -158,15 +156,15 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
           animate={{ opacity: 1, scale: 1 }}
           className="mb-12"
         >
-          <GlassCard className="p-8 border-4 border-[#FF7043]/30 bg-orange-50/30 shadow-pixel-lg">
+          <GlassCard className="p-8 border-4 border-brand-orange/30 bg-orange-50/30 shadow-pixel-lg">
             <div className="flex flex-col items-center text-center space-y-6">
-              <div className="w-20 h-20 rounded-3xl bg-white shadow-clay-sm flex items-center justify-center text-[#FF7043] relative">
+              <div className="w-20 h-20 rounded-3xl bg-white shadow-clay-sm flex items-center justify-center text-brand-orange relative">
                 <Sparkles className="absolute -top-2 -right-2 text-yellow-500 animate-pulse" />
                 <TrendingUp size={40} />
               </div>
               <div className="space-y-2">
                 <h3 className="text-2xl font-bold text-gray-800 font-display">먼저 우리 팀 이름을 정해주게!</h3>
-                <p className="text-gray-500 font-sans">궁합 점수 <span className="text-[#FF7043] font-bold">{userScore}점</span>으로 랭킹에 등록하려네.</p>
+                <p className="text-gray-500 font-sans">궁합 점수 <span className="text-brand-orange font-bold">{userScore}점</span>으로 랭킹에 등록하려네.</p>
               </div>
 
               <div className="w-full max-w-md space-y-3">
@@ -175,7 +173,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                     type="text"
                     value={teamName}
                     onChange={(e) => setTeamName(e.target.value)}
-                    className="flex-1 px-6 py-4 bg-white border-2 border-gray-100 rounded-2xl text-xl font-bold font-display text-center focus:outline-none focus:border-[#FF7043] transition-all shadow-clay-xs group-hover:shadow-clay-sm"
+                    className="flex-1 px-6 py-4 bg-white border-2 border-gray-100 rounded-2xl text-xl font-bold font-display text-center focus:outline-none focus:border-brand-orange transition-all shadow-clay-xs group-hover:shadow-clay-sm"
                     placeholder="팀명을 입력해 주세요"
                   />
                   <ActionButton
@@ -202,7 +200,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="bg-[#FF7043] text-white p-6 rounded-3xl shadow-clay-md flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
+          <div className="bg-brand-orange text-white p-6 rounded-3xl shadow-clay-md flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
             <div className="relative z-10 flex items-center gap-5">
               <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center font-black">
                 <span className="text-xs uppercase opacity-70">RANK</span>
@@ -218,7 +216,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                 <span className="block text-xs uppercase opacity-70 font-bold">Total Score</span>
                 <span className="text-3xl font-black font-sans">{userScore}</span>
               </div>
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-[#FF7043] shadow-clay-sm">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-brand-orange shadow-clay-sm">
                 <Trophy size={24} />
               </div>
             </div>
@@ -233,7 +231,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="bg-[#FF7043] text-white p-6 rounded-3xl shadow-clay-md flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
+          <div className="bg-brand-orange text-white p-6 rounded-3xl shadow-clay-md flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
             <div className="relative z-10 flex items-center gap-5">
               <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center font-black">
                 <span className="text-xs uppercase opacity-70">RANK</span>
@@ -249,43 +247,13 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                 <span className="block text-xs uppercase opacity-70 font-bold">Total Score</span>
                 <span className="text-3xl font-black font-sans">{userScore}</span>
               </div>
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-[#FF7043] shadow-clay-sm">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-brand-orange shadow-clay-sm">
                 <Trophy size={24} />
               </div>
             </div>
             {/* Background Decoration */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Tabs (Only visible when logged in) */}
-      {isLoggedIn && !fromAnalysis && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl w-fit mx-auto">
-            <button
-              onClick={() => handleTabChange("all")}
-              className={`px-6 py-3 rounded-xl font-bold font-sans text-sm transition-all ${activeTab === "all"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-                }`}
-            >
-              전체 랭킹
-            </button>
-            <button
-              onClick={() => handleTabChange("my")}
-              className={`px-6 py-3 rounded-xl font-bold font-sans text-sm transition-all ${activeTab === "my"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-                }`}
-            >
-              내 모임 랭킹
-            </button>
           </div>
         </motion.div>
       )}
@@ -317,10 +285,10 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
             >
               <GlassCard
                 className={`p-5 flex items-center gap-6 relative overflow-hidden group transition-all 
-                  ${isUser ? 'border-2 border-[#FF7043] bg-orange-50/10 shadow-clay-sm z-20 scale-[1.02]' : 'border-gray-100 shadow-pixel'}`}
+                  ${isUser ? 'border-2 border-brand-orange bg-orange-50/10 shadow-clay-sm z-20 scale-[1.02]' : 'border-gray-100 shadow-pixel'}`}
               >
                 {/* Rank Number */}
-                <div className={`w-12 h-12 rounded-xl ${isUser ? 'bg-[#FF7043] text-white shadow-clay-xs' : rankColors} flex flex-col items-center justify-center shrink-0 relative z-10`}>
+                <div className={`w-12 h-12 rounded-xl ${isUser ? 'bg-brand-orange text-white shadow-clay-xs' : rankColors} flex flex-col items-center justify-center shrink-0 relative z-10`}>
                   <span className="text-base font-black font-sans">{item.rank}</span>
                   <RankIcon size={14} className="mt-[-2px]" />
                 </div>
@@ -328,9 +296,9 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                 {/* Team Info */}
                 <div className="flex-1 relative z-10">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <h3 className={`text-lg font-bold font-display tracking-tight ${isUser ? 'text-[#FF7043]' : 'text-gray-800'}`}>
+                    <h3 className={`text-lg font-bold font-display tracking-tight ${isUser ? 'text-brand-orange' : 'text-gray-800'}`}>
                       {item.teamName}
-                      {isUser && <span className="ml-2 text-xs font-bold font-sans bg-[#FF7043]/10 px-2 py-0.5 rounded-md uppercase">YOU</span>}
+                      {isUser && <span className="ml-2 text-xs font-bold font-sans bg-brand-orange/10 px-2 py-0.5 rounded-md uppercase">YOU</span>}
                     </h3>
                     {!isUser && (
                       <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded-lg border border-gray-200 uppercase">
@@ -342,7 +310,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                     <span className="flex items-center gap-1">
                       <Users size={12} /> {item.members}명
                     </span>
-                    <span className={`flex items-center gap-1 font-bold ${isUser ? 'text-[#FF7043]' : 'text-gray-400'}`}>
+                    <span className={`flex items-center gap-1 font-bold ${isUser ? 'text-brand-orange' : 'text-gray-400'}`}>
                       <TrendingUp size={12} /> {item.score}점
                     </span>
                   </div>
@@ -350,20 +318,20 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
 
                 {/* Small Score Circle */}
                 <div className="shrink-0 relative z-10">
-                  <div className={`w-12 h-12 rounded-full border-2 flex items-center justify-center bg-white shadow-inner relative ${isUser ? 'border-[#FF7043]/30' : 'border-gray-50'}`}>
+                  <div className={`w-12 h-12 rounded-full border-2 flex items-center justify-center bg-white shadow-inner relative ${isUser ? 'border-brand-orange/30' : 'border-gray-50'}`}>
                     <svg className="absolute inset-0 w-full h-full -rotate-90">
                       <circle
                         cx="24"
                         cy="24"
                         r="21"
                         fill="none"
-                        stroke={isUser ? "#FF7043" : (isTop3 ? "#FF7043" : "#E2E8F0")}
+                        stroke={isUser ? "var(--brand-orange)" : (isTop3 ? "var(--brand-orange)" : "var(--color-gray-200)")}
                         strokeWidth="3"
                         strokeDasharray={`${(item.score / 100) * 131.9} 131.9`}
                         strokeLinecap="round"
                       />
                     </svg>
-                    <span className={`text-[10px] font-black font-sans ${isUser ? 'text-[#FF7043]' : 'text-gray-800'}`}>{item.score}</span>
+                    <span className={`text-[10px] font-black font-sans ${isUser ? 'text-brand-orange' : 'text-gray-800'}`}>{item.score}</span>
                   </div>
                 </div>
               </GlassCard>
@@ -394,7 +362,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                 key={page}
                 onClick={() => handlePageChange(page)}
                 className={`w-10 h-10 rounded-xl font-bold text-sm transition-all ${currentPage === page
-                  ? 'bg-[#FF7043] text-white shadow-clay-xs'
+                  ? 'bg-brand-orange text-white shadow-clay-xs'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
               >

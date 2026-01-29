@@ -25,15 +25,15 @@ export const ResultCharts: React.FC<ChartProps> = ({ data }) => {
       <div className="w-full h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
-            <PolarGrid stroke="#90A4AE" strokeWidth={1} />
-            <PolarAngleAxis dataKey="subject" tick={{ fill: "#37474F", fontSize: 12, fontWeight: "bold" }} />
+            <PolarGrid stroke="var(--brand-gray-light)" strokeWidth={1} />
+            <PolarAngleAxis dataKey="subject" tick={{ fill: "var(--brand-gray-dark)", fontSize: 12, fontWeight: "bold" }} />
             <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
             <Radar
               name="My Luck"
               dataKey="A"
-              stroke="#00897B"
+              stroke="brand-green"
               strokeWidth={3}
-              fill="#26A69A"
+              fill="brand-teal"
               fillOpacity={0.6}
             />
           </RadarChart>
