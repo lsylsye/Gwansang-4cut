@@ -11,6 +11,7 @@ import { GroupAnalysisSection } from "@/features/group/GroupAnalysisSection";
 import { RankingSection } from "@/features/ranking/components/RankingSection";
 import { PhotoBoothSection } from "@/features/photo/components/PhotoBoothSection";
 import { TurtleGuide } from "@/shared/components/TurtleGuide";
+import { HideTurtleGuideProvider, useHideTurtleGuide } from "@/shared/contexts/HideTurtleGuideContext";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { AnimatePresence, motion } from "motion/react";
 import { Trophy } from "lucide-react";
@@ -180,6 +181,7 @@ export default function App() {
 
   return (
     <Layout>
+      <HideTurtleGuideProvider>
       {!isPhotoBooth && (
         <header className="w-full h-16 px-6 flex justify-between items-center bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40">
         <div
@@ -363,13 +365,32 @@ export default function App() {
         </div>
       </main>
 
-      {/* Global Floating Turtle Guide */}
-      {!isPhotoBooth && (
-        <TurtleGuide
-          message={getGuideMessage()}
-          isThinking={isAnalyzingPath(pathname)}
-        />
-      )}
+      {/* Global Floating Turtle Guide (체질 분석 탭에서는 숨김) */}
+      <TurtleGuideGate
+        pathname={pathname}
+        getGuideMessage={getGuideMessage}
+        isPhotoBooth={isPhotoBooth}
+      />
+      </HideTurtleGuideProvider>
     </Layout>
+  );
+}
+
+function TurtleGuideGate({
+  pathname,
+  getGuideMessage,
+  isPhotoBooth,
+}: {
+  pathname: string;
+  getGuideMessage: () => string;
+  isPhotoBooth: boolean;
+}) {
+  const { hideTurtleGuide } = useHideTurtleGuide();
+  if (isPhotoBooth || hideTurtleGuide) return null;
+  return (
+    <TurtleGuide
+      message={getGuideMessage()}
+      isThinking={isAnalyzingPath(pathname)}
+    />
   );
 }

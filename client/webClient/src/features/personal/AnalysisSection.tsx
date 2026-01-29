@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { FaceAnalysis } from "./face/components/FaceAnalysis";
-import { StatsAnalysis } from "./stats/components/StatsAnalysis";
+import { StatsAnalysis, type ConstitutionPhase } from "./stats/components/StatsAnalysis";
 import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
 import { SajuAnalysisResponse } from "@/shared/api/sajuApi";
 import { USE_MOCK_RESULTS } from "@/shared/config/analysis";
@@ -302,10 +302,22 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
     const [currentTab, setCurrentTab] = useState<"physiognomy" | "constitution" | "future" | "ssafy-cut">(
         "physiognomy"
     );
+    const { setHideTurtleGuide } = useHideTurtleGuide();
+
+    // 체질 분석 탭일 때만 플로팅 거북 도사 숨김
+    useEffect(() => {
+        setHideTurtleGuide(currentTab === "constitution");
+        return () => setHideTurtleGuide(false);
+    }, [currentTab, setHideTurtleGuide]);
+
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [futureImage, setFutureImage] = useState<string | null>(null);
     const [savedFrameImage, setSavedFrameImage] = useState<string | null>(null);
+
+    // 체질 분석 상태 (다른 탭 갔다 와도 마지막 결과 뷰 유지)
+    const [constitutionPhase, setConstitutionPhase] = useState<ConstitutionPhase>("intro");
+    const [constitutionSelectedMenuIdx, setConstitutionSelectedMenuIdx] = useState<number | null>(null);
 
     // localStorage에서 프레임 이미지 로드
     useEffect(() => {
@@ -461,11 +473,15 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
 
                     {/* --- Tab 2 & 3: Constitution & Future --- */}
                     {(currentTab === "constitution" || currentTab === "future") && (
-                        <StatsAnalysis 
-                            tab={currentTab} 
-                            images={images} 
+                        <StatsAnalysis
+                            tab={currentTab}
+                            images={images}
                             futureImage={futureImage}
                             onFutureImageUpload={setFutureImage}
+                            constitutionPhase={constitutionPhase}
+                            onConstitutionPhaseChange={setConstitutionPhase}
+                            constitutionSelectedMenuIdx={constitutionSelectedMenuIdx}
+                            onConstitutionSelectedMenuIdxChange={setConstitutionSelectedMenuIdx}
                         />
                     )}
 
