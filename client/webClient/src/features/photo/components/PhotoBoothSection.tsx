@@ -6,6 +6,7 @@ import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { Card } from "@/shared/ui/core/card";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { AnalyzeMode } from "@/shared/types";
+import { getResultPath } from "@/shared/config/routes";
 import film01 from "@/assets/film_01.png";
 import film02 from "@/assets/film_02.png";
 import frame01 from "@/assets/frame_01.png";
@@ -508,12 +509,12 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
         // 직접 navigate만 호출
         // fromPhotoBooth를 false로 설정하여 관상 분석 탭으로 이동
         setTimeout(() => {
-          navigate("/result", { 
-            state: { 
+          navigate(getResultPath(mode), {
+            state: {
               frameImage,
-              fromPhotoBooth: false 
+              fromPhotoBooth: false,
             },
-            replace: true
+            replace: true,
           });
         }, 500);
       }, "image/png", 1.0);
@@ -537,7 +538,7 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
     });
   };
 
-  // Step 1: Frame Selection Screen
+  // Step 1: 프레임 선택하기기
   if (!frameType) {
     return (
       <motion.div
@@ -626,7 +627,7 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
 
   // Step 2 혹은 Step 3 결정
   if (!showSelection) {
-    // Step 2: Photo Capture Screen
+    // Step 2: 촬영화면
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -807,7 +808,7 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
 
   // Step 3 혹은 Step 4 결정
   if (showSelection && !showCustomization) {
-    // Step 3: Best Shot Selection Screen
+    // Step 3: 베스트샷 선택
     return (
       <div className="flex flex-col items-center justify-start w-full min-h-[90vh] pb-24 px-4 sm:px-6">
         <motion.div
