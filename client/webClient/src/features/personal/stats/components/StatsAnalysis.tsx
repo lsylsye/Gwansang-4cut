@@ -4,6 +4,7 @@ import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
 import { Heart, AlertTriangle, Utensils, Snowflake, Brain, Sparkles, Clock, TrendingUp, Download, Camera, Upload, X, CheckCircle2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { SajuAnalysisResponse } from "@/shared/api/sajuApi";
 import profileImage from "@/assets/profile.png";
 import selfieImage from "@/assets/selfie.png";
 
@@ -182,6 +183,7 @@ interface StatsAnalysisProps {
     images: string[];
     futureImage?: string | null;
     onFutureImageUpload?: (image: string | null) => void;
+    sajuAnalysisResult?: SajuAnalysisResponse | null;
 }
 
 // FastAPI 서버 URL (환경변수 또는 기본값)
@@ -191,7 +193,8 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
     tab, 
     images, 
     futureImage = null,
-    onFutureImageUpload 
+    onFutureImageUpload,
+    sajuAnalysisResult
 }) => {
     // TODO: 테스트 후 아래 줄 삭제하고 _futureImage를 futureImage로 되돌리기
     // const futureImage = "test"; // 로딩 화면 테스트용

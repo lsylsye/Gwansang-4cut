@@ -1,0 +1,20 @@
+{
+  "description": "샘플 관상 메트릭 데이터 (직접 입력용)",
+  "foreheadWidth": 48,
+  "foreheadHeight": 55,
+  "eyeWidth": 30,
+  "eyeDistance": 32,
+  "eyeSlant": 5,
+  "noseLength": 52,
+  "noseWidth": 40,
+  "noseBridgeHeight": 12,
+  "mouthWidth": 55,
+  "lipThickness": 14,
+  "jawWidth": 125,
+  "chinLength": 42,
+  "earLength": 58,
+  "earWidth": 28,
+  "faceWidth": 145,
+  "faceHeight": 185,
+  "faceRatio": 0.78
+}

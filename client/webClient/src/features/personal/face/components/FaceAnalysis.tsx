@@ -1,52 +1,33 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
-import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
-import { Sparkles, X, Calendar, ScanFace, Briefcase, Heart } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 
 // --- Types ---
-interface AnalysisSection {
-    id?: string;
-    label?: string;
-    title: string;
-    content: string;
-}
-
 interface FaceAnalysisProps {
     image: string;
     scores: any[];
     features: any;
-    totalAnalysis: AnalysisSection[];
+    totalReview?: TotalReview; // 거북 도사의 총평 데이터 (백엔드에서 받아옴)
 }
 
-// 거북 도사의 총평 2x2 카드: 아이콘·설명·스타일 (이미지 가이드 기준)
-const FORTUNE_CARD_EXTRA: Record<string, { desc: string; Icon: React.ComponentType<{ size?: number }>; iconBoxClass: string }> = {
-    saju: { desc: "타고난 기운과 사주 구조를 알아보세요", Icon: Calendar, iconBoxClass: "bg-amber-50 border-2 border-amber-400 text-amber-800" },
-    integration: { desc: "관상과 사주의 종합 해석", Icon: ScanFace, iconBoxClass: "bg-green-50 border-2 border-green-600 text-green-800" },
-    job: { desc: "직업·이직·승진에 대한 조언", Icon: Briefcase, iconBoxClass: "bg-blue-50 border-2 border-blue-400 text-blue-800" },
-    love: { desc: "연애와 관계에 대한 운세", Icon: Heart, iconBoxClass: "bg-pink-50 border-2 border-pink-400 text-pink-800" },
-};
-
-// 총평 두괄식: 한 줄 핵심 → 결론(LEAD) → 소제목 있는 전개(BODY)
-const TOTAL_REVIEW_HEAD = "올해의 핵심: 속도 조절과 관계를 돌아보는 해";
-const TOTAL_REVIEW_LEAD = `올해는 너무 앞만 보고 달리기보다, 중간중간 속도를 조절하며 사람 관계와 자신의 행동을 한 번 더 돌아보는 태도가 운의 흐름을 부드럽게 합니다. 이성 관계에서는 억지로 감정을 정리하거나 밀착시키기보다, 숨 쉴 수 있는 거리를 두고 차분하게 마음을 정리하는 것이 도움이 됩니다.`;
-
-const TOTAL_REVIEW_BODY: { sub?: string; text: string }[] = [
-    { sub: "올해 흐름", text: `올해는 선생님께서 자연스럽게 관심사가 넓어지고, 이것저것 손을 대게 되는 분주한 흐름 속에 놓이게 됩니다. 에너지가 안에서부터 차오르듯 "이건 해볼 만하다"는 생각이 자주 떠오를 수 있겠네요.` },
-    { text: `특히 연초에는 스스로에게 기대하는 수준이 높아지고, 경쟁심과 의욕이 함께 살아나며 여러 목표를 동시에 세워 열심히 움직이려는 모습이 보입니다. 일이나 재물에 대한 욕심이 커지는 것도 이 시기의 특징입니다.` },
-    { sub: "주의할 점", text: `다만, 앞서 나가려는 힘이 강해질수록 발걸음이 빨라져 주변을 돌아볼 여유가 줄어들 수 있습니다. "내가 지금 어떤 선택을 하고 있는지", "이게 정말 나에게 맞는 방향인지"를 점검하지 못하고 지나칠 가능성도 있습니다.` },
-    { text: `그래서 이 시기에는 의도하지 않은 실수나 작은 판단 착오로 아쉬운 손실을 경험할 수도 있고, 생각보다 복잡한 일에 휘말리는 순간이 생길 수 있겠습니다.` },
-    { sub: "이성 관계", text: `이성 관계는 올해 감정의 파장이 평소보다 커지는 시기라, 연인이 있는 경우 경쟁 구도가 생기거나 거리감이 느껴지기도 하고, 스스로 사람을 밀어내는 태도를 보이게 될 수도 있습니다. 전반적으로 외로움을 느끼기 쉬운 때이니, 감정이 흔들릴수록 충동적인 판단보다 차분하게 마음을 정리하는 시간이 필요해 보입니다.` },
-];
+// 거북 도사의 총평: 3가지 구성
+// 1. 부위 간의 조화 및 균형 해석
+// 2. 종합 운세 해석
+// 3. 운을 좋게 만드는 방법 제안
+interface TotalReview {
+    harmony?: string; // 부위 간의 조화 및 균형 해석
+    comprehensive?: string; // 종합 운세 해석
+    improvement?: string; // 운을 좋게 만드는 방법 제안
+}
 
 // highlightIndex: 0=얼굴형(공통·얼굴형), 1=이마, 2=눈, 3=코, 4=입, 5=턱
 const HIGHLIGHT_ORDER = 6;
 const HIGHLIGHT_DURATION_MS = 2800;
 
-export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, features, totalAnalysis }) => {
+export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, features, totalReview }) => {
     const [activeFeature, setActiveFeature] = useState<string | null>(null);
     const [highlightIndex, setHighlightIndex] = useState(0);
-    const [fortuneModalId, setFortuneModalId] = useState<string | null>(null);
 
     // 순차 하이라이트: 아무 것도 선택되지 않았을 때만 부위를 바꿔 가며 테두리 빛 표시
     useEffect(() => {
@@ -66,8 +47,11 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
         chin: "턱/하관",
     };
 
-    /** 범위 게이지: value가 어느 구간(segment)에 해당하는지 시각화. customLabel 없으면 "범위 게이지" */
-    const renderRangeGauge = (g: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] }, customLabel?: string) => {
+    /** 범위 게이지: value가 어느 구간(segment)에 해당하는지 시각화. 게이지 안에는 구간 기준값(segment min~max)만 표시 */
+    const renderRangeGauge = (
+        g: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] },
+        customLabel?: string
+    ) => {
         const { value, rangeMin, rangeMax, unit = "", segments } = g;
         const span = rangeMax - rangeMin || 1;
         const pct = Math.max(0, Math.min(100, ((value - rangeMin) / span) * 100));
@@ -82,9 +66,9 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
         const formatVal = (v: number) => (Math.abs(v) < 0.01 && v !== 0 ? v.toFixed(4) : v % 1 === 0 ? String(v) : v.toFixed(2));
 
         return (
-            <div className="mb-5">
+            <div className="mb-5 p-4 rounded-xl border border-gray-200 bg-gray-50/50">
                 <p className="text-gray-700 font-semibold mb-2 text-[19px]">{customLabel ?? "범위 게이지"}</p>
-                <div className="flex rounded-lg overflow-hidden border border-gray-200 text-[17px]">
+                <div className="flex rounded-lg overflow-hidden border border-gray-200 text-[17px] bg-white">
                     {resolved.map((r, i) => (
                         <div
                             key={i}
@@ -111,72 +95,66 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                     <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-brand-green border-2 border-white shadow" style={{ left: `max(0%,min(100%,${pct}%))`, marginLeft: "-8px" }} />
                 </div>
                 <p className="text-[17px] text-gray-600 mt-1.5 font-medium">측정값: {formatVal(value)}{unit}</p>
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                    <p className="text-gray-600 text-[15px] font-medium mb-2">기준값 (구간)</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[15px]">
+                        {resolved.map((r, i) => (
+                            <div key={i} className="py-2 px-3 rounded-lg bg-white border border-gray-100">
+                                <span className="font-medium text-gray-800">{r.label}:</span>{" "}
+                                <span className="text-gray-600">{formatVal(r.segMin)}{unit} ~ {formatVal(r.segMax)}{unit}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     };
 
-    /** 한 블록(forehead, eyes, nose, mouth, chin) 렌더 — 보고서형: 범위 게이지 / 측정 요약 / 해석 / 제언 */
+    /** 한 블록(forehead, eyes, nose, mouth, chin) 렌더 — 측정 데이터 + 게이지(기준값) + 핵심의미 */
     const renderBlock = (
-        f: { title?: string; valuesLabel?: string; values?: string; criteria?: string; interpretation?: string; adviceLabel?: string; advice?: string; gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] } } | undefined
+        f: { title?: string; values?: string; criteria?: string; gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] }; interpretation?: string } | undefined
     ) => {
         if (!f) return null;
+        const hasMeasureData = (f.values != null && f.values !== "") || (f.criteria != null && f.criteria !== "");
         return (
             <div className="space-y-5 text-[20px] leading-relaxed">
                 <h4 className="font-bold text-gray-800 font-display text-2xl border-b-2 border-brand-green/20 pb-2">{f.title}</h4>
-                {f.gauge && renderRangeGauge(f.gauge)}
-                {(f.values != null && f.values !== "") || (f.criteria != null && f.criteria !== "") ? (
+                {hasMeasureData && (
                     <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">측정 데이터</h5>
+                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 측정 데이터</h5>
                         <p className="text-gray-700">
                             {f.values != null && f.values !== "" && <>{f.values}</>}
                             {f.criteria != null && f.criteria !== "" && (
-                                <>{f.values != null && f.values !== "" ? " 적용 기준은 " : "적용 기준: "}{f.criteria}{f.values != null && f.values !== "" ? "입니다." : "."}</>
+                                <>{f.values != null && f.values !== "" ? " 적용 기준: " : ""}{f.criteria}{f.values != null && f.values !== "" ? "." : ""}</>
                             )}
                         </p>
                     </section>
-                ) : null}
+                )}
+                {f.gauge && renderRangeGauge(f.gauge, "범위 게이지")}
                 {f.interpretation != null && f.interpretation !== "" && (
                     <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">해석</h5>
+                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 핵심 의미</h5>
                         <p className="text-gray-700">{f.interpretation}</p>
-                    </section>
-                )}
-                {f.advice != null && f.advice !== "" && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">종합 및 제언</h5>
-                        <p className="text-gray-700">{f.advice}</p>
                     </section>
                 )}
             </div>
         );
     };
 
-    /** 이마 전용 확장 블록: 분석 신뢰도, 측정 데이터, 이마 높이 게이지, 판정·한줄요약·핵심의미·강점·주의·경계문장·제언 */
+    /** 이마 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
     const renderForeheadBlock = (f: {
-        title?: string; gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
-        analysisTrust?: string; analysisTrustNote?: string;
         measures?: { height?: string; heightRatio?: string; width?: string; widthRatio?: string };
-        typeSub?: string; oneLineSummary?: string; coreMeaning?: string; strengths?: string[]; cautions?: string[]; boundarySentence?: string;
-        interpretation?: string; advice?: string;
+        gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
+        coreMeaning?: string;
     } | undefined) => {
         if (!f) return null;
         const m = f.measures || {};
-        const strengths = f.strengths || [];
-        const cautions = f.cautions || [];
+        const hasMeasures = m.height || m.heightRatio || m.width || m.widthRatio;
         return (
             <div className="space-y-6 text-[20px] leading-relaxed">
                 <h4 className="font-bold text-gray-800 font-display text-2xl border-b-2 border-brand-green/20 pb-2">🧠 이마 분석 · 사고력과 초년운</h4>
 
-                {(f.analysisTrust || f.analysisTrustNote) && (
-                    <section>
-                        <p className="text-gray-700">
-                            <span className="font-semibold text-brand-green">🎯 분석 신뢰도: {f.analysisTrust || "—"}</span>
-                            {f.analysisTrustNote && <span className="text-gray-600"> ({f.analysisTrustNote})</span>}
-                        </p>
-                    </section>
-                )}
-
-                {(m.height || m.heightRatio || m.width || m.widthRatio) && (
+                {hasMeasures && (
                     <section>
                         <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 측정 데이터</h5>
                         <div className="grid grid-cols-2 gap-2 text-[18px]">
@@ -190,73 +168,24 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
 
                 {f.gauge && renderRangeGauge(f.gauge, "🧭 이마 높이 게이지 (초년운·사고력)")}
 
-                {f.typeSub && (
-                    <section>
-                        <p className="font-bold text-amber-800 text-xl p-3 rounded-xl bg-amber-50 border border-amber-200/80">🏆 판정 유형: {f.typeSub}</p>
-                    </section>
-                )}
-
-                {f.oneLineSummary && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">✨ 한 줄 요약</h5>
-                        <p className="text-gray-700 italic">"{f.oneLineSummary}"</p>
-                    </section>
-                )}
-
                 {f.coreMeaning && (
                     <section>
                         <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 이마가 말해주는 핵심 의미</h5>
                         <p className="text-gray-700">{f.coreMeaning}</p>
                     </section>
                 )}
-
-                {strengths.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-brand-green mb-2 text-xl">🌟 타고난 강점 (이마 기준)</h5>
-                        <ul className="list-decimal list-inside text-gray-700 space-y-2">
-                            {strengths.map((s, i) => <li key={i}>{s}</li>)}
-                        </ul>
-                    </section>
-                )}
-
-                {cautions.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-amber-700 mb-2 text-xl">⚠️ 이마가 높은 사람의 주의 포인트</h5>
-                        <ul className="list-disc list-inside text-gray-700 space-y-1">
-                            {cautions.map((s, i) => <li key={i}>{s}</li>)}
-                        </ul>
-                    </section>
-                )}
-
-                {f.boundarySentence && (
-                    <section className="p-4 rounded-xl bg-gray-100 border-l-4 border-amber-500">
-                        <p className="text-gray-700 font-medium">📌 관상적 경계 문장</p>
-                        <p className="text-gray-800 mt-1">"{f.boundarySentence}"</p>
-                    </section>
-                )}
-
-                {f.advice != null && f.advice !== "" && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">종합 및 제언</h5>
-                        <p className="text-gray-700">{f.advice}</p>
-                    </section>
-                )}
             </div>
         );
     };
 
-    /** 눈 전용 확장 블록: 이마와 유사 플로우 — 분석 신뢰도, Eye Metrics, 좌·우 균형 게이지, 판정, 한줄요약, 핵심의미, 성격·대인 강점, 주의, 제언 */
+    /** 눈 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
     const renderEyesBlock = (f: {
-        gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
-        analysisTrust?: string; analysisTrustNote?: string;
         measures?: { openL?: string; openR?: string; asymmetry?: string; asymmetryCriteria?: string; interDist?: string; widthRatio?: string; symmetry?: string };
-        typeSub?: string; oneLineSummary?: string; coreMeaning?: string; strengths?: string[]; cautions?: string[];
-        advice?: string;
+        gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
+        coreMeaning?: string;
     } | undefined) => {
         if (!f) return null;
         const m = f.measures || {};
-        const strengths = f.strengths || [];
-        const cautions = f.cautions || [];
         const measureRows: { label: string; value: string }[] = [
             m.openL != null && { label: "좌측 눈 개방도", value: m.openL },
             m.openR != null && { label: "우측 눈 개방도", value: m.openR },
@@ -266,24 +195,13 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
             m.widthRatio != null && { label: "얼굴 폭 대비 비율", value: m.widthRatio },
             m.symmetry != null && { label: "전체 대칭도", value: m.symmetry },
         ].filter(Boolean) as { label: string; value: string }[];
-
         return (
             <div className="space-y-6 text-[20px] leading-relaxed">
                 <h4 className="font-bold text-gray-800 font-display text-2xl border-b-2 border-brand-green/20 pb-2">👁 눈 분석 · 성격 · 직업운 · 관계 감각</h4>
 
-                {(f.analysisTrust || f.analysisTrustNote) && (
-                    <section>
-                        <p className="text-gray-700">
-                            <span className="font-semibold text-brand-green">🎯 분석 신뢰도: {f.analysisTrust || "—"}</span>
-                            {f.analysisTrustNote && <span className="text-gray-600"> ({f.analysisTrustNote})</span>}
-                        </p>
-                    </section>
-                )}
-
                 {measureRows.length > 0 && (
                     <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 Eye Metrics (눈 개방·대칭·거리)</h5>
-                        <p className="text-gray-500 text-[17px] mb-2">측정 데이터 요약</p>
+                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 측정 데이터</h5>
                         <div className="grid grid-cols-2 gap-2 text-[18px]">
                             {measureRows.map((r, i) => (
                                 <div key={i} className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">{r.label}:</span> {r.value}</div>
@@ -294,119 +212,42 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
 
                 {f.gauge && renderRangeGauge(f.gauge, "⚖️ 좌·우 눈 균형 게이지 (성향 안정도)")}
 
-                {f.typeSub && (
-                    <section>
-                        <p className="font-bold text-amber-800 text-xl p-4 rounded-xl bg-amber-50 border border-amber-200/80">🏆 판정 유형: {f.typeSub}</p>
-                    </section>
-                )}
-
-                {f.oneLineSummary && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">✨ 한 줄 요약</h5>
-                        <p className="text-gray-700 italic">"{f.oneLineSummary}"</p>
-                    </section>
-                )}
-
                 {f.coreMeaning && (
                     <section>
                         <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 눈이 말해주는 핵심 의미</h5>
                         <p className="text-gray-700">{f.coreMeaning}</p>
                     </section>
                 )}
-
-                {strengths.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-brand-green mb-2 text-xl">🌟 성격 & 대인관계 강점</h5>
-                        <ul className="list-decimal list-inside text-gray-700 space-y-2">
-                            {strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                        </ul>
-                    </section>
-                )}
-
-                {cautions.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-amber-700 mb-2 text-xl">⚠️ 주의 포인트</h5>
-                        <ul className="list-disc list-inside text-gray-700 space-y-1">
-                            {cautions.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                        </ul>
-                    </section>
-                )}
-
-                {f.advice != null && f.advice !== "" && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">종합 및 제언</h5>
-                        <p className="text-gray-700">{f.advice}</p>
-                    </section>
-                )}
             </div>
         );
     };
 
-    /** 코 전용 확장 블록: 이마·눈과 유사 플로우 — 분석 신뢰도, Nose Metrics, 판정 결과, 재물운 게이지, 유형, 한줄요약, 핵심의미, 재물운 강점, 주의, 제언 */
+    /** 코 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
     const renderNoseBlock = (f: {
-        gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
-        analysisTrust?: string; analysisTrustNote?: string;
         measures?: { length?: string; lengthRatio?: string; width?: string; lengthCriteria?: string };
-        judgementResult?: string; typeSub?: string; oneLineSummary?: string; coreMeaning?: string; strengths?: string[]; cautions?: string[];
-        advice?: string;
+        gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
+        coreMeaning?: string;
     } | undefined) => {
         if (!f) return null;
         const m = f.measures || {};
-        const strengths = f.strengths || [];
-        const cautions = f.cautions || [];
-
+        const hasMeasures = m.length != null || m.lengthRatio != null || m.width != null || m.lengthCriteria != null;
         return (
             <div className="space-y-6 text-[20px] leading-relaxed">
                 <h4 className="font-bold text-gray-800 font-display text-2xl border-b-2 border-brand-green/20 pb-2">💰 코 분석 · 재물운 · 축적 능력 · 현실 감각</h4>
 
-                {(f.analysisTrust || f.analysisTrustNote) && (
+                {hasMeasures && (
                     <section>
-                        <p className="text-gray-700">
-                            <span className="font-semibold text-brand-green">🎯 분석 신뢰도: {f.analysisTrust || "—"}</span>
-                            {f.analysisTrustNote && <span className="text-gray-600"> ({f.analysisTrustNote})</span>}
-                        </p>
-                    </section>
-                )}
-
-                {(m.length != null || m.lengthRatio != null || m.width != null || m.lengthCriteria != null) && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 Nose Metrics (코 길이·폭 비율)</h5>
-                        <p className="text-gray-500 text-[17px] mb-2">측정 데이터</p>
+                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 측정 데이터</h5>
                         <div className="grid grid-cols-2 gap-2 text-[18px]">
                             {m.length != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">코 길이:</span> {m.length}</div>}
                             {m.lengthRatio != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">얼굴 대비 코 길이 비율:</span> {m.lengthRatio}</div>}
                             {m.width != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">코 폭:</span> {m.width}</div>}
+                            {m.lengthCriteria != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">길이 기준:</span> {m.lengthCriteria}</div>}
                         </div>
-                        {m.lengthCriteria != null && (
-                            <div className="text-gray-600 text-[17px] mt-3">
-                                <p className="font-medium text-gray-700 mb-1">길이 기준</p>
-                                <p>{m.lengthCriteria}</p>
-                            </div>
-                        )}
-                    </section>
-                )}
-
-                {f.judgementResult && (
-                    <section className="p-4 rounded-xl bg-gray-100 border-l-4 border-brand-green">
-                        <p className="text-gray-700 font-medium">📌 판정 결과</p>
-                        <p className="text-gray-800 mt-1">👉 {f.judgementResult}</p>
                     </section>
                 )}
 
                 {f.gauge && renderRangeGauge(f.gauge, "📈 재물운 게이지 (축적 성향)")}
-
-                {f.typeSub && (
-                    <section>
-                        <p className="font-bold text-amber-800 text-xl p-4 rounded-xl bg-amber-50 border border-amber-200/80">🏆 유형 선언: {f.typeSub}</p>
-                    </section>
-                )}
-
-                {f.oneLineSummary && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">✨ 한 줄 요약</h5>
-                        <p className="text-gray-700 italic">"{f.oneLineSummary}"</p>
-                    </section>
-                )}
 
                 {f.coreMeaning && (
                     <section>
@@ -414,103 +255,36 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         <p className="text-gray-700">{f.coreMeaning}</p>
                     </section>
                 )}
-
-                {strengths.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-brand-green mb-2 text-xl">🌟 재물운 강점</h5>
-                        <ul className="list-none text-gray-700 space-y-2">
-                            {strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                        </ul>
-                    </section>
-                )}
-
-                {cautions.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-amber-700 mb-2 text-xl">⚠️ 주의 포인트</h5>
-                        <ul className="list-disc list-inside text-gray-700 space-y-1">
-                            {cautions.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                        </ul>
-                    </section>
-                )}
-
-                {f.advice != null && f.advice !== "" && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">종합 및 제언</h5>
-                        <p className="text-gray-700">{f.advice}</p>
-                    </section>
-                )}
             </div>
         );
     };
 
-    /** 입 전용 확장 블록: 분석 신뢰도, Mouth Metrics, 판정, 감정 표현 게이지, 유형, 한줄요약, 핵심의미, 입 기준 강점, 주의, 운용 팁, 흥미 포인트, 종합 요약 표, 한 줄 결론 */
+    /** 입 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
     const renderMouthBlock = (f: {
-        gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
-        analysisTrust?: string; analysisTrustNote?: string;
         measures?: { width?: string; lipThickness?: string; cornerSlope?: string; cornerCriteria?: string };
-        judgementResult?: string; typeSub?: string; oneLineSummary?: string; coreMeaning?: string; strengths?: string[]; cautions?: string[];
-        relationTips?: string[]; relationTipsNote?: string; interestingPoint?: string; summaryTable?: { item: string; value: string }[]; oneLineConclusion?: string;
-        advice?: string;
+        gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
+        coreMeaning?: string;
     } | undefined) => {
         if (!f) return null;
         const m = f.measures || {};
-        const strengths = f.strengths || [];
-        const cautions = f.cautions || [];
-        const tips = f.relationTips || [];
-        const table = f.summaryTable || [];
-
+        const hasMeasures = m.width != null || m.lipThickness != null || m.cornerSlope != null || m.cornerCriteria != null;
         return (
             <div className="space-y-6 text-[20px] leading-relaxed">
                 <h4 className="font-bold text-gray-800 font-display text-2xl border-b-2 border-brand-green/20 pb-2">💬 입 분석 · 신뢰 · 애정 · 표현 방식</h4>
 
-                {(f.analysisTrust || f.analysisTrustNote) && (
+                {hasMeasures && (
                     <section>
-                        <p className="text-gray-700">
-                            <span className="font-semibold text-brand-green">🎯 분석 신뢰도: {f.analysisTrust || "—"}</span>
-                            {f.analysisTrustNote && <span className="text-gray-600"> ({f.analysisTrustNote})</span>}
-                        </p>
-                    </section>
-                )}
-
-                {(m.width != null || m.lipThickness != null || m.cornerSlope != null || m.cornerCriteria != null) && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 Mouth Metrics (입 너비·입술·입꼬리)</h5>
-                        <p className="text-gray-500 text-[17px] mb-2">측정 데이터</p>
+                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 측정 데이터</h5>
                         <div className="grid grid-cols-2 gap-2 text-[18px]">
                             {m.width != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">입 너비:</span> {m.width}</div>}
                             {m.lipThickness != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">입술 두께:</span> {m.lipThickness}</div>}
                             {m.cornerSlope != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">입꼬리 기울기:</span> {m.cornerSlope}</div>}
+                            {m.cornerCriteria != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">입꼬리 기준:</span> {m.cornerCriteria}</div>}
                         </div>
-                        {m.cornerCriteria != null && (
-                            <div className="text-gray-600 text-[17px] mt-3">
-                                <p className="font-medium text-gray-700 mb-1">입꼬리 기준</p>
-                                <p>{m.cornerCriteria}</p>
-                            </div>
-                        )}
-                    </section>
-                )}
-
-                {f.judgementResult && (
-                    <section className="p-4 rounded-xl bg-gray-100 border-l-4 border-brand-green">
-                        <p className="text-gray-700 font-medium">📌 판정 결과</p>
-                        <p className="text-gray-800 mt-1">👉 {f.judgementResult}</p>
                     </section>
                 )}
 
                 {f.gauge && renderRangeGauge(f.gauge, "📉 감정 표현 게이지 (외부 인상)")}
-
-                {f.typeSub && (
-                    <section>
-                        <p className="font-bold text-amber-800 text-xl p-4 rounded-xl bg-amber-50 border border-amber-200/80">🏆 유형 선언: {f.typeSub}</p>
-                    </section>
-                )}
-
-                {f.oneLineSummary && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">✨ 한 줄 요약</h5>
-                        <p className="text-gray-700 italic">"{f.oneLineSummary}"</p>
-                    </section>
-                )}
 
                 {f.coreMeaning && (
                     <section>
@@ -518,144 +292,36 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         <p className="text-gray-700">{f.coreMeaning}</p>
                     </section>
                 )}
-
-                {strengths.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-brand-green mb-2 text-xl">🌟 입 기준 강점</h5>
-                        <ul className="list-none text-gray-700 space-y-2">
-                            {strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                        </ul>
-                    </section>
-                )}
-
-                {cautions.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-amber-700 mb-2 text-xl">⚠️ 입에서 보이는 주의 포인트</h5>
-                        <ul className="list-disc list-inside text-gray-700 space-y-1">
-                            {cautions.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                        </ul>
-                    </section>
-                )}
-
-                {tips.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">🧭 입 기준 관계·애정 운용 팁</h5>
-                        <ul className="list-none text-gray-700 space-y-1">
-                            {tips.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                        </ul>
-                        {f.relationTipsNote && <p className="text-gray-600 mt-2">👉 {f.relationTipsNote}</p>}
-                    </section>
-                )}
-
-                {f.interestingPoint && (
-                    <section className="p-4 rounded-xl bg-gray-50 border-l-4 border-brand-green/60">
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">💡 흥미로운 관상 포인트</h5>
-                        <p className="text-gray-700">{f.interestingPoint}</p>
-                    </section>
-                )}
-
-                {table.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">🧾 입 기준 종합 요약</h5>
-                        <div className="overflow-x-auto rounded-lg border border-gray-200">
-                            <table className="w-full text-[18px]">
-                                <tbody>
-                                    {table.map((row, i) => (
-                                        <tr key={i} className={i % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                                            <td className="py-2.5 px-4 font-medium text-gray-700 w-1/3">{row.item}</td>
-                                            <td className="py-2.5 px-4 text-gray-800">{row.value}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                )}
-
-                {f.oneLineConclusion && (
-                    <section className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/80">
-                        <p className="font-semibold text-gray-800 text-xl">💬 한 줄 결론</p>
-                        <p className="text-gray-800 mt-1 italic">"{f.oneLineConclusion}"</p>
-                    </section>
-                )}
-
-                {f.advice != null && f.advice !== "" && !f.oneLineConclusion && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">종합 및 제언</h5>
-                        <p className="text-gray-700">{f.advice}</p>
-                    </section>
-                )}
             </div>
         );
     };
 
-    /** 턱 전용 확장 블록: 분석 신뢰도, Jaw Metrics, 판정, 지구력 게이지, 유형, 한줄요약, 핵심의미, 턱 기준 강점, 주의, 경계문장, 인생 운용 가이드, 흥미 포인트, 제언 */
+    /** 턱 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
     const renderChinBlock = (f: {
-        gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
-        analysisTrust?: string; analysisTrustNote?: string;
         measures?: { length?: string; width?: string; angle?: string; angleCriteria?: string };
-        judgementResult?: string; typeSub?: string; oneLineSummary?: string; coreMeaning?: string; strengths?: string[]; cautions?: string[];
-        boundarySentence?: string; guide?: string[]; interestingPoint?: string;
-        advice?: string;
+        gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
+        coreMeaning?: string;
     } | undefined) => {
         if (!f) return null;
         const m = f.measures || {};
-        const strengths = f.strengths || [];
-        const cautions = f.cautions || [];
-        const guide = f.guide || [];
-
+        const hasMeasures = m.length != null || m.width != null || m.angle != null || m.angleCriteria != null;
         return (
             <div className="space-y-6 text-[20px] leading-relaxed">
                 <h4 className="font-bold text-gray-800 font-display text-2xl border-b-2 border-brand-green/20 pb-2">🪨 턱 분석 · 지구력 · 노년 안정도</h4>
 
-                {(f.analysisTrust || f.analysisTrustNote) && (
+                {hasMeasures && (
                     <section>
-                        <p className="text-gray-700">
-                            <span className="font-semibold text-brand-green">🎯 분석 신뢰도: {f.analysisTrust || "—"}</span>
-                            {f.analysisTrustNote && <span className="text-gray-600"> ({f.analysisTrustNote})</span>}
-                        </p>
-                    </section>
-                )}
-
-                {(m.length != null || m.width != null || m.angle != null || m.angleCriteria != null) && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 Jaw Metrics (턱 길이·폭·각도)</h5>
-                        <p className="text-gray-500 text-[17px] mb-2">측정 데이터</p>
+                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 측정 데이터</h5>
                         <div className="grid grid-cols-2 gap-2 text-[18px]">
                             {m.length != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">턱 길이:</span> {m.length}</div>}
                             {m.width != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">턱 폭:</span> {m.width}</div>}
                             {m.angle != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">턱 각도:</span> {m.angle}</div>}
+                            {m.angleCriteria != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">각도 기준:</span> {m.angleCriteria}</div>}
                         </div>
-                        {m.angleCriteria != null && (
-                            <div className="text-gray-600 text-[17px] mt-3">
-                                <p className="font-medium text-gray-700 mb-1">각도 기준</p>
-                                <p>{m.angleCriteria}</p>
-                            </div>
-                        )}
-                    </section>
-                )}
-
-                {f.judgementResult && (
-                    <section className="p-4 rounded-xl bg-gray-100 border-l-4 border-brand-green">
-                        <p className="text-gray-700 font-medium">📌 판정 결과</p>
-                        <p className="text-gray-800 mt-1">👉 {f.judgementResult}</p>
                     </section>
                 )}
 
                 {f.gauge && renderRangeGauge(f.gauge, "🧱 지구력 게이지 (버티는 힘)")}
-
-                {f.typeSub && (
-                    <section>
-                        <p className="font-bold text-amber-800 text-xl p-4 rounded-xl bg-amber-50 border border-amber-200/80">🏆 유형 선언: {f.typeSub}</p>
-                    </section>
-                )}
-
-                {f.oneLineSummary && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">✨ 한 줄 요약</h5>
-                        <p className="text-gray-700 italic">"{f.oneLineSummary}"</p>
-                    </section>
-                )}
 
                 {f.coreMeaning && (
                     <section>
@@ -663,74 +329,22 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         <p className="text-gray-700">{f.coreMeaning}</p>
                     </section>
                 )}
-
-                {strengths.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-brand-green mb-2 text-xl">🌟 턱 기준 강점</h5>
-                        <ul className="list-none text-gray-700 space-y-2">
-                            {strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                        </ul>
-                    </section>
-                )}
-
-                {cautions.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-amber-700 mb-2 text-xl">⚠️ 턱에서 보이는 주의 포인트</h5>
-                        <ul className="list-disc list-inside text-gray-700 space-y-1">
-                            {cautions.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                        </ul>
-                    </section>
-                )}
-
-                {f.boundarySentence && (
-                    <section className="p-4 rounded-xl bg-gray-100 border-l-4 border-amber-500">
-                        <p className="text-gray-700 font-medium">📌 관상적 경계 문장</p>
-                        <p className="text-gray-800 mt-1">"{f.boundarySentence}"</p>
-                    </section>
-                )}
-
-                {guide.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">🧭 턱 기준 인생 운용 가이드</h5>
-                        <ul className="list-none text-gray-700 space-y-1">
-                            {guide.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                        </ul>
-                    </section>
-                )}
-
-                {f.interestingPoint && (
-                    <section className="p-4 rounded-xl bg-gray-50 border-l-4 border-brand-green/60">
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">💡 흥미로운 관상 포인트</h5>
-                        <p className="text-gray-700">{f.interestingPoint}</p>
-                    </section>
-                )}
-
-                {f.advice != null && f.advice !== "" && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">종합 및 제언</h5>
-                        <p className="text-gray-700">{f.advice}</p>
-                    </section>
-                )}
             </div>
         );
     };
 
-    /** 공통·얼굴형: 이마와 유사 플로우 — 측정 → 게이지 → 판정 → 한줄요약 → 핵심의미 → 강점 → 주의 → 성향 → 운용 (사진 품질 체크 없음) */
+    /** 공통·얼굴형: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
     const renderCommonAndFaceShape = (_common: any, faceShape: any) => {
         const fs = faceShape || {};
-        const strengths = fs.strengths || [];
-        const cautions = fs.cautions || [];
-        const behavior = fs.patterns?.behavior || [];
-        const life = fs.patterns?.life || [];
-        const guide = fs.guide || [];
         const gauge = fs.gauge ? { rangeMin: 0, rangeMax: 8, ...fs.gauge } : null;
+        const coreMeaning = fs.coreMeaning || fs.summary;
+        const hasMeasures = fs.measures?.w != null || fs.measures?.h != null || fs.measures?.wh != null;
 
         return (
             <div className="space-y-6 text-[20px] leading-relaxed">
                 <h4 className="font-bold text-gray-800 font-display text-2xl border-b-2 border-brand-green/20 pb-2">🎭 얼굴형 분석 · 그릇의 크기</h4>
 
-                {/* 📐 측정 데이터 */}
-                {(fs.measures?.w != null || fs.measures?.h != null || fs.measures?.wh != null) && (
+                {hasMeasures && (
                     <section>
                         <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 측정 데이터</h5>
                         <div className="grid grid-cols-3 gap-2 text-[18px]">
@@ -741,75 +355,12 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                     </section>
                 )}
 
-                {/* 🧭 얼굴형 게이지 */}
                 {gauge && gauge.rangeMin != null && gauge.rangeMax != null && renderRangeGauge(gauge, "🧭 얼굴형 게이지 (그릇의 크기)")}
 
-                {/* 🏆 판정 유형 */}
-                {(fs.type || fs.typeSub) && (
-                    <section>
-                        <p className="font-bold text-amber-800 text-xl p-4 rounded-xl bg-amber-50 border border-amber-200/80">🏆 판정 유형: {fs.type || "—"} ({fs.typeSub || "—"})</p>
-                    </section>
-                )}
-
-                {/* ✨ 한 줄 요약 */}
-                {(fs.oneLineSummary || fs.summary) && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">✨ 한 줄 요약</h5>
-                        <p className="text-gray-700 italic">"{fs.oneLineSummary || fs.summary}"</p>
-                    </section>
-                )}
-
-                {/* 🔍 얼굴형이 말해주는 핵심 의미 */}
-                {(fs.coreMeaning || fs.summary) && (
+                {coreMeaning && (
                     <section>
                         <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 얼굴형이 말해주는 핵심 의미</h5>
-                        <p className="text-gray-700">{fs.coreMeaning || fs.summary}</p>
-                    </section>
-                )}
-
-                {/* 🌟 타고난 강점 */}
-                {strengths.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-brand-green mb-2 text-xl">🌟 타고난 강점 (얼굴형 기준)</h5>
-                        <ul className="list-disc list-inside text-gray-700 space-y-1">
-                            {strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                        </ul>
-                    </section>
-                )}
-
-                {/* ⚠️ 주의 포인트 */}
-                {cautions.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-amber-700 mb-2 text-xl">⚠️ 넓은 그릇의 주의 포인트</h5>
-                        <ul className="list-disc list-inside text-gray-700 space-y-1">
-                            {cautions.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                        </ul>
-                    </section>
-                )}
-
-                {/* 🧠 성향·인생 패턴 */}
-                {(behavior.length > 0 || life.length > 0) && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">🧠 얼굴형 기반 성향·인생 패턴</h5>
-                        <div className="space-y-2 text-gray-700">
-                            {behavior.length > 0 && <p>{behavior.join(" ")}</p>}
-                            {life.length > 0 && <p>{life.join(" ")}</p>}
-                        </div>
-                    </section>
-                )}
-
-                {/* 🧭 운용 전략 */}
-                {guide.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">🧭 얼굴형 운용 전략</h5>
-                        <p className="text-gray-700">
-                            {guide.map((g: { from?: string; to?: string }, i: number) => (
-                                <span key={i}>
-                                    {i > 0 && " "}
-                                    <span className="text-gray-500">{g.from}</span>보다 <span className="text-brand-green font-medium">{g.to}</span> 방향을 권합니다.
-                                </span>
-                            ))}
-                        </p>
+                        <p className="text-gray-700">{coreMeaning}</p>
                     </section>
                 )}
             </div>
@@ -835,51 +386,36 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         <h3 className="font-bold text-xl sm:text-2xl text-gray-800">거북 도사의 총평</h3>
                     </div>
 
-                    <p className="text-brand-green font-bold text-base mb-3 flex-shrink-0">{TOTAL_REVIEW_HEAD}</p>
-                    <div className="pl-4 border-l-4 border-brand-green py-1 mb-5 flex-shrink-0">
-                        <p className="text-gray-800 font-bold text-base leading-[1.7]">{TOTAL_REVIEW_LEAD}</p>
-                    </div>
+                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 space-y-5 max-h-[50vh]">
+                        {/* 1. 부위 간의 조화 및 균형 해석 */}
+                        {totalReview?.harmony && (
+                            <section>
+                                <h4 className="text-gray-800 font-bold text-base mb-2">1. 부위 간의 조화 및 균형 해석</h4>
+                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview.harmony}</p>
+                            </section>
+                        )}
 
-                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 space-y-4 max-h-[50vh]">
-                        {TOTAL_REVIEW_BODY.map((item, i) => (
-                            <div key={i}>
-                                {item.sub != null && <h4 className="text-gray-800 font-bold text-base mb-1.5">{item.sub}</h4>}
-                                <p className="text-gray-700 text-base leading-[1.75]">{item.text}</p>
-                            </div>
-                        ))}
+                        {/* 2. 종합 운세 해석 */}
+                        {totalReview?.comprehensive && (
+                            <section>
+                                <h4 className="text-gray-800 font-bold text-base mb-2">2. 종합 운세 해석</h4>
+                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview.comprehensive}</p>
+                            </section>
+                        )}
+
+                        {/* 3. 운을 좋게 만드는 방법 제안 */}
+                        {totalReview?.improvement && (
+                            <section>
+                                <h4 className="text-gray-800 font-bold text-base mb-2">3. 운을 좋게 만드는 방법 제안</h4>
+                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview.improvement}</p>
+                            </section>
+                        )}
                     </div>
 
                     <section className="mt-5 pt-4 border-t border-gray-100 flex-shrink-0">
                         <h4 className="text-sm font-bold text-gray-600 mb-1.5">상세</h4>
                         <p className="text-gray-600 text-sm leading-relaxed">이마, 눈, 코, 입, 턱, 얼굴형 중 궁금한 부위를 눌러 부위별 상세해석을 확인해 보세요.</p>
                     </section>
-                </GlassCard>
-
-                <GlassCard className="p-8 border-4 border-white rounded-[40px] shadow-clay-md bg-white/40 font-sans">
-                    <div className="flex items-center gap-3 mb-5">
-                        <div className="w-10 h-10 bg-brand-green/10 border-2 border-brand-green rounded-xl flex items-center justify-center">🐢</div>
-                        <h3 className="font-bold text-[22px] sm:text-[24px] text-gray-800 font-sans">사주·관상 더 알아보기</h3>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                        {totalAnalysis.filter((ch) => ch.id === "saju" || ch.id === "integration").map((ch) => {
-                            const extra = FORTUNE_CARD_EXTRA[ch.id ?? ""];
-                            const Icon = extra?.Icon;
-                            return (
-                                <button key={ch.id} type="button" onClick={() => setFortuneModalId(ch.id ?? null)} className="flex items-center gap-3 p-4 rounded-2xl border-2 border-gray-100 bg-white shadow-sm hover:border-brand-green/25 hover:shadow-clay-xs transition-all duration-200 text-left group">
-                                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center flex-shrink-0 ${extra?.iconBoxClass ?? "bg-gray-50 border-2 border-gray-200 text-gray-600"}`}>{Icon ? <Icon size={22} /> : null}</div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="font-bold text-gray-800 text-base sm:text-lg">{ch.label ?? ch.title}</p>
-                                        <p className="text-gray-500 text-xs sm:text-sm mt-0.5 line-clamp-2">{extra?.desc ?? ""}</p>
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
-                    <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
-                        {totalAnalysis.filter((ch) => ch.id === "job" || ch.id === "love").map((ch) => (
-                            <button key={ch.id} type="button" onClick={() => setFortuneModalId(ch.id ?? null)} className="px-3 py-2 rounded-xl text-sm font-medium text-gray-600 bg-gray-50/80 hover:bg-gray-100 hover:text-gray-800 border border-gray-100 transition-colors">{ch.label ?? ch.title}</button>
-                        ))}
-                    </div>
                 </GlassCard>
             </div>
 
@@ -1086,29 +622,6 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                     )}
                 </AnimatePresence>
             </div>
-
-            {/* 운세 상세 모달 (사주, 관상+사주, 취업운, 연애운) — 텍스트가 많아 화면을 많이 쓰는 큰 모달 */}
-            {(() => {
-                const chosen = totalAnalysis.find((c) => (c.id ?? "") === fortuneModalId);
-                return (
-                    <Modal
-                        isOpen={!!fortuneModalId}
-                        onClose={() => setFortuneModalId(null)}
-                        size="xl"
-                    >
-                        {chosen && (
-                            <>
-                                <ModalHeader>{chosen.label ?? chosen.title}</ModalHeader>
-                                <ModalBody>
-                                    <p className="text-gray-700 leading-relaxed whitespace-pre-line font-sans text-[17px] sm:text-[19px]">
-                                        {chosen.content}
-                                    </p>
-                                </ModalBody>
-                            </>
-                        )}
-                    </Modal>
-                );
-            })()}
         </div>
     );
 };

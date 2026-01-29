@@ -231,14 +231,14 @@ export const FaceMeshWebcam = ({
           
           // 가이드 밖 얼굴 상태 업데이트 (얼굴이 감지되었지만 가이드 안에 없을 때)
           setIsFaceOutsideGuide(hasOutsideFace && !hasInsideFace);
-          // const DURATION = 3000;
-          const DURATION = 0; // 개발용 3초 대기 없음
+          const DURATION = 3000;
+          // const DURATION = 0; // 개발용 3초 대기 없음
 
           // 조건: 개인(1명 이상), 그룹(2명 이상)이어야 하고, 모두가 정면이고, 모두가 3초를 넘겨야 함
-          // const minFaces = maxFaces === 1 ? 1 : 2;
-          const minFaces = 0; // 개발용 최소 인원 없음
-          // const allReady = detectedFaceCount >= minFaces && currentFrameTrackers.every(t => t.isFrontal && (Date.now() - t.startTime >= DURATION));
-          const allReady = detectedFaceCount >= minFaces; // 개발용
+          const minFaces = maxFaces === 1 ? 1 : 2;
+          // const minFaces = 0; // 개발용 최소 인원 없음
+          const allReady = detectedFaceCount >= minFaces && currentFrameTrackers.every(t => t.isFrontal && (Date.now() - t.startTime >= DURATION));
+          // const allReady = detectedFaceCount >= minFaces; // 개발용
           
           // 중복 전송 방지: 구성원 중 한 명이라도 아직 'isSent'가 안 된 상태여야 보냄
           // (즉, 이미 다 보냈으면 또 안 보냄)
@@ -360,7 +360,7 @@ export const FaceMeshWebcam = ({
              // 텍스트 및 게이지 (좌우반전 보정)
              ctx.save();
              ctx.scale(-1, 1);
-             ctx.font = `700 16px ${fontSans}`; // 브랜드 sans 폰트 사용
+             ctx.font = `700 22px ${fontSans}`; // 브랜드 sans 폰트 사용
 
              const textX = -(x + w); // 반전된 x 좌표
 
