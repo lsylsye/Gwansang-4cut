@@ -108,3 +108,82 @@ export async function detectFacesAndCrop(
 
   return { count, crops };
 }
+
+/** FaceMeshWebcam onCapture와 동일한 payload 형식 (백엔드/개인 분석용) */
+export type PersonalFaceMeshPayload = {
+  timestamp: string;
+  faces: Array<{
+    faceIndex: number;
+    duration: number;
+    landmarks: Array<{ index: number; x: number; y: number; z: number }>;
+  }>;
+};
+
+/**
+ * 개인 관상용: 정적 이미지(data URL)에 MediaPipe 얼굴 랜드마크 분석을 수행하고
+ * FaceMeshWebcam과 동일한 형식의 payload를 반환합니다.
+ */
+export async function analyzePersonalImage(
+  dataUrl: string
+): Promise<PersonalFaceMeshPayload | null> {
+  const faceLandmarker = await getFaceLandmarker();
+  const img = await loadImage(dataUrl);
+  if (img.decode) await img.decode();
+  const result = faceLandmarker.detect(img);
+  const landmarksList = result.faceLandmarks;
+  if (!landmarksList?.length) return null;
+
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  const timestamp = new Date(now.getTime() - offset).toISOString().slice(0, -1);
+
+  const faces = landmarksList.slice(0, 1).map((landmarks, idx) => ({
+    faceIndex: idx + 1,
+    duration: 0,
+    landmarks: landmarks.map((pt, i) => ({
+      index: i + 1,
+      x: pt.x,
+      y: pt.y,
+      z: pt.z,
+    })),
+  }));
+
+  return { timestamp, faces };
+}
+
+/** 모임 업로드용: 단체 사진 한 장에서 timestamp + faces(landmarks) 추출 (백엔드 전송 형식) */
+export type GroupFaceMeshPayload = {
+  timestamp: string;
+  faces: Array<{
+    faceIndex: number;
+    duration: number;
+    landmarks: Array<{ index: number; x: number; y: number; z: number }>;
+  }>;
+};
+
+export async function analyzeGroupPhotoForApi(
+  dataUrl: string
+): Promise<GroupFaceMeshPayload> {
+  const faceLandmarker = await getFaceLandmarker();
+  const img = await loadImage(dataUrl);
+  if (img.decode) await img.decode();
+  const result = faceLandmarker.detect(img);
+  const landmarksList = result.faceLandmarks ?? [];
+
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  const timestamp = new Date(now.getTime() - offset).toISOString().slice(0, -1);
+
+  const faces = landmarksList.map((landmarks, idx) => ({
+    faceIndex: idx + 1,
+    duration: 0,
+    landmarks: landmarks.map((pt, i) => ({
+      index: i + 1,
+      x: pt.x,
+      y: pt.y,
+      z: pt.z,
+    })),
+  }));
+
+  return { timestamp, faces };
+}
