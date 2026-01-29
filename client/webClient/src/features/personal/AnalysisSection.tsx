@@ -454,7 +454,6 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
                             image={images[0] || ""}
                             scores={MOCK_DATA.scores}
                             features={MOCK_DATA.features}
-                            totalAnalysis={MOCK_DATA.totalAnalysis}
                         />
                     )}
 
