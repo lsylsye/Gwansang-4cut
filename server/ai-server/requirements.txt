@@ -1,0 +1,16 @@
+# FastAPI 및 서버
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+python-multipart>=0.0.17
+
+# Google Generative AI SDK
+google-genai>=1.0.0
+
+# 이미지 처리
+Pillow>=11.0.0
+
+# 환경 변수
+python-dotenv>=1.0.1
+
+# 유틸리티
+pydantic>=2.10.0

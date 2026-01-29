@@ -7,7 +7,6 @@ import { HistoryItem } from "@/shared/types";
 
 interface HistorySectionProps {
   onViewResult?: (item: HistoryItem) => void;
-  isLoggedIn: boolean;
   onNewAnalysis?: () => void;
   historyData?: HistoryItem[];
 }
@@ -60,7 +59,6 @@ const MOCK_HISTORY: HistoryItem[] = [
 
 export const HistorySection: React.FC<HistorySectionProps> = ({
   onViewResult,
-  isLoggedIn,
   onNewAnalysis,
   historyData: propHistoryData
 }) => {
@@ -113,7 +111,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
             repeat: Infinity,
             ease: "easeInOut"
           }}
-          className="w-full h-full bg-gradient-to-br from-[#E0F2F1] to-[#B2DFDB] rounded-full flex items-center justify-center shadow-clay-md border-4 border-white"
+          className="w-full h-full bg-gradient-to-br from-brand-green-muted to-brand-green-light rounded-full flex items-center justify-center shadow-clay-md border-4 border-white"
         >
           <span className="text-6xl">🐢</span>
         </motion.div>
@@ -127,9 +125,9 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
             repeat: Infinity,
             ease: "easeInOut"
           }}
-          className="absolute -top-2 -right-2 w-8 h-8 bg-[#FFD54F] rounded-full flex items-center justify-center"
+          className="absolute -top-2 -right-2 w-8 h-8 bg-brand-yellow rounded-full flex items-center justify-center"
         >
-          <Package size={16} className="text-[#F57C00]" />
+          <Package size={16} className="text-brand-yellow-dark" />
         </motion.div>
       </div>
 
@@ -161,7 +159,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
       className="group cursor-pointer"
       onClick={() => onViewResult?.(item)}
     >
-      <GlassCard className="p-5 shadow-sm hover:shadow-lg transition-all border border-gray-100 hover:border-[#00897B]/30 bg-gradient-to-br from-white to-gray-50/50">
+      <GlassCard className="p-5 shadow-sm hover:shadow-lg transition-all border border-gray-100 hover:border-brand-green/30 bg-gradient-to-br from-white to-gray-50/50">
         <div className="flex items-start gap-4">
           {/* Thumbnails */}
           <div className="flex gap-2 shrink-0">
@@ -182,7 +180,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
           {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <div className="px-3 py-1 bg-gradient-to-r from-[#E0F2F1] to-[#B2DFDB] text-[#00897B] rounded-full text-xs font-bold flex items-center gap-1 shadow-sm">
+              <div className="px-3 py-1 bg-gradient-to-r from-brand-green-muted to-brand-green-light text-brand-green rounded-full text-xs font-bold flex items-center gap-1 shadow-sm">
                 <User size={12} />
                 개인 관상
               </div>
@@ -200,7 +198,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
           </div>
 
           {/* Arrow */}
-          <div className="shrink-0 w-10 h-10 rounded-full bg-gray-100 group-hover:bg-[#00897B] flex items-center justify-center transition-all shadow-sm group-hover:shadow-md">
+          <div className="shrink-0 w-10 h-10 rounded-full bg-gray-100 group-hover:bg-brand-green flex items-center justify-center transition-all shadow-sm group-hover:shadow-md">
             <ArrowRight size={18} className="text-gray-400 group-hover:text-white transition-colors" />
           </div>
         </div>
@@ -216,7 +214,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
       className="group cursor-pointer"
       onClick={() => onViewResult?.(item)}
     >
-      <GlassCard className="p-5 shadow-sm hover:shadow-lg transition-all border border-gray-100 hover:border-[#FF7043]/30 bg-gradient-to-br from-white to-orange-50/30">
+      <GlassCard className="p-5 shadow-sm hover:shadow-lg transition-all border border-gray-100 hover:border-brand-orange/30 bg-gradient-to-br from-white to-orange-50/30">
         <div className="flex items-start gap-4">
           {/* Thumbnail */}
           {item.thumbnail && (
@@ -232,12 +230,12 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
           {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <div className="px-3 py-1 bg-gradient-to-r from-[#FFF3E0] to-[#FFE0B2] text-[#FF7043] rounded-full text-xs font-bold flex items-center gap-1 shadow-sm">
+              <div className="px-3 py-1 bg-gradient-to-r from-brand-orange-muted to-brand-orange-lightest text-brand-orange rounded-full text-xs font-bold flex items-center gap-1 shadow-sm">
                 <Users size={12} />
                 모임 관상
               </div>
               {item.score && (
-                <div className="px-3 py-1 bg-gradient-to-r from-[#FFD54F] to-[#FFC107] text-[#F57C00] rounded-full text-xs font-bold shadow-sm">
+                <div className="px-3 py-1 bg-gradient-to-r from-brand-yellow to-brand-yellow-muted text-brand-yellow-dark rounded-full text-xs font-bold shadow-sm">
                   {item.score}점
                 </div>
               )}
@@ -262,29 +260,13 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
           </div>
 
           {/* Arrow */}
-          <div className="shrink-0 w-10 h-10 rounded-full bg-gray-100 group-hover:bg-[#FF7043] flex items-center justify-center transition-all shadow-sm group-hover:shadow-md">
+          <div className="shrink-0 w-10 h-10 rounded-full bg-gray-100 group-hover:bg-brand-orange flex items-center justify-center transition-all shadow-sm group-hover:shadow-md">
             <ArrowRight size={18} className="text-gray-400 group-hover:text-white transition-colors" />
           </div>
         </div>
       </GlassCard>
     </motion.div>
   );
-
-  if (!isLoggedIn) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 px-4">
-        <div className="text-center mb-8">
-          <span className="text-6xl mb-4 block">🔒</span>
-          <h3 className="text-2xl font-bold text-gray-800 mb-3 font-display">
-            로그인이 필요합니다
-          </h3>
-          <p className="text-gray-500">
-            나의 관상 기록을 확인하려면 로그인해주세요.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-8">
@@ -297,7 +279,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-4xl font-bold text-gray-900 mb-2 font-display flex items-center gap-3">
-              <div className="w-14 h-14 bg-gradient-to-br from-[#00897B] to-[#00695C] rounded-2xl flex items-center justify-center shadow-lg">
+              <div className="w-14 h-14 bg-gradient-to-br from-brand-green to-brand-green-deepest rounded-2xl flex items-center justify-center shadow-lg">
                 <BarChart3 size={28} className="text-white" />
               </div>
               나의 히스토리
@@ -343,12 +325,12 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
           >
             <GlassCard className="p-5 bg-gradient-to-br from-white to-teal-50/50 border border-teal-100 shadow-sm hover:shadow-md transition-shadow h-[140px] flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00897B] to-[#00695C] flex items-center justify-center shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-green to-brand-green-deepest flex items-center justify-center shadow-sm">
                   <User size={20} className="text-white" />
                 </div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-[#00897B] mb-1 font-display">{stats.personal}</div>
+                <div className="text-3xl font-bold text-brand-green mb-1 font-display">{stats.personal}</div>
                 <div className="text-sm text-gray-600 font-medium">개인 관상</div>
               </div>
             </GlassCard>
@@ -361,12 +343,12 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
           >
             <GlassCard className="p-5 bg-gradient-to-br from-white to-orange-50/50 border border-orange-100 shadow-sm hover:shadow-md transition-shadow h-[140px] flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF7043] to-[#F4511E] flex items-center justify-center shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-orange to-brand-orange-deep flex items-center justify-center shadow-sm">
                   <Users size={20} className="text-white" />
                 </div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-[#FF7043] mb-1 font-display">{stats.group}</div>
+                <div className="text-3xl font-bold text-brand-orange mb-1 font-display">{stats.group}</div>
                 <div className="text-sm text-gray-600 font-medium">모임 관상</div>
               </div>
             </GlassCard>
@@ -379,12 +361,12 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
           >
             <GlassCard className="p-5 bg-gradient-to-br from-white to-yellow-50/50 border border-yellow-100 shadow-sm hover:shadow-md transition-shadow h-[140px] flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FFD54F] to-[#FFC107] flex items-center justify-center shadow-sm">
-                  <TrendingUp size={20} className="text-[#F57C00]" />
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-yellow to-brand-yellow-muted flex items-center justify-center shadow-sm">
+                  <TrendingUp size={20} className="text-brand-yellow-dark" />
                 </div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-[#F57C00] mb-1 font-display">
+                <div className="text-3xl font-bold text-brand-yellow-dark mb-1 font-display">
                   {stats.avgGroupScore > 0 ? stats.avgGroupScore : "-"}
                 </div>
                 <div className="text-sm text-gray-600 font-medium">평균 모임 점수</div>
@@ -433,7 +415,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
         <button
           onClick={() => setActiveTab("personal")}
           className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeTab === "personal"
-            ? "bg-gradient-to-r from-[#00897B] to-[#00695C] text-white shadow-md"
+            ? "bg-gradient-to-r from-brand-green to-brand-green-deepest text-white shadow-md"
             : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
             }`}
         >
@@ -443,7 +425,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
         <button
           onClick={() => setActiveTab("group")}
           className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeTab === "group"
-            ? "bg-gradient-to-r from-[#FF7043] to-[#F4511E] text-white shadow-md"
+            ? "bg-gradient-to-r from-brand-orange to-brand-orange-deep text-white shadow-md"
             : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
             }`}
         >

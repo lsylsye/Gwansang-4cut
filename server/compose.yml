@@ -1,0 +1,29 @@
+services: # local 작업 용 compose.yml
+  cache-server:
+    container_name: localRedis
+    image: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      retries: 10
+    volumes:
+      - redis_data:/data
+
+  db-server:
+    container_name: localDB
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: gs4cutdb
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: 1234
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  redis_data:
+  mysql_data:
