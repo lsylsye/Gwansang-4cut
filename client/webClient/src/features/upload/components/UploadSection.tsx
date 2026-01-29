@@ -40,6 +40,7 @@ import { AnalyzeMode, SajuData, GroupMember } from "@/shared/types";
 import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
 import { ConsentModal } from "./ConsentModal";
 import { FaceMeshWebcam } from "./FaceMeshWebcam";
+import { detectFacesAndCrop } from "../utils/groupPhotoFaceDetection";
 import { API_ENDPOINTS } from "@/shared/api/config";
 import profileImage from "@/assets/profile.png";
 import selfieImage from "@/assets/selfie.png";
@@ -91,13 +92,10 @@ const CAPTURE_STEPS = [
   },
 ];
 
-// Mock Avatar Images for Segmentation Simulation
-const MOCK_AVATARS = [
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop",
-];
+function getTodayDateString(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 export const UploadSection: React.FC<UploadSectionProps> = ({
   mode,
@@ -117,6 +115,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   const [detectedCount, setDetectedCount] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
   const [isSegmenting, setIsSegmenting] = useState(false);
+  const [faceDetectionError, setFaceDetectionError] = useState<
+    string | null
+  >(null);
   const [isUploadTypeModalOpen, setIsUploadTypeModalOpen] =
     useState(false);
   const [isPersonalUploadModalOpen, setIsPersonalUploadModalOpen] =
@@ -139,31 +140,49 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     GroupMember[]
   >([]);
 
-  // Simulation: Initialize group members after detection
-  const processGroupPhoto = useCallback(
-    (_photo: string) => {
-      setIsSegmenting(true);
-      // Simulate segmentation time
-      setTimeout(() => {
-        const count = detectedCount || 3;
-        const members: GroupMember[] = Array.from({
-          length: count,
-        }).map((_, i) => ({
+  // MediaPipe로 얼굴 검출 및 크롭 후 groupMembers 초기화
+  const processGroupPhoto = useCallback(async (photo: string) => {
+    setFaceDetectionError(null);
+    setIsSegmenting(true);
+    try {
+      const { count, crops } = await detectFacesAndCrop(photo);
+
+      if (count === 0) {
+        setFaceDetectionError(
+          "얼굴을 인식하지 못했습니다. 다른 사진을 시도해 주세요."
+        );
+        setIsSegmenting(false);
+        return;
+      }
+      if (count === 1) {
+        setFaceDetectionError(
+          "2명 이상의 얼굴이 필요합니다. 다시 촬영하거나 다른 사진을 업로드해 주세요."
+        );
+        setIsSegmenting(false);
+        return;
+      }
+
+      // 2명 이상: detectedCount, groupMembers(avatar: crops[i]), step 3
+      setDetectedCount(count);
+      const members: GroupMember[] = Array.from({ length: count }).map(
+        (_, i) => ({
           id: Date.now() + i,
           name: `멤버 ${i + 1}`,
-          birthDate: "",
+          birthDate: getTodayDateString(),
           birthTime: "",
-          gender: i % 2 === 0 ? "male" : "female",
-          avatar: MOCK_AVATARS[i % MOCK_AVATARS.length],
+          gender: "male",
+          avatar: crops[i] ?? "",
           birthTimeUnknown: false,
-        }));
-        setGroupMembers(members);
-        setIsSegmenting(false);
-        setCurrentStep(3);
-      }, 2000);
-    },
-    [detectedCount],
-  );
+        })
+      );
+      setGroupMembers(members);
+      setIsSegmenting(false);
+      setCurrentStep(3);
+    } catch {
+      setFaceDetectionError("얼굴 분석 중 오류가 발생했습니다.");
+      setIsSegmenting(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (isCapturing || isCameraActive) {
@@ -207,7 +226,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         const result = reader.result as string;
         setCapturedImages([result, null, null]);
         setIsUploadTypeModalOpen(false);
-        processGroupPhoto(result);
+        setFaceDetectionError(null);
+        setIsGroupPhotoConfirming(true);
       };
       reader.readAsDataURL(file);
     }
@@ -220,6 +240,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         setShowSajuInput(true);
       } else if (showSajuInput) {
         // 사주 정보 입력 완료 후 분석 시작
+        // 이전 싸피네컷 사진 캐시 삭제 (백엔드 POST 전에 삭제)
+        try {
+          localStorage.removeItem("photoBoothSets");
+        } catch (error) {
+          console.error("이전 촬영 데이터 삭제 실패:", error);
+        }
+
         if (faceMeshMetadata) {
           const finalPayload = {
             ...faceMeshMetadata,
@@ -275,6 +302,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       setGroupMembers([]);
       setIsCameraActive(true);
       setIsIndividualPhotoUpload(false);
+      setIsGroupPhotoConfirming(false);
+      setFaceDetectionError(null);
       setCurrentStep(0);
     }
   };
@@ -305,7 +334,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     const newMember: GroupMember = {
       id: Date.now(),
       name: "",
-      birthDate: "",
+      birthDate: getTodayDateString(),
       birthTime: "",
       gender: "male",
       avatar: "",
@@ -333,6 +362,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   };
 
   const handleGroupAnalyze = () => {
+    // 이전 싸피네컷 사진 캐시 삭제 (백엔드 POST 전에 삭제)
+    try {
+      localStorage.removeItem("photoBoothSets");
+    } catch (error) {
+      console.error("이전 촬영 데이터 삭제 실패:", error);
+    }
+
     if (faceMeshMetadata) {
       // ✅ 백엔드 전송 시 avatar 필드 제외
       const membersWithoutAvatar = groupMembers.map(({ avatar, ...rest }) => rest);
@@ -518,85 +554,37 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                     </label>
                   </div>
                   {!sajuData.birthTimeUnknown ? (
-                    <div className="grid grid-cols-3 gap-2 w-full">
+                    <div className="grid grid-cols-2 gap-2 w-full max-w-[50%]">
                       <div className="relative min-w-0">
                         <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange pointer-events-none z-10" />
                         <Select
                           value={
                             sajuData.birthTime
-                              ? parseInt(sajuData.birthTime.split(":")[0]) >= 12
-                                ? "PM"
-                                : "AM"
-                              : "AM"
+                              ? parseInt(sajuData.birthTime.split(":")[0], 10).toString()
+                              : "0"
                           }
                           onValueChange={(value) => {
                             const currentTime = sajuData.birthTime || "00:00";
-                            const [hours, minutes] = currentTime.split(":");
-                            let hour = parseInt(hours);
-
-                            if (value === "PM" && hour < 12) {
-                              hour += 12;
-                            } else if (value === "AM" && hour >= 12) {
-                              hour -= 12;
-                            }
-
+                            const [, minutes] = currentTime.split(":");
+                            const h = value.padStart(2, "0");
                             setSajuData({
                               ...sajuData,
-                              birthTime: `${hour.toString().padStart(2, "0")}:${minutes}`,
+                              birthTime: `${h}:${minutes}`,
                             });
                           }}
                         >
                           <SelectTrigger className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all pl-9 pr-3 text-sm w-full min-w-0">
-                            <SelectValue placeholder="AM/PM" />
+                            <SelectValue placeholder="시" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="AM">AM</SelectItem>
-                            <SelectItem value="PM">PM</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <Select
-                        value={(() => {
-                          if (!sajuData.birthTime) return "";
-                          const [hours] = sajuData.birthTime.split(":");
-                          let hour = parseInt(hours);
-                          if (hour === 0) return "12";
-                          if (hour > 12) hour -= 12;
-                          return hour.toString();
-                        })()}
-                        onValueChange={(value) => {
-                          const currentTime = sajuData.birthTime || "00:00";
-                          const [hours, minutes] = currentTime.split(":");
-                          const currentHour = parseInt(hours);
-                          const isPM = currentHour >= 12;
-
-                          let newHour = parseInt(value);
-                          if (isPM && newHour !== 12) {
-                            newHour += 12;
-                          } else if (!isPM && newHour === 12) {
-                            newHour = 0;
-                          }
-
-                          setSajuData({
-                            ...sajuData,
-                            birthTime: `${newHour.toString().padStart(2, "0")}:${minutes}`,
-                          });
-                        }}
-                      >
-                        <SelectTrigger className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm px-3">
-                          <SelectValue placeholder="시" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 12 }, (_, i) => i + 1).map(
-                            (hour) => (
+                            {Array.from({ length: 24 }, (_, i) => i).map((hour) => (
                               <SelectItem key={hour} value={hour.toString()}>
                                 {hour}시
                               </SelectItem>
-                            )
-                          )}
-                        </SelectContent>
-                      </Select>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
                       <Select
                         value={
@@ -1085,7 +1073,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       {
                         id: Date.now(),
                         name: "",
-                        birthDate: "",
+                        birthDate: getTodayDateString(),
                         birthTime: "",
                         gender: "male",
                         avatar: "",
@@ -1094,9 +1082,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       {
                         id: Date.now() + 1,
                         name: "",
-                        birthDate: "",
+                        birthDate: getTodayDateString(),
                         birthTime: "",
-                        gender: "female",
+                        gender: "male",
                         avatar: "",
                         birthTimeUnknown: false,
                       },
@@ -1199,6 +1187,11 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               <p className="text-sm opacity-90 drop-shadow-md">
                 촬영된 사진을 확인하세요
               </p>
+              {mode === "group" && faceDetectionError && (
+                <p className="mt-3 text-sm text-red-200 bg-red-900/60 px-3 py-2 rounded-lg">
+                  {faceDetectionError}
+                </p>
+              )}
             </div>
 
             {/* Top Right Controls */}
@@ -1396,7 +1389,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                   입력해주세요.
                 </p>
               </div>
-              <div className="flex items-center gap-3 self-end md:self-auto">
+              <div className="flex items-center gap-3 self-end md:self-auto flex-wrap justify-end">
                 <button
                   onClick={handleRetake}
                   className="px-4 py-2 text-gray-400 hover:text-brand-orange hover:bg-orange-50 rounded-xl transition-all flex items-center gap-2 text-sm font-bold group"
@@ -1416,13 +1409,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
             <div className="space-y-6 relative z-10">
               <AnimatePresence>
-                {groupMembers.map((member, index) => {
-                  // AI가 감지한 이미지인지 확인 (MOCK_AVATARS에 포함되어 있으면 AI 감지)
-                  const isAIDetected =
-                    member.avatar &&
-                    MOCK_AVATARS.includes(member.avatar);
-
-                  return (
+                {groupMembers.map((member, index) => (
                     <motion.div
                       key={member.id}
                       initial={{ opacity: 0, scale: 0.95 }}
@@ -1432,16 +1419,10 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       {/* Member Avatar Upload */}
                       <div className="shrink-0 flex flex-col items-center sm:items-start">
                         <div
-                          className={`w-40 h-40 sm:w-44 sm:h-44 rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-gray-50 transition-all duration-300 relative group/avatar flex items-center justify-center ${isAIDetected
-                            ? "cursor-default"
-                            : "cursor-pointer hover:scale-105 hover:shadow-2xl"
-                            }`}
+                          className="w-40 h-40 sm:w-44 sm:h-44 rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-gray-50 transition-all duration-300 relative group/avatar flex items-center justify-center cursor-pointer hover:scale-105 hover:shadow-2xl"
                           onClick={() =>
-                            !isAIDetected &&
                             document
-                              .getElementById(
-                                `avatar-upload-${member.id}`,
-                              )
+                              .getElementById(`avatar-upload-${member.id}`)
                               ?.click()
                           }
                         >
@@ -1452,14 +1433,12 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                                 alt="Face"
                                 className="w-full h-full object-cover"
                               />
-                              {!isAIDetected && (
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center text-white backdrop-blur-sm">
-                                  <Camera size={28} className="mb-2" />
-                                  <span className="text-sm font-bold">
-                                    사진 변경
-                                  </span>
-                                </div>
-                              )}
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center text-white backdrop-blur-sm">
+                                <Camera size={28} className="mb-2" />
+                                <span className="text-sm font-bold">
+                                  사진 변경
+                                </span>
+                              </div>
                             </>
                           ) : (
                             <div className="flex flex-col items-center justify-center text-gray-400 gap-3">
@@ -1473,20 +1452,15 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                               </span>
                             </div>
                           )}
-                          {!isAIDetected && (
-                            <input
-                              type="file"
-                              id={`avatar-upload-${member.id}`}
-                              className="hidden"
-                              accept="image/*"
-                              onChange={(e) =>
-                                handleMemberAvatarUpload(
-                                  member.id,
-                                  e,
-                                )
-                              }
-                            />
-                          )}
+                          <input
+                            type="file"
+                            id={`avatar-upload-${member.id}`}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={(e) =>
+                              handleMemberAvatarUpload(member.id, e)
+                            }
+                          />
                         </div>
                       </div>
 
@@ -1518,6 +1492,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                               placeholder="YYYY.MM.DD"
                               themeColor="orange"
                               className="w-full"
+                              maxDate={new Date()}
                             />
                           </div>
                           <div className="flex flex-col gap-2 w-full min-w-0">
@@ -1583,80 +1558,33 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                             </label>
                           </div>
                           {!member.birthTimeUnknown ? (
-                            <div className="grid grid-cols-3 gap-2 w-full min-w-0">
+                            <div className="grid grid-cols-2 gap-2 w-full min-w-0 max-w-[50%]">
                               <div className="relative min-w-0">
                                 <Clock
                                   className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange pointer-events-none z-10"
                                 />
                                 <Select
-                                  value={(() => {
-                                    if (!member.birthTime) return "AM";
-                                    const [hours] = member.birthTime.split(":");
-                                    return parseInt(hours) >= 12 ? "PM" : "AM";
-                                  })()}
+                                  value={
+                                    member.birthTime
+                                      ? parseInt(member.birthTime.split(":")[0], 10).toString()
+                                      : "0"
+                                  }
                                   onValueChange={(value) => {
                                     const currentTime = member.birthTime || "00:00";
-                                    const [hours, minutes] = currentTime.split(":");
-                                    let hour = parseInt(hours);
-
-                                    if (value === "PM" && hour < 12) {
-                                      hour += 12;
-                                    } else if (value === "AM" && hour >= 12) {
-                                      hour -= 12;
-                                    }
-
+                                    const [, minutes] = currentTime.split(":");
+                                    const h = value.padStart(2, "0");
                                     updateGroupMember(
                                       member.id,
                                       "birthTime",
-                                      `${hour.toString().padStart(2, "0")}:${minutes}`
+                                      `${h}:${minutes}`
                                     );
                                   }}
                                 >
-                                    <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all pl-9 pr-3 text-sm w-full min-w-0 [&>span]:!line-clamp-none">
-                                      <SelectValue placeholder="AM/PM" />
+                                  <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all pl-9 pr-3 text-sm w-full min-w-0 [&>span]:!line-clamp-none">
+                                    <SelectValue placeholder="시" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="AM">AM</SelectItem>
-                                    <SelectItem value="PM">PM</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div className="min-w-0">
-                                <Select
-                                  value={(() => {
-                                    if (!member.birthTime) return "";
-                                    const [hours] = member.birthTime.split(":");
-                                    let hour = parseInt(hours);
-                                    if (hour === 0) return "12";
-                                    if (hour > 12) hour -= 12;
-                                    return hour.toString();
-                                  })()}
-                                  onValueChange={(value) => {
-                                    const currentTime = member.birthTime || "00:00";
-                                    const [hours, minutes] = currentTime.split(":");
-                                    const currentHour = parseInt(hours);
-                                    const isPM = currentHour >= 12;
-
-                                    let newHour = parseInt(value);
-                                    if (isPM && newHour !== 12) {
-                                      newHour += 12;
-                                    } else if (!isPM && newHour === 12) {
-                                      newHour = 0;
-                                    }
-
-                                    updateGroupMember(
-                                      member.id,
-                                      "birthTime",
-                                      `${newHour.toString().padStart(2, "0")}:${minutes}`
-                                    );
-                                  }}
-                                >
-                                    <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm px-3">
-                                      <SelectValue placeholder="시" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Array.from({ length: 12 }, (_, i) => i + 1).map((hour) => (
+                                    {Array.from({ length: 24 }, (_, i) => i).map((hour) => (
                                       <SelectItem key={hour} value={hour.toString()}>
                                         {hour}시
                                       </SelectItem>
@@ -1682,8 +1610,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                                     );
                                   }}
                                 >
-                                    <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm px-3">
-                                      <SelectValue placeholder="분" />
+                                  <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm px-3">
+                                    <SelectValue placeholder="분" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {Array.from({ length: 12 }, (_, i) => i * 5).map((minute) => (
@@ -1708,8 +1636,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                         </div>
                       </div>
                     </motion.div>
-                  );
-                })}
+                ))}
               </AnimatePresence>
             </div>
           </div>

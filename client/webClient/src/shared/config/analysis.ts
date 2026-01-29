@@ -19,6 +19,12 @@
 /** 개발용: 결과 준비 완료까지 대기 시간(ms). 10초 고정. API 연동 시 실제 응답 대기로 교체. */
 export const ANALYSIS_LOADING_MS = 10_000;
 
+/**
+ * [개발용] true: 단체(그룹) 모드에서 /analyzing 생략 후 바로 /result로 이동.
+ * false 또는 주석 해제 시: 그룹도 개인과 동일하게 /analyzing → ANALYSIS_LOADING_MS 후 /result.
+ */
+export const DEV_SKIP_ANALYZING_FOR_GROUP = true;
+
 /** AnalyzingSection 스텝 수 (얼굴형·눈·코·입·턱·조합). */
 export const ANALYSIS_STEP_COUNT = 6;
 
