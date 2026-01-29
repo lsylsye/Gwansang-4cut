@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
-import { ImageWithFallback } from "@/shared/components/figma/ImageWithFallback";
+import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
 import { Heart, AlertTriangle, Utensils, Snowflake, Brain, Sparkles, Clock, TrendingUp, Download, Camera, Upload, X, CheckCircle2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import profileImage from "@/assets/profile.png";
