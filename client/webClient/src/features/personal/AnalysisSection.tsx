@@ -8,6 +8,7 @@ import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
 import { SajuAnalysisResponse } from "@/shared/api/sajuApi";
 import { USE_MOCK_RESULTS } from "@/shared/config/analysis";
 import html2canvas from "html2canvas";
+import { useHideTurtleGuide } from "@/shared/contexts/HideTurtleGuideContext";
 
 // --- Types ---
 interface AnalysisSectionProps {
