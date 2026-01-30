@@ -48,6 +48,7 @@ export default function App() {
   const [analysisDone, setAnalysisDone] = useState(false);
   const [frameImageState, setFrameImageState] = useState<string | null>(null);
   const [fromPhotoBoothState, setFromPhotoBoothState] = useState(false);
+  const [isPhotoBoothShooting, setIsPhotoBoothShooting] = useState(false);
   const pathnameRef = useRef(location.pathname);
 
   // location.state 변경 감지
@@ -182,7 +183,7 @@ export default function App() {
   return (
     <Layout>
       <HideTurtleGuideProvider>
-      {!isPhotoBooth && (
+      {(!isPhotoBooth || !isPhotoBoothShooting) && (
         <header className="w-full h-14 sm:h-16 px-3 sm:px-6 flex justify-between items-center bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40 shadow-sm">
         <div
           className="flex items-center gap-0.5 cursor-pointer"
@@ -323,6 +324,7 @@ export default function App() {
               >
                 <PhotoBoothSection
                   mode={mode}
+                  onStepChange={(step) => setIsPhotoBoothShooting(step === "shooting")}
                   onBack={() => {
                     // analyzing이 완료된 상태면 결과창으로, 진행 중이면 analyzing으로
                     if (analysisDone) {

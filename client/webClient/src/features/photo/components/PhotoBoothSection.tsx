@@ -14,10 +14,13 @@ import frame02 from "@/assets/frame_02.png";
 import ssafy02 from "@/assets/ssafy_02.png";
 import shutterSound from "@/assets/shutter_sound.mp3";
 
+export type PhotoBoothStep = "frame-selection" | "shooting" | "best-shot" | "customization";
+
 interface PhotoBoothSectionProps {
   onBack: () => void;
   onComplete: (photos: string[]) => void;
   mode?: AnalyzeMode;
+  onStepChange?: (step: PhotoBoothStep) => void;
 }
 
 type FrameType = "vertical" | "horizontal";
@@ -30,6 +33,7 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
   onBack,
   onComplete,
   mode = "personal",
+  onStepChange,
 }) => {
   const isPersonal = mode === "personal";
 
@@ -62,6 +66,15 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
   const [isDesktop, setIsDesktop] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // 단계 변경 시 상위에 알림 (헤더 표시 등)
+  useEffect(() => {
+    if (!onStepChange) return;
+    if (!frameType) onStepChange("frame-selection");
+    else if (!showSelection) onStepChange("shooting");
+    else if (!showCustomization) onStepChange("best-shot");
+    else onStepChange("customization");
+  }, [frameType, showSelection, showCustomization, onStepChange]);
 
   const PRESET_TEXTS = [
     "아자스",
@@ -976,10 +989,6 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
 
           {/* Frame Preview */}
           <div className="relative w-full max-w-5xl flex-1 flex items-center justify-center">
-            <div className={`absolute inset-0 scale-[1.2] blur-[120px] opacity-30 -z-10 transition-colors duration-1000`}
-              style={{ backgroundColor: frameColor }}
-            />
-
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
