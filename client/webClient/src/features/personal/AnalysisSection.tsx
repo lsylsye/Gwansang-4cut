@@ -1,17 +1,21 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { FaceAnalysis } from "./face/components/FaceAnalysis";
 import { StatsAnalysis } from "./stats/components/StatsAnalysis";
 import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
+import { SajuAnalysisResponse } from "@/shared/api/sajuApi";
+import { USE_MOCK_RESULTS } from "@/shared/config/analysis";
 import html2canvas from "html2canvas";
 
 // --- Types ---
 interface AnalysisSectionProps {
     images?: string[];
     onRestart: () => void;
-    onNavigateToPhotoGallery?: () => void;
+    onNavigateToPhotoBooth?: () => void;
+    frameImage?: string;
+    fromPhotoBooth?: boolean;
 }
 
 // --- Mock Data (부위별 상세: values, criteria, interpretation, advice) ---
@@ -294,11 +298,51 @@ const MOCK_DATA = {
 };
 
 // --- Main Component ---
-export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], onRestart, onNavigateToPhotoGallery }) => {
-    const [currentTab, setCurrentTab] = useState<"physiognomy" | "constitution" | "future" | "photo-gallery">("physiognomy");
+export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], onRestart, onNavigateToPhotoBooth, frameImage, fromPhotoBooth }) => {
+    const [currentTab, setCurrentTab] = useState<"physiognomy" | "constitution" | "future" | "ssafy-cut">(
+        "physiognomy"
+    );
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [futureImage, setFutureImage] = useState<string | null>(null);
+    const [savedFrameImage, setSavedFrameImage] = useState<string | null>(null);
+
+    // localStorage에서 프레임 이미지 로드
+    useEffect(() => {
+        const loadFrameImage = () => {
+            try {
+                const saved = localStorage.getItem("photoBoothSets");
+                if (saved) {
+                    const sets = JSON.parse(saved);
+                    if (sets.length > 0 && sets[0].frameImage) {
+                        setSavedFrameImage(sets[0].frameImage);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to load frame image:", error);
+            }
+        };
+        loadFrameImage();
+        
+        // frameImage prop이 변경될 때도 업데이트
+        if (frameImage) {
+            setSavedFrameImage(frameImage);
+        }
+    }, [frameImage]);
+
+    // fromPhotoBooth가 true이고 frameImage가 있으면 싸피네컷 탭으로 이동
+    useEffect(() => {
+        if (fromPhotoBooth && (frameImage || savedFrameImage)) {
+            setCurrentTab("ssafy-cut");
+            // 탭으로 스크롤
+            setTimeout(() => {
+                const tabElement = document.querySelector('[data-tab="ssafy-cut"]');
+                if (tabElement) {
+                    tabElement.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+            }, 100);
+        }
+    }, [fromPhotoBooth, frameImage, savedFrameImage]);
 
     // Mock QR code URL
     const shareUrl = `${window.location.origin}/result/abc123`;
@@ -372,19 +416,16 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
                         { id: "physiognomy", label: "관상 분석", icon: Brain },
                         { id: "constitution", label: "체질 분석", icon: Heart },
                         { id: "future", label: "미래의 나", icon: Camera },
-                        { id: "photo-gallery", label: "싸피네컷", icon: Images },
+                        { id: "ssafy-cut", label: "싸피네컷", icon: Images },
                     ].map((tab) => {
                         const Icon = tab.icon;
                         const isActive = currentTab === tab.id;
                         return (
                             <button
                                 key={tab.id}
+                                data-tab={tab.id}
                                 onClick={() => {
-                                    if (tab.id === "photo-gallery" && onNavigateToPhotoGallery) {
-                                        onNavigateToPhotoGallery();
-                                    } else {
-                                        setCurrentTab(tab.id as any);
-                                    }
+                                    setCurrentTab(tab.id as any);
                                 }}
                                 className={`
                             flex items-center gap-2 px-8 py-3.5 rounded-2xl transition-all duration-300 font-bold font-display
@@ -415,7 +456,6 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
                             image={images[0] || ""}
                             scores={MOCK_DATA.scores}
                             features={MOCK_DATA.features}
-                            totalAnalysis={MOCK_DATA.totalAnalysis}
                         />
                     )}
 
@@ -427,6 +467,61 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
                             futureImage={futureImage}
                             onFutureImageUpload={setFutureImage}
                         />
+                    )}
+
+                    {/* --- Tab 4: 싸피네컷 --- */}
+                    {currentTab === "ssafy-cut" && (
+                        <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 px-4">
+                            {(frameImage || savedFrameImage) ? (
+                                <div className="w-full max-w-4xl space-y-8">
+                                    <div className="flex justify-center">
+                                        <div className="relative w-full max-w-2xl">
+                                            <img
+                                                src={frameImage || savedFrameImage || ""}
+                                                alt="싸피네컷"
+                                                className="w-full h-auto rounded-2xl shadow-2xl border-4 border-white"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-center gap-4">
+                                        <ActionButton
+                                            variant="primary"
+                                            onClick={() => {
+                                                const link = document.createElement("a");
+                                                link.download = "싸피네컷.png";
+                                                link.href = frameImage || savedFrameImage || "";
+                                                link.click();
+                                            }}
+                                        >
+                                            <Download size={20} className="mr-2" />
+                                            이미지 다운로드
+                                        </ActionButton>
+                                        {onNavigateToPhotoBooth && (
+                                            <ActionButton
+                                                variant="secondary"
+                                                onClick={onNavigateToPhotoBooth}
+                                            >
+                                                <RotateCcw size={20} className="mr-2" />
+                                                다시 찍기
+                                            </ActionButton>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center space-y-4">
+                                    <p className="text-gray-500 text-lg">아직 싸피네컷이 없습니다.</p>
+                                    {onNavigateToPhotoBooth && (
+                                        <ActionButton
+                                            variant="primary"
+                                            onClick={onNavigateToPhotoBooth}
+                                        >
+                                            <Images size={20} className="mr-2" />
+                                            싸피네컷 찍으러 가기
+                                        </ActionButton>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     )}
                 </motion.div>
             </AnimatePresence>

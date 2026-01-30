@@ -1,7 +1,7 @@
 services: # local 작업 용 compose.yml
   cache-server:
     container_name: localRedis
-    image: redis
+    image: redis/redis-stack-server
     ports:
       - "6379:6379"
     healthcheck:

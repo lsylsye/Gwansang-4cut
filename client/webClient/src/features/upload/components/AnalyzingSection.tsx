@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { motion, AnimatePresence } from "motion/react";
-import { Sparkles, Search, Brain, Loader2, Camera } from "lucide-react";
+import { Sparkles, Search, Brain, Loader2, Camera, AlertCircle, CheckCircle2 } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { ANALYSIS_STEP_INTERVAL_MS } from "@/shared/config/analysis";
 
@@ -15,6 +15,9 @@ interface AnalyzingSectionProps {
     combination?: string;
   };
   onNavigateToPhotoBooth?: () => void;
+  isAnalyzing?: boolean;
+  analysisError?: string | null;
+  analysisComplete?: boolean;
 }
 
 // 줌 위치 정의 (거북도사의 신비로운 거울 컨셉)
@@ -36,7 +39,13 @@ const ANALYSIS_STEPS = [
   { text: "삼라만상의 조화를 갈무리하는 중...", icon: <Brain className="w-5 h-5" />, target: 5, label: "조합" },
 ];
 
-export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ ragData, onNavigateToPhotoBooth }) => {
+export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ 
+  ragData, 
+  onNavigateToPhotoBooth,
+  isAnalyzing = true,
+  analysisError = null,
+  analysisComplete = false
+}) => {
   const [currentStep, setCurrentStep] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const faceContainerRef = useRef<HTMLDivElement>(null);
@@ -322,9 +331,17 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ ragData, onN
         {/* Right: Analysis Info - Traditional Slate Design */}
         <div className="flex-1 max-w-xl text-center lg:text-left space-y-8">
           <div className="inline-flex items-center gap-3 bg-brand-green/10 border border-brand-green/30 px-4 py-2 rounded-full shadow-[0_0_15px_rgba(0,137,123,0.2)]">
-            <Loader2 className="w-5 h-5 text-brand-green animate-spin" />
-            <span className="text-brand-green font-bold tracking-[0.2em] text-[10px] uppercase font-sans">
-              Celestial Neural Scanning
+            {analysisError ? (
+              <AlertCircle className="w-5 h-5 text-red-500" />
+            ) : analysisComplete ? (
+              <CheckCircle2 className="w-5 h-5 text-green-500" />
+            ) : (
+              <Loader2 className="w-5 h-5 text-brand-green animate-spin" />
+            )}
+            <span className={`font-bold tracking-[0.2em] text-[10px] uppercase font-sans ${
+              analysisError ? 'text-red-500' : analysisComplete ? 'text-green-600' : 'text-brand-green'
+            }`}>
+              {analysisError ? 'Analysis Error' : analysisComplete ? 'Analysis Complete' : 'Celestial Neural Scanning'}
             </span>
           </div>
           
@@ -344,14 +361,33 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ ragData, onN
             
             {!ragData ? (
               <div className="flex flex-col items-center lg:items-start gap-4">
-                <div className="flex gap-2">
-                  {[0, 1, 2].map(i => (
-                    <motion.div key={i} animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} className="w-2 h-2 bg-brand-green rounded-full" />
-                  ))}
-                </div>
-                 <p className="text-gray-500 font-hand text-lg md:text-xl italic leading-relaxed">
-                   "천기를 읽는 중이니 잠시만 정적을 유지하게나..."
-                 </p>
+                {analysisError ? (
+                  <>
+                    <AlertCircle className="w-6 h-6 text-red-500" />
+                    <p className="text-red-500 font-hand text-lg md:text-xl leading-relaxed">
+                      "허허, 천기를 읽는 데 어려움이 있구먼... 잠시 후 다시 시도해보게나."
+                    </p>
+                    <p className="text-gray-400 text-sm mt-2">{analysisError}</p>
+                  </>
+                ) : analysisComplete ? (
+                  <>
+                    <CheckCircle2 className="w-6 h-6 text-green-500" />
+                    <p className="text-green-600 font-hand text-lg md:text-xl leading-relaxed">
+                      "허허, 관상을 다 읽었네! 곧 결과를 보여주리다..."
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      {[0, 1, 2].map(i => (
+                        <motion.div key={i} animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} className="w-2 h-2 bg-brand-green rounded-full" />
+                      ))}
+                    </div>
+                    <p className="text-gray-500 font-hand text-lg md:text-xl italic leading-relaxed">
+                      "천기를 읽는 중이니 잠시만 정적을 유지하게나..."
+                    </p>
+                  </>
+                )}
               </div>
             ) : currentRagContent ? (
               <div className="space-y-4">

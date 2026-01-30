@@ -1,23 +1,31 @@
-# Gemini Image Generation API Server
+# AI Server (FastAPI)
 
-Google Gemini (Nano Banana)를 활용한 이미지 생성/편집 FastAPI 서버입니다.
+Google Gemini (Nano Banana)와 GMS API를 활용한 이미지 생성/편집 및 사주 분석 FastAPI 서버입니다.
 
 ## 지원 기능
 
-### 모델
+### 1. 이미지 생성 (Gemini)
+
+#### 모델
 
 | 모델 | 이름 | 특징 |
 |------|------|------|
 | `gemini-2.5-flash-image` | Nano Banana | 빠른 속도, 효율성 최적화, 최대 1024px |
 | `gemini-3-pro-image-preview` | Nano Banana Pro | 고품질, 최대 4K, 14개 참조 이미지 지원 |
 
-### 주요 기능
+#### 주요 기능
 
 - **텍스트 → 이미지 생성**: 텍스트 프롬프트로 이미지 생성
 - **이미지 편집**: 기존 이미지를 프롬프트로 수정
 - **다중 이미지 결합**: 여러 참조 이미지를 결합하여 새 이미지 생성
 - **멀티턴 채팅**: 대화형으로 이미지를 반복 수정
 - **Google 검색 그라운딩**: 실시간 정보 기반 이미지 생성
+
+### 2. 사주 분석 (GMS API)
+
+- **사주팔자 계산**: 생년월일시를 기반으로 연주/월주/일주/시주 계산
+- **명리 분석**: 오행 분석, 십성 분석, 키워드 추출
+- **AI 사주 풀이**: GMS API(GPT-4o-mini)를 사용한 자세한 사주 해석
 
 ## 설치 및 실행
 
@@ -43,10 +51,12 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # .env 파일을 열어 API 키 입력
-# GEMINI_API_KEY=your_api_key_here
+# GMS_KEY=your_gms_api_key_here          # 사주 분석용 (필수)
+# GEMINI_API_KEY=your_gemini_api_key    # 이미지 생성용 (선택)
 ```
 
-API 키는 [Google AI Studio](https://aistudio.google.com/apikey)에서 발급받을 수 있습니다.
+- GMS API 키는 SSAFY GMS 포털에서 발급받을 수 있습니다.
+- Gemini API 키는 [Google AI Studio](https://aistudio.google.com/apikey)에서 발급받을 수 있습니다.
 
 ### 3. 서버 실행
 

@@ -13,22 +13,6 @@ export interface UserProfile {
   profileImage?: string;
 }
 
-export interface HistoryItem {
-  id: string;
-  type: "personal" | "group";
-  date: string;
-  timestamp: string;
-  thumbnail?: string;
-
-  // Personal data
-  images?: string[];
-
-  // Group data
-  teamName?: string;
-  memberCount?: number;
-  score?: number;
-}
-
 export interface GroupMember {
   id: number;
   name: string;

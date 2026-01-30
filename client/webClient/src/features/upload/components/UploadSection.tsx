@@ -40,6 +40,7 @@ import { AnalyzeMode, SajuData, GroupMember } from "@/shared/types";
 import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
 import { ConsentModal } from "./ConsentModal";
 import { FaceMeshWebcam } from "./FaceMeshWebcam";
+import { detectFacesAndCrop, analyzePersonalImage, analyzeGroupPhotoForApi, type GroupFaceMeshPayload } from "../utils/groupPhotoFaceDetection";
 import { API_ENDPOINTS } from "@/shared/api/config";
 import profileImage from "@/assets/profile.png";
 import selfieImage from "@/assets/selfie.png";
@@ -91,13 +92,10 @@ const CAPTURE_STEPS = [
   },
 ];
 
-// Mock Avatar Images for Segmentation Simulation
-const MOCK_AVATARS = [
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop",
-];
+function getTodayDateString(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 export const UploadSection: React.FC<UploadSectionProps> = ({
   mode,
@@ -117,6 +115,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   const [detectedCount, setDetectedCount] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
   const [isSegmenting, setIsSegmenting] = useState(false);
+  const [faceDetectionError, setFaceDetectionError] = useState<
+    string | null
+  >(null);
+  /** 멤버별 개인 사진 업로드 시 MediaPipe 분석 중인 멤버 id (null이면 비표시) */
+  const [memberIdAnalyzing, setMemberIdAnalyzing] = useState<number | null>(null);
+  /** 멤버별 사진 업로드에서 얼굴 인식 실패한 멤버 id */
+  const [memberAvatarErrorId, setMemberAvatarErrorId] = useState<number | null>(null);
   const [isUploadTypeModalOpen, setIsUploadTypeModalOpen] =
     useState(false);
   const [isPersonalUploadModalOpen, setIsPersonalUploadModalOpen] =
@@ -133,37 +138,77 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     birthTimeUnknown: false,
   });
   const [faceMeshMetadata, setFaceMeshMetadata] = useState<any>(null);
+  /** 단체 사진 업로드 시 추출한 timestamp+faces (백엔드 전송 형식) */
+  const [groupUploadFaceMetadata, setGroupUploadFaceMetadata] = useState<GroupFaceMeshPayload | null>(null);
   const [showSajuInput, setShowSajuInput] = useState(false);
+  const [isPersonalUploadAnalyzing, setIsPersonalUploadAnalyzing] = useState(false);
+  /** 개인 모드에서 사진 업로드(파일 선택)로 이미지가 들어온 경우 → 확인 화면 건너뛰고 사주 입력으로만 이동 */
+  const [cameFromPersonalFileUpload, setCameFromPersonalFileUpload] = useState(false);
 
   const [groupMembers, setGroupMembers] = useState<
     GroupMember[]
   >([]);
 
-  // Simulation: Initialize group members after detection
-  const processGroupPhoto = useCallback(
-    (_photo: string) => {
-      setIsSegmenting(true);
-      // Simulate segmentation time
-      setTimeout(() => {
-        const count = detectedCount || 3;
-        const members: GroupMember[] = Array.from({
-          length: count,
-        }).map((_, i) => ({
+  // MediaPipe로 얼굴 검출 및 크롭 후 groupMembers 초기화 (단체 사진 등록 시 바로 호출 → 분석 후 step 3)
+  const processGroupPhoto = useCallback(async (photo: string) => {
+    setFaceDetectionError(null);
+    setIsSegmenting(true);
+    const delayMs = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    try {
+      const [faceResult] = await Promise.all([
+        detectFacesAndCrop(photo),
+        delayMs(3000),
+      ]);
+      const { count, crops } = faceResult;
+
+      if (count === 0) {
+        setFaceDetectionError(
+          "얼굴을 인식하지 못했습니다. 다른 사진을 시도해 주세요."
+        );
+        setIsSegmenting(false);
+        setIsGroupPhotoConfirming(true); // 실패 시 확인 화면에서 에러 표시·재시도 가능
+        return;
+      }
+      if (count === 1) {
+        setFaceDetectionError(
+          "2명 이상의 얼굴이 필요합니다. 다시 촬영하거나 다른 사진을 업로드해 주세요."
+        );
+        setIsSegmenting(false);
+        setIsGroupPhotoConfirming(true);
+        return;
+      }
+      if (count > 7) {
+        setFaceDetectionError(
+          "최대 7명까지만 인식 가능합니다. 7명 이하의 사진을 업로드해 주세요."
+        );
+        setIsSegmenting(false);
+        setIsGroupPhotoConfirming(true);
+        return;
+      }
+
+      // 2명 이상 7명 이하: detectedCount, groupMembers(avatar: crops[i]), step 3
+      setDetectedCount(count);
+      const members: GroupMember[] = Array.from({ length: count }).map(
+        (_, i) => ({
           id: Date.now() + i,
           name: `멤버 ${i + 1}`,
-          birthDate: "",
+          birthDate: getTodayDateString(),
           birthTime: "",
-          gender: i % 2 === 0 ? "male" : "female",
-          avatar: MOCK_AVATARS[i % MOCK_AVATARS.length],
+          gender: "male",
+          avatar: crops[i] ?? "",
           birthTimeUnknown: false,
-        }));
-        setGroupMembers(members);
-        setIsSegmenting(false);
-        setCurrentStep(3);
-      }, 2000);
-    },
-    [detectedCount],
-  );
+        })
+      );
+      setGroupMembers(members);
+      setIsSegmenting(false);
+      setCurrentStep(3);
+      analyzeGroupPhotoForApi(photo).then(setGroupUploadFaceMetadata).catch(() => {});
+    } catch {
+      setFaceDetectionError("얼굴 분석 중 오류가 발생했습니다.");
+      setIsSegmenting(false);
+      setIsGroupPhotoConfirming(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (isCapturing || isCameraActive) {
@@ -183,11 +228,18 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       reader.onloadend = () => {
         const result = reader.result as string;
         if (mode === "personal") {
-          const newImages = [...capturedImages];
-          newImages[currentStep] = result;
-          setCapturedImages(newImages);
-          // 파일 업로드 후 바로 사주 정보 입력으로 넘어가지 않고 확인 화면을 보여줍니다.
-          setIsCapturing(false);
+          setIsPersonalUploadAnalyzing(true);
+          (async () => {
+            const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+            const metadataPromise = analyzePersonalImage(result);
+            await Promise.all([metadataPromise, delay(3000)]);
+            const metadata = await metadataPromise;
+            setCapturedImages([result]);
+            setFaceMeshMetadata(metadata);
+            setIsCapturing(false);
+            setIsPersonalUploadAnalyzing(false);
+            setCameFromPersonalFileUpload(true); // 확인 화면 건너뛰고 모달에서 "다음" 시 사주 입력으로만 이동
+          })();
         } else {
           setCapturedImages([result, null, null]);
           setCurrentStep(3);
@@ -207,6 +259,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         const result = reader.result as string;
         setCapturedImages([result, null, null]);
         setIsUploadTypeModalOpen(false);
+        setFaceDetectionError(null);
+        // 단체 사진 등록: 확인 화면 건너뛰고 바로 MediaPipe 분석 → 개인정보 입력(step 3)으로
         processGroupPhoto(result);
       };
       reader.readAsDataURL(file);
@@ -220,6 +274,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         setShowSajuInput(true);
       } else if (showSajuInput) {
         // 사주 정보 입력 완료 후 분석 시작
+        // 이전 싸피네컷 사진 캐시 삭제 (백엔드 POST 전에 삭제)
+        try {
+          localStorage.removeItem("photoBoothSets");
+        } catch (error) {
+          console.error("이전 촬영 데이터 삭제 실패:", error);
+        }
+
         if (faceMeshMetadata) {
           const finalPayload = {
             ...faceMeshMetadata,
@@ -269,13 +330,19 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       setCurrentStep(0);
       setIsCapturing(true);
       setShowSajuInput(false);
+      setCameFromPersonalFileUpload(false);
     } else {
       setCapturedImages([null]);
       setFaceMeshMetadata(null);
+      setGroupUploadFaceMetadata(null);
       setGroupMembers([]);
-      setIsCameraActive(true);
+      setIsCameraActive(false);
       setIsIndividualPhotoUpload(false);
+      setIsGroupPhotoConfirming(false);
+      setFaceDetectionError(null);
       setCurrentStep(0);
+      if (groupFileInputRef.current) groupFileInputRef.current.value = "";
+      // 모임: 다시 촬영하기 → 모임 관상 확인하기(촬영/업로드 선택) 섹션으로
     }
   };
 
@@ -302,10 +369,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   };
 
   const addGroupMember = () => {
+    if (groupMembers.length >= 7) {
+      return; // 최대 7명까지만 추가 가능
+    }
     const newMember: GroupMember = {
       id: Date.now(),
       name: "",
-      birthDate: "",
+      birthDate: getTodayDateString(),
       birthTime: "",
       gender: "male",
       avatar: "",
@@ -320,30 +390,76 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   ) => {
     const file = e.target.files?.[0];
     if (file) {
+      setMemberAvatarErrorId(null);
       const reader = new FileReader();
       reader.onloadend = () => {
-        updateGroupMember(
-          id,
-          "avatar",
-          reader.result as string,
-        );
+        const result = reader.result as string;
+        setMemberIdAnalyzing(id);
+        const delayMs = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        (async () => {
+          try {
+            const [faceResult] = await Promise.all([
+              detectFacesAndCrop(result),
+              delayMs(3000),
+            ]);
+            const { count, crops } = faceResult;
+            setMemberIdAnalyzing(null);
+            if (count >= 1) {
+              updateGroupMember(id, "avatar", crops[0]);
+            } else {
+              setMemberAvatarErrorId(id);
+            }
+          } catch {
+            setMemberIdAnalyzing(null);
+            setMemberAvatarErrorId(id);
+          }
+        })();
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleGroupAnalyze = () => {
+  const handleGroupAnalyze = async () => {
+    // 이전 싸피네컷 사진 캐시 삭제 (백엔드 POST 전에 삭제)
+    try {
+      localStorage.removeItem("photoBoothSets");
+    } catch (error) {
+      console.error("이전 촬영 데이터 삭제 실패:", error);
+    }
+
+    const membersWithoutAvatar = groupMembers.map(({ avatar, ...rest }) => rest);
+
+    // 백엔드 형식: { timestamp, faces, groupMembers } (groupMembers는 avatar 제외)
+    let finalPayload: (GroupFaceMeshPayload & { groupMembers: typeof membersWithoutAvatar }) | null = null;
+
     if (faceMeshMetadata) {
-      // ✅ 백엔드 전송 시 avatar 필드 제외
-      const membersWithoutAvatar = groupMembers.map(({ avatar, ...rest }) => rest);
-      
-      const finalPayload = {
+      // 촬영: FaceMeshWebcam에서 받은 timestamp + faces + groupMembers
+      finalPayload = {
         ...faceMeshMetadata,
         groupMembers: membersWithoutAvatar,
       };
+    } else if (groupUploadFaceMetadata) {
+      // 단체 사진 업로드: analyzeGroupPhotoForApi로 저장해 둔 timestamp + faces + groupMembers
+      finalPayload = {
+        ...groupUploadFaceMetadata,
+        groupMembers: membersWithoutAvatar,
+      };
+    } else if (groupMembers.length >= 2 && groupMembers.every((m) => m.avatar)) {
+      // 멤버별 개인 사진 업로드: 각 멤버 avatar로 landmarks 추출 후 faces 조합
+      const now = new Date();
+      const offset = now.getTimezoneOffset() * 60000;
+      const timestamp = new Date(now.getTime() - offset).toISOString().slice(0, -1);
+      const faceResults = await Promise.all(
+        groupMembers.map((m) => (m.avatar ? analyzePersonalImage(m.avatar) : Promise.resolve(null)))
+      );
+      const faces = faceResults
+        .map((meta, i) => (meta?.faces?.[0] ? { ...meta.faces[0], faceIndex: i + 1 } : null))
+        .filter((f) => f != null) as Array<{ faceIndex: number; duration: number; landmarks: Array<{ index: number; x: number; y: number; z: number }> }>;
+      finalPayload = { timestamp, faces, groupMembers: membersWithoutAvatar };
+    }
 
+    if (finalPayload) {
       console.log("🚀 백엔드 전송 데이터 (Group):", finalPayload);
-
       fetch(API_ENDPOINTS.FACEMESH_GROUP, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -518,117 +634,78 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                     </label>
                   </div>
                   {!sajuData.birthTimeUnknown ? (
-                    <div className="grid grid-cols-3 gap-2 w-full">
+                    <div className="grid grid-cols-2 gap-2 w-full max-w-[50%]">
                       <div className="relative min-w-0">
                         <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange pointer-events-none z-10" />
                         <Select
                           value={
                             sajuData.birthTime
-                              ? parseInt(sajuData.birthTime.split(":")[0]) >= 12
-                                ? "PM"
-                                : "AM"
-                              : "AM"
+                              ? parseInt(sajuData.birthTime.split(":")[0], 10).toString()
+                              : "0"
                           }
                           onValueChange={(value) => {
                             const currentTime = sajuData.birthTime || "00:00";
-                            const [hours, minutes] = currentTime.split(":");
-                            let hour = parseInt(hours);
-
-                            if (value === "PM" && hour < 12) {
-                              hour += 12;
-                            } else if (value === "AM" && hour >= 12) {
-                              hour -= 12;
-                            }
-
+                            const [, minutes] = currentTime.split(":");
+                            const h = value.padStart(2, "0");
                             setSajuData({
                               ...sajuData,
-                              birthTime: `${hour.toString().padStart(2, "0")}:${minutes}`,
+                              birthTime: `${h}:${minutes}`,
                             });
                           }}
                         >
                           <SelectTrigger className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all pl-9 pr-3 text-sm w-full min-w-0">
-                            <SelectValue placeholder="AM/PM" />
+                            <SelectValue placeholder="시" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="AM">AM</SelectItem>
-                            <SelectItem value="PM">PM</SelectItem>
+                            {Array.from({ length: 24 }, (_, i) => i).map((hour) => (
+                              <SelectItem key={hour} value={hour.toString()}>
+                                {hour}시
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
 
-                      <Select
-                        value={(() => {
-                          if (!sajuData.birthTime) return "";
-                          const [hours] = sajuData.birthTime.split(":");
-                          let hour = parseInt(hours);
-                          if (hour === 0) return "12";
-                          if (hour > 12) hour -= 12;
-                          return hour.toString();
-                        })()}
-                        onValueChange={(value) => {
-                          const currentTime = sajuData.birthTime || "00:00";
-                          const [hours, minutes] = currentTime.split(":");
-                          const currentHour = parseInt(hours);
-                          const isPM = currentHour >= 12;
-
-                          let newHour = parseInt(value);
-                          if (isPM && newHour !== 12) {
-                            newHour += 12;
-                          } else if (!isPM && newHour === 12) {
-                            newHour = 0;
+                      <div className="relative w-full min-w-0">
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="0"
+                          maxLength={2}
+                          value={
+                            sajuData.birthTime
+                              ? sajuData.birthTime.split(":")[1]
+                              : ""
                           }
-
-                          setSajuData({
-                            ...sajuData,
-                            birthTime: `${newHour.toString().padStart(2, "0")}:${minutes}`,
-                          });
-                        }}
-                      >
-                        <SelectTrigger className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm px-3">
-                          <SelectValue placeholder="시" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 12 }, (_, i) => i + 1).map(
-                            (hour) => (
-                              <SelectItem key={hour} value={hour.toString()}>
-                                {hour}시
-                              </SelectItem>
-                            )
-                          )}
-                        </SelectContent>
-                      </Select>
-
-                      <Select
-                        value={
-                          sajuData.birthTime
-                            ? sajuData.birthTime.split(":")[1]
-                            : ""
-                        }
-                        onValueChange={(value) => {
-                          const currentTime = sajuData.birthTime || "00:00";
-                          const [hours] = currentTime.split(":");
-                          setSajuData({
-                            ...sajuData,
-                            birthTime: `${hours}:${value}`,
-                          });
-                        }}
-                      >
-                        <SelectTrigger className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm px-3">
-                          <SelectValue placeholder="분" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 12 }, (_, i) => i * 5).map(
-                            (minute) => (
-                              <SelectItem
-                                key={minute}
-                                value={minute.toString().padStart(2, "0")}
-                              >
-                                {minute.toString().padStart(2, "0")}분
-                              </SelectItem>
-                            )
-                          )}
-                        </SelectContent>
-                      </Select>
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/\D/g, "").slice(0, 2);
+                            const currentTime = sajuData.birthTime || "00:00";
+                            const [hours] = currentTime.split(":");
+                            const num = v === "" ? 0 : parseInt(v, 10);
+                            const clamped = num > 59 ? "59" : v === "" ? "00" : v;
+                            setSajuData({
+                              ...sajuData,
+                              birthTime: `${hours}:${clamped}`,
+                            });
+                          }}
+                          onBlur={() => {
+                            const currentTime = sajuData.birthTime || "00:00";
+                            const [hours, min] = currentTime.split(":");
+                            const parsed = parseInt(min || "0", 10);
+                            const clamped = Math.min(59, Math.max(0, isNaN(parsed) ? 0 : parsed)).toString().padStart(2, "0");
+                            if (min !== clamped) {
+                              setSajuData({
+                                ...sajuData,
+                                birthTime: `${hours}:${clamped}`,
+                              });
+                            }
+                          }}
+                          className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm pl-3 pr-9"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none">
+                          분
+                        </span>
+                      </div>
                     </div>
                   ) : (
                     <div className="relative w-full min-w-0">
@@ -661,7 +738,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     );
   }
 
-  // --- Segmenting Animation Overlay ---
+  // --- Segmenting Animation Overlay (모임 관상 단체 사진 MediaPipe 분석 중) ---
   if (isSegmenting) {
     return (
       <div className="flex flex-col items-center justify-center w-full min-h-[50vh]">
@@ -673,12 +750,12 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               repeat: Infinity,
               ease: "linear",
             }}
-            className="absolute inset-0 border-4 border-dashed border-brand-green rounded-full"
+            className="absolute inset-0 border-4 border-dashed border-brand-orange rounded-full"
           />
           <div className="absolute inset-4 bg-white/40 backdrop-blur-md rounded-full flex items-center justify-center shadow-clay-sm">
             <Users
               size={48}
-              className="text-brand-green animate-pulse"
+              className="text-brand-orange animate-pulse"
             />
           </div>
         </div>
@@ -703,7 +780,25 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       groupMembers.every((m) => m.avatar);
 
     return (
-      <div className="flex flex-col items-center justify-center w-full max-w-7xl mx-auto pb-20 px-4">
+      <div className="relative flex flex-col items-center justify-center w-full max-w-7xl mx-auto pb-20 px-4 min-h-[50vh]">
+        {memberIdAnalyzing !== null && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10 backdrop-blur-md">
+            <div className="flex flex-col items-center justify-center gap-3 px-6 py-5 rounded-2xl bg-white/95 backdrop-blur-sm shadow-xl border border-gray-100 w-fit max-w-[90%]">
+              <div className="relative w-14 h-14">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-0 border-3 border-dashed border-brand-orange rounded-full"
+                />
+                <div className="absolute inset-1.5 bg-white/80 rounded-full flex items-center justify-center">
+                  <Camera size={24} className="text-brand-orange animate-pulse" />
+                </div>
+              </div>
+              <h3 className="text-base font-bold text-gray-800 font-display">얼굴 분석 중...</h3>
+              <p className="text-gray-500 text-sm">MediaPipe로 얼굴을 추출하고 있습니다.</p>
+            </div>
+          </div>
+        )}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -757,29 +852,11 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       }
                     >
                       {member.avatar ? (
-                        <div className="relative w-full h-full group">
-                          <img
-                            src={member.avatar}
-                            alt={`Member ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                          <div
-                            className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              document
-                                .getElementById(
-                                  `individual-upload-${member.id}`,
-                                )
-                                ?.click();
-                            }}
-                          >
-                            <Camera size={32} />
-                            <span className="text-sm font-bold mt-2">
-                              사진 변경
-                            </span>
-                          </div>
-                        </div>
+                        <img
+                          src={member.avatar}
+                          alt={`Member ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         <div className="flex flex-col items-center justify-center text-gray-300 gap-3">
                           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
@@ -791,6 +868,11 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                         </div>
                       )}
                     </div>
+                    {memberAvatarErrorId === member.id && (
+                      <p className="mt-2 text-xs text-red-500 font-medium text-center">
+                        얼굴을 인식하지 못했습니다.
+                      </p>
+                    )}
                     <input
                       type="file"
                       id={`individual-upload-${member.id}`}
@@ -824,10 +906,17 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             <ActionButton
               variant="secondary"
               onClick={addGroupMember}
-              className="w-full py-5 border-4 border-dashed border-gray-200 bg-gray-50/50 text-gray-600 hover:bg-white hover:border-teal-200 hover:text-teal-600 transition-all flex items-center justify-center gap-3 rounded-2xl shadow-none"
+              disabled={groupMembers.length >= 7}
+              className={`w-full py-5 border-4 border-dashed transition-all flex items-center justify-center gap-3 rounded-2xl shadow-none ${
+                groupMembers.length >= 7
+                  ? "border-gray-100 bg-gray-50/30 text-gray-400 cursor-not-allowed opacity-50"
+                  : "border-gray-200 bg-gray-50/50 text-gray-600 hover:bg-white hover:border-teal-200 hover:text-teal-600"
+              }`}
             >
               <Users size={20} />
-              <span className="font-bold">멤버 추가하기</span>
+              <span className="font-bold">
+                {groupMembers.length >= 7 ? "최대 7명까지만 가능합니다" : "멤버 추가하기"}
+              </span>
             </ActionButton>
 
             <ActionButton
@@ -880,17 +969,18 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-3xl">
           <GlassCard
-            className={`p-10 flex flex-col items-center justify-center gap-6 hover:bg-white/90 transition-all cursor-pointer group border-2 border-transparent hover:border-${isPersonal ? "brand-green" : "brand-green"} shadow-clay-md`}
+            className="p-10 flex flex-col items-center justify-center gap-6 hover:bg-white/90 transition-all cursor-pointer group border-2 border-transparent hover:border-brand-green hover:shadow-md shadow-clay-md"
             onClick={() => {
               if (isPersonal) {
+                setCameFromPersonalFileUpload(false);
                 setIsCapturing(true);
               } else {
                 setIsCameraActive(true);
               }
             }}
           >
-            <div className={`w-24 h-24 ${isPersonal ? "bg-brand-green-muted" : "bg-brand-green-muted"} rounded-3xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-clay-sm`}>
-              <Camera className={`w-12 h-12 ${isPersonal ? "text-brand-green" : "text-brand-green"}`} />
+            <div className="w-24 h-24 bg-brand-green-muted rounded-3xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-clay-sm">
+              <Camera className="w-12 h-12 text-brand-green" />
             </div>
             <div className="text-center">
               <h3 className="text-2xl font-bold text-gray-800 mb-3 font-display">
@@ -905,7 +995,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           </GlassCard>
 
           <GlassCard
-            className={`p-10 flex flex-col items-center justify-center gap-6 hover:bg-white/90 transition-all cursor-pointer group border-2 border-transparent hover:border-${isPersonal ? "brand-orange" : "brand-orange"} shadow-clay-md`}
+            className="p-10 flex flex-col items-center justify-center gap-6 hover:bg-white/90 transition-all cursor-pointer group border-2 border-transparent hover:border-brand-orange hover:shadow-md shadow-clay-md"
             onClick={() => {
               if (isPersonal) {
                 setIsPersonalUploadModalOpen(true);
@@ -914,8 +1004,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               }
             }}
           >
-            <div className={`w-24 h-24 ${isPersonal ? "bg-brand-orange-muted" : "bg-brand-orange-muted"} rounded-3xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-clay-sm`}>
-              <Upload className={`w-12 h-12 ${isPersonal ? "text-brand-orange" : "text-brand-orange"}`} />
+            <div className="w-24 h-24 bg-brand-orange-muted rounded-3xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-clay-sm">
+              <Upload className="w-12 h-12 text-brand-orange" />
             </div>
             <div className="text-center">
               <h3 className="text-2xl font-bold text-gray-800 mb-3 font-display">
@@ -934,7 +1024,15 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         {isPersonal && (
           <Modal
             isOpen={isPersonalUploadModalOpen}
-            onClose={() => setIsPersonalUploadModalOpen(false)}
+            onClose={() => {
+              setIsPersonalUploadModalOpen(false);
+              // 모달만 닫으면 capturedImages[0]가 있어서 Initial View 조건이 false가 되어 다른 뷰로 넘어감 → 개인 업로드 상태 초기화로 촬영/업로드 선택 화면 유지
+              setCapturedImages([null]);
+              setFaceMeshMetadata(null);
+              setCameFromPersonalFileUpload(false);
+              // 파일 input 값 초기화 → 같은 파일 다시 선택해도 onChange 발생 (안 하면 재진입 시 업로드 안 됨)
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            }}
             size="md"
           >
             <ModalHeader description="정확한 관상 분석을 위해 가이드를 확인해주세요.">
@@ -942,15 +1040,43 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             </ModalHeader>
 
             <ModalBody>
-              <div className="space-y-6">
-                {/* Prominent Upload Area */}
-                <button
-                  onClick={() => {
-                    fileInputRef.current?.click();
-                  }}
-                  className="w-full group"
-                >
-                  <div className={`p-10 flex flex-col items-center justify-center gap-4 ${capturedImages[0] ? 'bg-green-50/50 border-brand-green/30' : 'bg-orange-50/50 border-brand-orange/30'} rounded-[32px] border-2 border-dashed group-hover:border-brand-orange group-hover:bg-orange-50 transition-all relative overflow-hidden min-h-[240px]`}>
+              <div className="relative min-h-[320px]">
+                {isPersonalUploadAnalyzing && (
+                  <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/10 backdrop-blur-[2px] rounded-2xl">
+                    <div className="flex flex-col items-center justify-center gap-3 px-6 py-5 rounded-2xl bg-white/95 backdrop-blur-sm shadow-xl border border-gray-100 w-fit max-w-[90%]">
+                      <div className="relative w-14 h-14">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                          className="absolute inset-0 border-3 border-dashed border-brand-green rounded-full"
+                        />
+                        <div className="absolute inset-1.5 bg-white/80 rounded-full flex items-center justify-center">
+                          <Camera size={24} className="text-brand-green animate-pulse" />
+                        </div>
+                      </div>
+                      <h3 className="text-base font-bold text-gray-800 font-display">
+                        얼굴 분석 중...
+                      </h3>
+                      <p className="text-gray-500 text-sm">
+                        MediaPipe로 얼굴 특징점을 추출하고 있습니다.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-6">
+                  {/* Prominent Upload Area */}
+                  <button
+                    onClick={() => {
+                      if (!isPersonalUploadAnalyzing) fileInputRef.current?.click();
+                    }}
+                    className="w-full group"
+                    disabled={isPersonalUploadAnalyzing}
+                  >
+                  <div className={`p-10 flex flex-col items-center justify-center gap-4 ${capturedImages[0] ? 'bg-green-50/50 border-brand-green/30' : 'bg-orange-50/50 border-brand-orange/30'} rounded-[32px] border-2 border-dashed group-hover:border-brand-orange group-hover:bg-orange-50 transition-all relative overflow-hidden min-h-[240px] ${isPersonalUploadAnalyzing ? "pointer-events-none opacity-60" : ""}`}>
                     {capturedImages[0] ? (
                       <div className="flex flex-col items-center gap-4">
                         <div className="relative">
@@ -966,7 +1092,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                           </div>
                         </div>
                         <div className="text-center">
-                          <h4 className="text-xl font-bold text-gray-800 font-display">사진 선택 완료</h4>
+                          <h4 className="text-xl font-bold text-gray-800 font-display">얼굴 분석 완료</h4>
                           <p className="text-sm text-gray-500 mt-1 italic">다른 사진을 선택하려면 다시 클릭하세요</p>
                         </div>
                       </div>
@@ -1040,6 +1166,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                 >
                   다음
                 </ActionButton>
+                </div>
               </div>
             </ModalBody>
           </Modal>
@@ -1085,7 +1212,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       {
                         id: Date.now(),
                         name: "",
-                        birthDate: "",
+                        birthDate: getTodayDateString(),
                         birthTime: "",
                         gender: "male",
                         avatar: "",
@@ -1094,9 +1221,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       {
                         id: Date.now() + 1,
                         name: "",
-                        birthDate: "",
+                        birthDate: getTodayDateString(),
                         birthTime: "",
-                        gender: "female",
+                        gender: "male",
                         avatar: "",
                         birthTimeUnknown: false,
                       },
@@ -1158,7 +1285,12 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   }
 
   // --- Photo Confirmation View ---
-  const isPersonalConfirming = mode === "personal" && capturedImages[currentStep] !== null && !isPersonalUploadModalOpen;
+  // 개인 모드에서 "사진 업로드"로 들어온 경우(cameFromPersonalFileUpload)는 확인 화면 생략 → 모달 "다음" 시 사주 입력으로 직행
+  const isPersonalConfirming =
+    mode === "personal" &&
+    capturedImages[currentStep] !== null &&
+    !isPersonalUploadModalOpen &&
+    !cameFromPersonalFileUpload;
   if (
     (mode === "group" &&
       isGroupPhotoConfirming &&
@@ -1199,6 +1331,11 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               <p className="text-sm opacity-90 drop-shadow-md">
                 촬영된 사진을 확인하세요
               </p>
+              {mode === "group" && faceDetectionError && (
+                <p className="mt-3 text-sm text-red-200 bg-red-900/60 px-3 py-2 rounded-lg">
+                  {faceDetectionError}
+                </p>
+              )}
             </div>
 
             {/* Top Right Controls */}
@@ -1212,18 +1349,20 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               </button>
             </div>
 
-            {/* Bottom Center Button */}
-            <div className="absolute bottom-8 left-0 right-0 flex justify-center pointer-events-auto">
-              <ActionButton
-                variant={mode === "personal" ? "primary" : "orange-primary"}
-                onClick={handleNextStep}
-                className="px-8 py-4"
-                disabled={!capturedImages[0]}
-              >
-                다음
-                <ArrowRight size={18} className="ml-2" />
-              </ActionButton>
-            </div>
+            {/* Bottom Center Button: 모임에서 얼굴 인식 실패 시 다음 버튼 숨김 */}
+            {!(mode === "group" && faceDetectionError) && (
+              <div className="absolute bottom-8 left-0 right-0 flex justify-center pointer-events-auto">
+                <ActionButton
+                  variant={mode === "personal" ? "primary" : "orange-primary"}
+                  onClick={handleNextStep}
+                  className="px-8 py-4"
+                  disabled={!capturedImages[0]}
+                >
+                  다음
+                  <ArrowRight size={18} className="ml-2" />
+                </ActionButton>
+              </div>
+            )}
           </GlassCard>
         </motion.div>
       </div>
@@ -1275,7 +1414,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                   setIsCameraActive(false);
                 }}
                 onFaceCountChange={setDetectedCount}
-                maxFaces={mode === "personal" ? 1 : 5}
+                maxFaces={mode === "personal" ? 1 : 7}
                 title="카메라를 3초간 응시해 주세요"
                 themeColor={mode === "personal" ? "green" : "orange"}
                 showFaceCount={mode === "group"}
@@ -1294,7 +1433,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             />
           )}
 
-          {isScanning && !hasCapturedImage && mode === "group" && (
+          {/* 개인/모임 공통: 움직이는 스캔 라인 (개인=green, 모임=orange) */}
+          {isScanning && !hasCapturedImage && (
             <div className="absolute inset-0 pointer-events-none z-20">
               <motion.div
                 initial={{ top: "0%" }}
@@ -1304,17 +1444,17 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                   repeat: Infinity,
                   ease: "linear",
                 }}
-                className="absolute left-0 right-0 h-1 bg-brand-green shadow-[0_0_15px_var(--brand-green)] opacity-60"
+                className={`absolute left-0 right-0 h-1 opacity-60 ${
+                  mode === "personal"
+                    ? "bg-brand-green shadow-[0_0_15px_var(--brand-green)]"
+                    : "bg-brand-orange shadow-[0_0_15px_var(--brand-orange)]"
+                }`}
               />
             </div>
           )}
 
           {!hasCapturedImage && stepInfo.overlay && (
-            <>
-              {stepInfo.overlay}
-              {/* Eye level guide line */}
-              <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-brand-green/80 z-10 pointer-events-none" />
-            </>
+            <>{stepInfo.overlay}</>
           )}
 
 
@@ -1374,29 +1514,29 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
   // --- Camera View ---
   return (
-    <div className="flex flex-col items-center justify-center gap-6 w-full max-w-4xl mx-auto pb-20 px-4">
+    <div className="flex flex-col items-center justify-center gap-4 w-full max-w-4xl mx-auto pb-12 px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full"
       >
         <div className="w-full">
-          <div className="w-full p-10 bg-white/90 backdrop-blur-sm rounded-[32px] shadow-clay-md border-4 border-white relative">
+          <div className="w-full p-5 sm:p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-clay-md border-4 border-white relative">
             {/* Decorative background element */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-orange-muted rounded-full -mr-16 -mt-16 opacity-50 blur-2xl"></div>
+            <div className="absolute top-0 right-0 w-24 h-24 bg-brand-orange-muted rounded-full -mr-12 -mt-12 opacity-50 blur-2xl"></div>
 
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4 relative z-10">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-5 gap-3 relative z-10">
               <div className="flex-1">
-                <h3 className="text-gray-800 font-bold text-2xl flex items-center gap-3 font-display">
-                  <Users size={32} className="text-brand-orange" />
+                <h3 className="text-gray-800 font-bold text-xl sm:text-2xl flex items-center gap-2 font-display">
+                  <Users size={26} className="text-brand-orange shrink-0" />
                   멤버별 인적 사항 등록
                 </h3>
-                <p className="text-gray-500 mt-2 font-sans text-base leading-relaxed break-keep">
+                <p className="text-gray-500 mt-1 font-sans text-sm leading-relaxed break-keep">
                   각 멤버의 이름과 생년월일, 생시를
                   입력해주세요.
                 </p>
               </div>
-              <div className="flex items-center gap-3 self-end md:self-auto">
+              <div className="flex items-center gap-3 self-end md:self-auto flex-wrap justify-end">
                 <button
                   onClick={handleRetake}
                   className="px-4 py-2 text-gray-400 hover:text-brand-orange hover:bg-orange-50 rounded-xl transition-all flex items-center gap-2 text-sm font-bold group"
@@ -1414,57 +1554,37 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               </div>
             </div>
 
-            <div className="space-y-6 relative z-10">
+            <div className="space-y-4 relative z-10">
               <AnimatePresence>
-                {groupMembers.map((member, index) => {
-                  // AI가 감지한 이미지인지 확인 (MOCK_AVATARS에 포함되어 있으면 AI 감지)
-                  const isAIDetected =
-                    member.avatar &&
-                    MOCK_AVATARS.includes(member.avatar);
-
-                  return (
+                {groupMembers.map((member, index) => (
                     <motion.div
                       key={member.id}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="flex flex-col sm:flex-row gap-8 items-start bg-white/60 backdrop-blur-sm p-8 rounded-3xl border-2 border-gray-100 shadow-lg hover:shadow-xl hover:border-brand-orange/40 transition-all duration-300 relative group"
+                      className="flex flex-col sm:flex-row gap-4 sm:gap-5 items-start bg-white/60 backdrop-blur-sm p-4 sm:p-5 rounded-2xl border-2 border-gray-100 shadow-md hover:shadow-lg hover:border-brand-orange/40 transition-all duration-300 relative group"
                     >
                       {/* Member Avatar Upload */}
                       <div className="shrink-0 flex flex-col items-center sm:items-start">
                         <div
-                          className={`w-40 h-40 sm:w-44 sm:h-44 rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-gray-50 transition-all duration-300 relative group/avatar flex items-center justify-center ${isAIDetected
-                            ? "cursor-default"
-                            : "cursor-pointer hover:scale-105 hover:shadow-2xl"
-                            }`}
-                          onClick={() =>
-                            !isAIDetected &&
-                            document
-                              .getElementById(
-                                `avatar-upload-${member.id}`,
-                              )
-                              ?.click()
-                          }
+                          className={`w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden shadow-lg border-2 border-white bg-gray-50 transition-all duration-300 relative flex items-center justify-center ${member.avatar ? '' : 'cursor-pointer hover:scale-105 hover:shadow-xl'}`}
+                          onClick={() => {
+                            if (!member.avatar) {
+                              document
+                                .getElementById(`avatar-upload-${member.id}`)
+                                ?.click();
+                            }
+                          }}
                         >
                           {member.avatar ? (
-                            <>
-                              <img
-                                src={member.avatar}
-                                alt="Face"
-                                className="w-full h-full object-cover"
-                              />
-                              {!isAIDetected && (
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center text-white backdrop-blur-sm">
-                                  <Camera size={28} className="mb-2" />
-                                  <span className="text-sm font-bold">
-                                    사진 변경
-                                  </span>
-                                </div>
-                              )}
-                            </>
+                            <img
+                              src={member.avatar}
+                              alt="Face"
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
-                            <div className="flex flex-col items-center justify-center text-gray-400 gap-3">
-                              <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center shadow-inner">
-                                <Camera size={32} />
+                            <div className="flex flex-col items-center justify-center text-gray-400 gap-1.5">
+                              <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center shadow-inner">
+                                <Camera size={20} />
                               </div>
                               <span className="text-xs font-bold text-center leading-tight">
                                 얼굴 사진
@@ -1473,28 +1593,23 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                               </span>
                             </div>
                           )}
-                          {!isAIDetected && (
-                            <input
-                              type="file"
-                              id={`avatar-upload-${member.id}`}
-                              className="hidden"
-                              accept="image/*"
-                              onChange={(e) =>
-                                handleMemberAvatarUpload(
-                                  member.id,
-                                  e,
-                                )
-                              }
-                            />
-                          )}
+                          <input
+                            type="file"
+                            id={`avatar-upload-${member.id}`}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={(e) =>
+                              handleMemberAvatarUpload(member.id, e)
+                            }
+                          />
                         </div>
                       </div>
 
-                      <div className="flex-1 flex flex-col gap-5 min-w-0 w-full">
+                      <div className="flex-1 flex flex-col gap-3 min-w-0 w-full">
                         <div className="w-full">
                           <Input
                             placeholder="성함을 입력하세요."
-                            className="h-12 w-full text-base bg-white/90 border-2 border-gray-200 focus:bg-white focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 transition-all rounded-2xl font-semibold px-5 placeholder:text-gray-400 shadow-sm"
+                            className="h-10 w-full text-sm bg-white/90 border-2 border-gray-200 focus:bg-white focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 transition-all rounded-xl font-semibold px-3 placeholder:text-gray-400 shadow-sm"
                             value={member.name && !member.name.startsWith('멤버 ') ? member.name : ''}
                             onChange={(e) =>
                               updateGroupMember(
@@ -1505,10 +1620,10 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                             }
                           />
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start w-full min-w-0">
-                          <div className="flex flex-col gap-2 w-full min-w-0">
-                            <div className="min-h-[1.75rem] flex items-center">
-                              <Label className="text-sm font-bold text-gray-700 ml-1.5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start w-full min-w-0">
+                          <div className="flex flex-col gap-1 w-full min-w-0">
+                            <div className="min-h-[1.25rem] flex items-center">
+                              <Label className="text-xs font-bold text-gray-700 ml-1">
                                 생년월일
                               </Label>
                             </div>
@@ -1518,11 +1633,12 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                               placeholder="YYYY.MM.DD"
                               themeColor="orange"
                               className="w-full"
+                              maxDate={new Date()}
                             />
                           </div>
-                          <div className="flex flex-col gap-2 w-full min-w-0">
-                            <div className="min-h-[1.75rem] flex items-center">
-                              <Label className="text-sm font-bold text-gray-700 ml-1.5">
+                          <div className="flex flex-col gap-1 w-full min-w-0">
+                            <div className="min-h-[1.25rem] flex items-center">
+                              <Label className="text-xs font-bold text-gray-700 ml-1">
                                 성별
                               </Label>
                             </div>
@@ -1538,7 +1654,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                                 )
                               }
                               variant="outline"
-                              className="w-full [&>button]:h-12"
+                              className="w-full [&>button]:h-10"
                             >
                               <ToggleGroupItem
                                 value="male"
@@ -1556,9 +1672,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-2 w-full min-w-0">
-                          <div className="flex justify-between items-center min-h-[1.75rem]">
-                            <Label className="text-sm font-bold text-gray-700 ml-1.5">
+                        <div className="flex flex-col gap-1 w-full min-w-0">
+                          <div className="flex justify-between items-center min-h-[1.25rem]">
+                            <Label className="text-xs font-bold text-gray-700 ml-1">
                               태어난 시간
                             </Label>
                             <label className="flex items-center gap-2 cursor-pointer group">
@@ -1583,80 +1699,33 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                             </label>
                           </div>
                           {!member.birthTimeUnknown ? (
-                            <div className="grid grid-cols-3 gap-2 w-full min-w-0">
+                            <div className="grid grid-cols-2 gap-2 w-full min-w-0 max-w-[50%]">
                               <div className="relative min-w-0">
                                 <Clock
                                   className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange pointer-events-none z-10"
                                 />
                                 <Select
-                                  value={(() => {
-                                    if (!member.birthTime) return "AM";
-                                    const [hours] = member.birthTime.split(":");
-                                    return parseInt(hours) >= 12 ? "PM" : "AM";
-                                  })()}
+                                  value={
+                                    member.birthTime
+                                      ? parseInt(member.birthTime.split(":")[0], 10).toString()
+                                      : "0"
+                                  }
                                   onValueChange={(value) => {
                                     const currentTime = member.birthTime || "00:00";
-                                    const [hours, minutes] = currentTime.split(":");
-                                    let hour = parseInt(hours);
-
-                                    if (value === "PM" && hour < 12) {
-                                      hour += 12;
-                                    } else if (value === "AM" && hour >= 12) {
-                                      hour -= 12;
-                                    }
-
+                                    const [, minutes] = currentTime.split(":");
+                                    const h = value.padStart(2, "0");
                                     updateGroupMember(
                                       member.id,
                                       "birthTime",
-                                      `${hour.toString().padStart(2, "0")}:${minutes}`
+                                      `${h}:${minutes}`
                                     );
                                   }}
                                 >
-                                    <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all pl-9 pr-3 text-sm w-full min-w-0 [&>span]:!line-clamp-none">
-                                      <SelectValue placeholder="AM/PM" />
+                                  <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-9 rounded-lg transition-all pl-8 pr-3 text-sm w-full min-w-0 [&>span]:!line-clamp-none">
+                                    <SelectValue placeholder="시" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="AM">AM</SelectItem>
-                                    <SelectItem value="PM">PM</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div className="min-w-0">
-                                <Select
-                                  value={(() => {
-                                    if (!member.birthTime) return "";
-                                    const [hours] = member.birthTime.split(":");
-                                    let hour = parseInt(hours);
-                                    if (hour === 0) return "12";
-                                    if (hour > 12) hour -= 12;
-                                    return hour.toString();
-                                  })()}
-                                  onValueChange={(value) => {
-                                    const currentTime = member.birthTime || "00:00";
-                                    const [hours, minutes] = currentTime.split(":");
-                                    const currentHour = parseInt(hours);
-                                    const isPM = currentHour >= 12;
-
-                                    let newHour = parseInt(value);
-                                    if (isPM && newHour !== 12) {
-                                      newHour += 12;
-                                    } else if (!isPM && newHour === 12) {
-                                      newHour = 0;
-                                    }
-
-                                    updateGroupMember(
-                                      member.id,
-                                      "birthTime",
-                                      `${newHour.toString().padStart(2, "0")}:${minutes}`
-                                    );
-                                  }}
-                                >
-                                    <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm px-3">
-                                      <SelectValue placeholder="시" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Array.from({ length: 12 }, (_, i) => i + 1).map((hour) => (
+                                    {Array.from({ length: 24 }, (_, i) => i).map((hour) => (
                                       <SelectItem key={hour} value={hour.toString()}>
                                         {hour}시
                                       </SelectItem>
@@ -1665,34 +1734,43 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                                 </Select>
                               </div>
 
-                              <div className="min-w-0">
-                                <Select
+                              <div className="relative min-w-0 flex-1">
+                                <Input
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="0"
+                                  maxLength={2}
                                   value={(() => {
                                     if (!member.birthTime) return "";
                                     const [, minutes] = member.birthTime.split(":");
                                     return minutes;
                                   })()}
-                                  onValueChange={(value) => {
+                                  onChange={(e) => {
+                                    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
                                     const currentTime = member.birthTime || "00:00";
                                     const [hours] = currentTime.split(":");
+                                    const num = v === "" ? 0 : parseInt(v, 10);
+                                    const clamped = num > 59 ? "59" : v === "" ? "00" : v;
                                     updateGroupMember(
                                       member.id,
                                       "birthTime",
-                                      `${hours}:${value}`
+                                      `${hours}:${clamped}`
                                     );
                                   }}
-                                >
-                                    <SelectTrigger className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm px-3">
-                                      <SelectValue placeholder="분" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Array.from({ length: 12 }, (_, i) => i * 5).map((minute) => (
-                                      <SelectItem key={minute} value={minute.toString().padStart(2, "0")}>
-                                        {minute.toString().padStart(2, "0")}분
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                  onBlur={() => {
+                                    const currentTime = member.birthTime || "00:00";
+                                    const [hours, min] = currentTime.split(":");
+                                    const parsed = parseInt(min || "0", 10);
+                                    const clamped = Math.min(59, Math.max(0, isNaN(parsed) ? 0 : parsed)).toString().padStart(2, "0");
+                                    if (min !== clamped) {
+                                      updateGroupMember(member.id, "birthTime", `${hours}:${clamped}`);
+                                    }
+                                  }}
+                                  className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-9 rounded-lg transition-all w-full min-w-0 text-sm pl-3 pr-9"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none">
+                                  분
+                                </span>
                               </div>
                             </div>
                           ) : (
@@ -1700,7 +1778,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                               <Clock
                                 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10"
                               />
-                              <div className="bg-gray-100/50 border-2 border-gray-100 h-10 rounded-lg flex items-center pl-9 text-gray-400 text-sm w-full">
+                              <div className="bg-gray-100/50 border-2 border-gray-100 h-9 rounded-lg flex items-center pl-9 text-gray-400 text-sm w-full">
                                 시간 정보 없음
                               </div>
                             </div>
@@ -1708,8 +1786,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                         </div>
                       </div>
                     </motion.div>
-                  );
-                })}
+                ))}
               </AnimatePresence>
             </div>
           </div>
@@ -1717,7 +1794,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             variant="orange-primary"
             onClick={handleGroupAnalyze}
             disabled={!isReady}
-            className={`w-full py-6 mt-6 transition-all duration-300 text-base ${!isReady ? "opacity-50 grayscale cursor-not-allowed" : "animate-bounce-subtle"}`}
+            className={`w-full py-5 mt-4 transition-all duration-300 text-sm sm:text-base ${!isReady ? "opacity-50 grayscale cursor-not-allowed" : "animate-bounce-subtle"}`}
           >
             {isReady
               ? "모임 궁합 분석하기"

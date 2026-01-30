@@ -16,8 +16,14 @@
  * - 다 안 찍었는데 분석 끝남 → /result로 자동 이동하지 않음 (App의 setTimeout에서 pathname 감지)
  */
 
-/** 개발용: 결과 준비 완료까지 대기 시간(ms). 10초 고정. API 연동 시 실제 응답 대기로 교체. */
-export const ANALYSIS_LOADING_MS = 10_000;
+/** 로딩 애니메이션 스텝 전환용 기본 시간(ms). 실제 분석은 API 응답을 기다립니다. */
+export const ANALYSIS_LOADING_MS = 30_000;
+
+/**
+ * [개발용] true: 단체(그룹) 모드에서 /analyzing 생략 후 바로 /result로 이동.
+ * false 또는 주석 해제 시: 그룹도 개인과 동일하게 /analyzing → ANALYSIS_LOADING_MS 후 /result.
+ */
+export const DEV_SKIP_ANALYZING_FOR_GROUP = true;
 
 /** AnalyzingSection 스텝 수 (얼굴형·눈·코·입·턱·조합). */
 export const ANALYSIS_STEP_COUNT = 6;
@@ -29,6 +35,6 @@ export const ANALYSIS_STEP_INTERVAL_MS = Math.round(
 
 /**
  * true: 결과 화면에 더미 데이터 사용 (AnalysisSection MOCK_DATA, GroupResult GROUP_MOCK_DATA 등)
- * false: API 응답 데이터 사용 (연동 후 전환)
+ * false: API 응답 데이터 사용
  */
-export const USE_MOCK_RESULTS = true;
+export const USE_MOCK_RESULTS = false;
