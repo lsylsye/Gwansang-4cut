@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "../styles/fonts.css";
 import "../styles/theme.css";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
@@ -80,7 +80,7 @@ export default function App() {
   useEffect(() => {
     if (location.pathname === ROUTES.PERSONAL_UPLOAD) {
       setMode("personal");
-    } else if (location.pathname === ROUTES.GROUP_UPLOAD) {
+    } else if (location.pathname === ROUTES.GROUP_UPLOAD || location.pathname === ROUTES.GROUP_UPLOAD_MEMBERS) {
       setMode("group");
     }
   }, [location.pathname]);
@@ -95,7 +95,7 @@ export default function App() {
     selectedFeatures: string[],
     sajuData: SajuData,
     members?: GroupMember[],
-    metadata?: any,  // faceMeshMetadata 추가
+    metadata?: any,
   ) => {
     setAnalysisDone(false);
     setAnalysisError(null);
@@ -103,6 +103,8 @@ export default function App() {
     setImages(capturedImages);
     setFeatures(selectedFeatures);
     setSaju(sajuData);
+    // members 있으면 그룹 플로우 (직접 /group/upload 접근 시 mode 지연 대비)
+    const isGroupFlow = Boolean(members && members.length > 0);
     if (metadata) {
       setFaceMeshMetadata(metadata);
     }
@@ -111,90 +113,61 @@ export default function App() {
       setUserTeamName("기운찬 도사님들의 모임");
     }
 
-    // 개인 모드: /analyzing으로 이동 후 API 호출
-    if (mode === "personal") {
+    // 그룹 모드: [개발용] 바로 /group/result 이동 — 이 분기 없으면 모임 궁합 분석하기 결과창 안 나옴
+    if (isGroupFlow && DEV_SKIP_ANALYZING_FOR_GROUP) {
+      setAnalysisDone(true);
+      setTimeout(() => navigate(ROUTES.GROUP_RESULT), 0);
+      return;
+    }
+
+    // 개인 모드: /analyzing 이동 후 API 호출
+    if (!isGroupFlow) {
       navigate(ROUTES.PERSONAL_ANALYZING);
       setIsAnalyzing(true);
-      
       try {
-        // faceMeshMetadata가 있으면 API 호출
-        console.log("📋 받은 metadata:", metadata);
-        console.log("📋 faces 배열:", metadata?.faces);
-        console.log("📋 첫 번째 얼굴 landmarks 수:", metadata?.faces?.[0]?.landmarks?.length);
-        
         if (metadata?.faces && metadata.faces.length > 0) {
-          console.log("🚀 관상 분석 API 호출 시작...");
-          
           const requestData = {
             timestamp: new Date().toISOString(),
             faces: metadata.faces,
             sajuData: {
-              gender: sajuData.gender as 'male' | 'female',
-              calendarType: sajuData.calendarType as 'solar' | 'lunar',
+              gender: sajuData.gender as "male" | "female",
+              calendarType: sajuData.calendarType as "solar" | "lunar",
               birthDate: sajuData.birthDate,
               birthTime: sajuData.birthTime,
               birthTimeUnknown: sajuData.birthTimeUnknown,
             },
           };
-          
-          console.log("📤 API 요청 데이터:", JSON.stringify(requestData, null, 2).substring(0, 500));
-          
           const result = await analyzeFace(requestData);
-          
           if (result.error) {
-            console.error("❌ API 오류:", result.error);
             setAnalysisError(result.error);
             setIsAnalyzing(false);
-            // 에러 시 result 페이지로 이동하지 않음
             return;
           }
-          
-          console.log("✅ 관상 분석 완료:", result);
           setFaceAnalysisResult(result);
           setAnalysisDone(true);
           setIsAnalyzing(false);
-          
-          // 분석 완료 후 result 페이지로 이동
-          const currentPath = pathnameRef.current;
-          const isPhotoBooth = isPhotoBoothPath(currentPath);
-          if (!isPhotoBooth) {
-            console.log("✅ /personal/result로 이동");
+          if (!isPhotoBoothPath(pathnameRef.current)) {
             navigate(ROUTES.PERSONAL_RESULT);
-          } else {
-            console.log("⚠️ photo-booth에 있어서 자동 이동하지 않음:", currentPath);
           }
         } else {
-          // metadata가 없으면 에러 처리
-          console.error("❌ 랜드마크 데이터가 없습니다.");
           setAnalysisError("얼굴 분석 데이터가 없습니다. 다시 촬영해주세요.");
           setIsAnalyzing(false);
         }
       } catch (error) {
-        console.error("❌ 분석 중 오류:", error);
         setAnalysisError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
         setIsAnalyzing(false);
       }
+      return;
     }
 
-    // ----- [개발용] 단체 모드: /analyzing 생략, 바로 /result. DEV_SKIP_ANALYZING_FOR_GROUP=false 시 아래 원래 흐름 사용 -----
-    if (mode === "group" && DEV_SKIP_ANALYZING_FOR_GROUP) {
-      setTimeout(() => {
-        setAnalysisDone(true);
-        // 싸피네컷 다 안 찍었는데 분석 끝난 경우: /photo-booth에 있으면 /result로 보내지 않음
-        if (isAnalyzingPath(pathnameRef.current)) {
-          navigate(ROUTES.GROUP_RESULT);
-        }
-      }, ANALYSIS_LOADING_MS);
-    } else if (mode === "group") {
-      // 그룹 모드 (DEV_SKIP_ANALYZING_FOR_GROUP=false): /analyzing으로 이동 후 ANALYSIS_LOADING_MS 후 /result로 이동
-      navigate(ROUTES.GROUP_ANALYZING);
-      setTimeout(() => {
-        setAnalysisDone(true);
-        if (isAnalyzingPath(pathnameRef.current)) {
-          navigate(ROUTES.GROUP_RESULT);
-        }
-      }, ANALYSIS_LOADING_MS);
-    }
+    // 그룹 모드 (DEV_SKIP=false): /analyzing → 타이머 후 /result
+    navigate(ROUTES.GROUP_ANALYZING);
+    setTimeout(() => {
+      setAnalysisDone(true);
+      if (isAnalyzingPath(pathnameRef.current)) {
+        navigate(ROUTES.GROUP_RESULT);
+      }
+    }, ANALYSIS_LOADING_MS);
   };
 
   const handleViewRanking = (score?: number, name?: string) => {
@@ -222,6 +195,8 @@ export default function App() {
         return "자네의 얼굴에 삼라만상이 담겨 있구먼. \n내 신통한 거울에 얼굴을 비추어 보게나. \n숨겨진 운명을 내가 낱낱이 읽어보리다.";
       case ROUTES.GROUP_UPLOAD:
         return "허허, 모임 관상을 보러 왔구먼! \n사진을 주거나, 직접 한 자리에 모여 보게. \n자네들 사이의 기운을 내가 한 번 짚어보리다.";
+      case ROUTES.GROUP_UPLOAD_MEMBERS:
+        return "이제 각 멤버의 이름과 생년월일을 입력해 주게. \n다 적었으면 모임 궁합 분석하기를 눌러 보게나.";
       case ROUTES.PERSONAL_ANALYZING:
       case ROUTES.GROUP_ANALYZING:
         return "음... 가만있어 보자... \n천기를 스르지 않고 기운을 읽는 중이니, \n잠시만 정적을 지켜주시게나.";
@@ -292,7 +267,7 @@ export default function App() {
               </motion.div>
             )}
 
-            {(pathname === ROUTES.PERSONAL_UPLOAD || pathname === ROUTES.GROUP_UPLOAD) && (
+            {(pathname === ROUTES.PERSONAL_UPLOAD || pathname === ROUTES.GROUP_UPLOAD || pathname === ROUTES.GROUP_UPLOAD_MEMBERS) && (
               <motion.div
                 key="upload"
                 initial={{ opacity: 0, y: 20 }}
@@ -303,7 +278,10 @@ export default function App() {
               >
                 <UploadSection
                   mode={mode}
+                  pathname={pathname}
                   onAnalyze={handleAnalyze}
+                  onNavigateToMembers={() => navigate(ROUTES.GROUP_UPLOAD_MEMBERS)}
+                  onNavigateToUpload={() => navigate(ROUTES.GROUP_UPLOAD)}
                 />
               </motion.div>
             )}
@@ -332,16 +310,24 @@ export default function App() {
               </motion.div>
             )}
 
-            {pathname === ROUTES.PERSONAL_RESULT && (
+            {/* 모임 궁합 분석하기 결과창: PERSONAL_RESULT뿐 아니라 GROUP_RESULT도 포함해야 /group/result에서 화면이 렌더됨 (git pull 후 조건이 PERSONAL_RESULT만 있으면 결과창 안 나옴) */}
+            {(pathname === ROUTES.PERSONAL_RESULT || pathname === ROUTES.GROUP_RESULT) && (
               <motion.div
-                key="personal-result"
+                key={pathname === ROUTES.GROUP_RESULT ? "group-result" : "personal-result"}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4 }}
                 className="w-full h-full"
               >
-                {mode === "personal" ? (
+                {pathname === ROUTES.GROUP_RESULT ? (
+                  <GroupAnalysisSection
+                    groupMembers={groupMembers}
+                    groupImage={images[0]}
+                    onRestart={handleRestart}
+                    onViewRanking={handleViewRanking}
+                  />
+                ) : (
                   <AnalysisSection
                     images={images}
                     onRestart={handleRestart}
@@ -353,13 +339,6 @@ export default function App() {
                     faceAnalysisResult={faceAnalysisResult?.stage1}
                     totalReview={faceAnalysisResult?.totalReview}
                     isLoading={isAnalyzing}
-                  />
-                ) : (
-                  <GroupAnalysisSection
-                    groupMembers={groupMembers}
-                    groupImage={images[0]}
-                    onRestart={handleRestart}
-                    onViewRanking={handleViewRanking}
                   />
                 )}
               </motion.div>

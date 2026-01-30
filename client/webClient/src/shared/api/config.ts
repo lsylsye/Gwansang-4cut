@@ -7,4 +7,5 @@ export const API_ENDPOINTS = {
   FACEMESH_PERSONAL: `${API_BASE_URL}/test-api/facemesh/personal`,
   FACEMESH_GROUP: `${API_BASE_URL}/test-api/facemesh/group`,
   SAJU_ANALYZE: `${AI_SERVER_URL}/api/saju/analyze`,
+  GROUP_OHENG_COMBINATION: `${AI_SERVER_URL}/api/group-oheng-combination`,
 } as const;

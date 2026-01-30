@@ -48,8 +48,7 @@ export const GroupAnalysisSection: React.FC<GroupAnalysisSectionProps> = ({ grou
                 </motion.p>
             </motion.div>
 
-            {/* Result Section */}
-            <GroupResult groupImage={groupImage} onViewRanking={onViewRanking} />
+            <GroupResult groupMembers={groupMembers} groupImage={groupImage} onViewRanking={onViewRanking} />
 
             {/* Relations Section with spacing */}
             <motion.div
