@@ -1996,6 +1996,179 @@ async def analyze_saju(request: SajuAnalysisRequest):
         )
 
 
+# ===== 모임 오행 조합 API (RAG 활용) =====
+
+ELEMENT_NAMES = {"목": "목(木)", "화": "화(火)", "토": "토(土)", "금": "금(金)", "수": "수(水)"}
+SUPPLEMENT_THRESHOLD = 3  # 이 이상이면 "많음"
+CONFLICT_THRESHOLD = 3   # 둘 다 이 이상이면 "상충"
+CONFLICT_BOTH_MIN = 2    # 둘 다 2 이상이면 상충 후보 (같은 기운 강함)
+
+
+class FiveElementsBody(BaseModel):
+    """오행 분포 (목·화·토·금·수 개수)"""
+    목: int = Field(default=0, description="목 오행 개수")
+    화: int = Field(default=0, description="화 오행 개수")
+    토: int = Field(default=0, description="토 오행 개수")
+    금: int = Field(default=0, description="금 오행 개수")
+    수: int = Field(default=0, description="수 오행 개수")
+
+
+class GroupOhengMember(BaseModel):
+    """모임 멤버 (이름 + 오행)"""
+    name: str = Field(..., description="멤버 이름")
+    fiveElements: FiveElementsBody = Field(..., description="오행 분포")
+
+
+class GroupOhengCombinationRequest(BaseModel):
+    """모임 오행 조합 요청"""
+    members: List[GroupOhengMember] = Field(..., description="멤버 목록 (이름 + 오행)")
+
+
+class SupplementPair(BaseModel):
+    """기운 채워줌 쌍"""
+    fromName: str = Field(..., description="기운을 채워 주는 사람")
+    toName: str = Field(..., description="기운을 받는 사람")
+    element: str = Field(..., description="오행 (목/화/토/금/수)")
+    elementLabel: str = Field(..., description="오행 한글 라벨 (예: 금(金))")
+    explanation: str = Field(default="", description="RAG 기반 해석")
+
+
+class ConflictPair(BaseModel):
+    """상충 쌍"""
+    name1: str = Field(..., description="멤버1")
+    name2: str = Field(..., description="멤버2")
+    element: str = Field(..., description="오행 (목/화/토/금/수)")
+    elementLabel: str = Field(..., description="오행 한글 라벨")
+    explanation: str = Field(default="", description="RAG 기반 해석")
+
+
+class GroupOhengCombinationResponse(BaseModel):
+    """모임 오행 조합 응답"""
+    success: bool = True
+    supplement: List[SupplementPair] = Field(default_factory=list, description="기운 채워줌 목록")
+    conflict: List[ConflictPair] = Field(default_factory=list, description="상충 목록")
+    summary: Optional[str] = Field(default=None, description="요약 (선택)")
+
+
+def _get_rag_explanation_for_meeting(query: str, top_k: int = 3) -> str:
+    """모임 오행 지식베이스에서 RAG 검색 후 해석 문단 반환"""
+    if not KNOWLEDGE_CHUNKS:
+        return ""
+    chunks = search_chunks(KNOWLEDGE_CHUNKS, query, topK=top_k)
+    if not chunks:
+        return ""
+    return chunks[0].content if chunks else ""
+
+
+def _get_element_val(fe: FiveElementsBody, elem: str) -> int:
+    """FiveElementsBody에서 오행 값 읽기"""
+    return getattr(fe, elem, 0)
+
+
+def _compute_supplement_pairs(members: List[GroupOhengMember]) -> List[SupplementPair]:
+    """기운 채워줌 쌍 계산: A는 해당 오행 많음(>=3), B는 해당 오행 없음(0)"""
+    pairs: List[SupplementPair] = []
+    elements = ["목", "화", "토", "금", "수"]
+
+    for elem in elements:
+        for i, a in enumerate(members):
+            val_a = _get_element_val(a.fiveElements, elem)
+            if val_a < SUPPLEMENT_THRESHOLD:
+                continue
+            for j, b in enumerate(members):
+                if i == j:
+                    continue
+                val_b = _get_element_val(b.fiveElements, elem)
+                if val_b != 0:
+                    continue
+                query = f"모임 오행 기운 채워줌 {elem} 기운"
+                context = _get_rag_explanation_for_meeting(query, top_k=2)
+                explanation = context.split("---")[0].strip() if context else f"{a.name}님이 {b.name}님의 {ELEMENT_NAMES.get(elem, elem)} 기운을 채워 주는 관계입니다."
+                if len(explanation) > 400:
+                    explanation = explanation[:397] + "..."
+                pairs.append(SupplementPair(
+                    fromName=a.name,
+                    toName=b.name,
+                    element=elem,
+                    elementLabel=ELEMENT_NAMES.get(elem, elem),
+                    explanation=explanation
+                ))
+    return pairs
+
+
+def _compute_conflict_pairs(members: List[GroupOhengMember]) -> List[ConflictPair]:
+    """상충 쌍 계산: 둘 다 같은 오행이 강함(각 2 이상)"""
+    pairs: List[ConflictPair] = []
+    elements = ["목", "화", "토", "금", "수"]
+
+    for elem in elements:
+        for i in range(len(members)):
+            for j in range(i + 1, len(members)):
+                a, b = members[i], members[j]
+                va, vb = _get_element_val(a.fiveElements, elem), _get_element_val(b.fiveElements, elem)
+                if va >= CONFLICT_BOTH_MIN and vb >= CONFLICT_BOTH_MIN:
+                    query = f"모임 오행 상충 {elem} 같은 기운"
+                    context = _get_rag_explanation_for_meeting(query, top_k=2)
+                    explanation = context.split("---")[0].strip() if context else f"{a.name}님과 {b.name}님은 둘 다 {ELEMENT_NAMES.get(elem, elem)} 기운이 강해 같은 기운이라 상충할 수 있습니다."
+                    if len(explanation) > 400:
+                        explanation = explanation[:397] + "..."
+                    pairs.append(ConflictPair(
+                        name1=a.name,
+                        name2=b.name,
+                        element=elem,
+                        elementLabel=ELEMENT_NAMES.get(elem, elem),
+                        explanation=explanation
+                    ))
+    return pairs
+
+
+@app.post("/api/group-oheng-combination", response_model=GroupOhengCombinationResponse)
+async def group_oheng_combination(request: GroupOhengCombinationRequest):
+    """
+    모임 관상 결과용 오행 조합 분석 (RAG 활용)
+
+    - 기운 채워줌: 한 사람은 해당 오행이 많고, 다른 사람은 그 오행이 없음 → 채워 주는 관계
+    - 상충: 두 사람 모두 같은 오행이 많음 → 같은 기운이라 상충
+
+    멤버별 오행(목·화·토·금·수 개수)을 넘기면 규칙으로 쌍을 찾고, RAG 지식베이스에서 해석 문단을 가져와 반환합니다.
+    """
+    try:
+        if not request.members or len(request.members) < 2:
+            return GroupOhengCombinationResponse(
+                success=True,
+                supplement=[],
+                conflict=[],
+                summary="멤버가 2명 이상일 때만 오행 조합을 분석합니다."
+            )
+
+        supplement = _compute_supplement_pairs(request.members)
+        conflict = _compute_conflict_pairs(request.members)
+
+        summary_parts = []
+        if supplement:
+            summary_parts.append(f"기운 채워줌 {len(supplement)}쌍: " + ", ".join(f"{p.fromName}→{p.toName}({p.elementLabel})" for p in supplement[:5]))
+        if conflict:
+            summary_parts.append(f"상충 {len(conflict)}쌍: " + ", ".join(f"{p.name1}-{p.name2}({p.elementLabel})" for p in conflict[:5]))
+        summary = " ".join(summary_parts) if summary_parts else "채워줌/상충 쌍이 없습니다."
+
+        return GroupOhengCombinationResponse(
+            success=True,
+            supplement=supplement,
+            conflict=conflict,
+            summary=summary
+        )
+    except Exception as e:
+        print(f"❌ 모임 오행 조합 분석 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        return GroupOhengCombinationResponse(
+            success=False,
+            supplement=[],
+            conflict=[],
+            summary=None
+        )
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

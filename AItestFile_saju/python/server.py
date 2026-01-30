@@ -128,6 +128,132 @@ def health_check():
     })
 
 
+# ----- 모임 오행 조합 (RAG) -----
+ELEMENT_LABELS = {"목": "목(木)", "화": "화(火)", "토": "토(土)", "금": "금(金)", "수": "수(水)"}
+SUPPLEMENT_THRESHOLD = 3
+CONFLICT_THRESHOLD = 2
+
+
+def _get_rag_explanation_meeting(query: str, top_k: int = 2) -> str:
+    """모임 오행 지식베이스에서 RAG 검색 후 해석 문단 반환"""
+    chunks = get_knowledge_chunks()
+    if not chunks:
+        return ""
+    found = search_chunks(chunks, query, topK=top_k)
+    if not found:
+        return ""
+    return found[0].content if hasattr(found[0], "content") else ""
+
+
+def _compute_supplement_pairs(members: list) -> list:
+    """기운 채워줌: A는 해당 오행 >= 3, B는 0"""
+    pairs = []
+    for elem in ["목", "화", "토", "금", "수"]:
+        for i, a in enumerate(members):
+            fe_a = a.get("fiveElements", {})
+            val_a = fe_a.get(elem, 0)
+            if val_a < SUPPLEMENT_THRESHOLD:
+                continue
+            for j, b in enumerate(members):
+                if i == j:
+                    continue
+                fe_b = b.get("fiveElements", {})
+                if fe_b.get(elem, 0) != 0:
+                    continue
+                name_a = a.get("name", f"멤버{i+1}")
+                name_b = b.get("name", f"멤버{j+1}")
+                query = f"모임 오행 기운 채워줌 {elem} 기운"
+                explanation = _get_rag_explanation_meeting(query)
+                if not explanation or len(explanation) > 400:
+                    explanation = explanation[:397] + "..." if explanation and len(explanation) > 400 else (
+                        f"{name_a}님이 {name_b}님의 {ELEMENT_LABELS.get(elem, elem)} 기운을 채워 주는 관계입니다."
+                    )
+                pairs.append({
+                    "fromName": name_a,
+                    "toName": name_b,
+                    "element": elem,
+                    "elementLabel": ELEMENT_LABELS.get(elem, elem),
+                    "explanation": explanation or f"{name_a}님이 {name_b}님의 {ELEMENT_LABELS.get(elem, elem)} 기운을 채워 줍니다.",
+                })
+    return pairs
+
+
+def _compute_conflict_pairs(members: list) -> list:
+    """상충: 둘 다 같은 오행 >= 2"""
+    pairs = []
+    for elem in ["목", "화", "토", "금", "수"]:
+        for i in range(len(members)):
+            for j in range(i + 1, len(members)):
+                a, b = members[i], members[j]
+                va = a.get("fiveElements", {}).get(elem, 0)
+                vb = b.get("fiveElements", {}).get(elem, 0)
+                if va >= CONFLICT_THRESHOLD and vb >= CONFLICT_THRESHOLD:
+                    name_a = a.get("name", f"멤버{i+1}")
+                    name_b = b.get("name", f"멤버{j+1}")
+                    query = f"모임 오행 상충 {elem} 같은 기운"
+                    explanation = _get_rag_explanation_meeting(query)
+                    if explanation and len(explanation) > 400:
+                        explanation = explanation[:397] + "..."
+                    if not explanation:
+                        explanation = f"{name_a}님과 {name_b}님은 둘 다 {ELEMENT_LABELS.get(elem, elem)} 기운이 강해 같은 기운이라 상충할 수 있습니다."
+                    pairs.append({
+                        "name1": name_a,
+                        "name2": name_b,
+                        "element": elem,
+                        "elementLabel": ELEMENT_LABELS.get(elem, elem),
+                        "explanation": explanation,
+                    })
+    return pairs
+
+
+@app.route("/api/group-oheng-combination", methods=["POST", "OPTIONS"])
+def group_oheng_combination():
+    """
+    모임 관상 결과용 오행 조합 (RAG).
+    요청: { "members": [ { "name": "...", "fiveElements": { "목": n, "화": n, "토": n, "금": n, "수": n } }, ... ] }
+    """
+    if request.method == "OPTIONS":
+        return "", 204
+    try:
+        data = request.json or {}
+        members = data.get("members", [])
+        if len(members) < 2:
+            return jsonify({
+                "success": True,
+                "supplement": [],
+                "conflict": [],
+                "summary": "멤버가 2명 이상일 때만 오행 조합을 분석합니다.",
+            })
+        supplement = _compute_supplement_pairs(members)
+        conflict = _compute_conflict_pairs(members)
+        summary_parts = []
+        if supplement:
+            summary_parts.append("기운 채워줌 %d쌍: " % len(supplement) + ", ".join(
+                f"{p['fromName']}→{p['toName']}({p['elementLabel']})" for p in supplement[:5]
+            ))
+        if conflict:
+            summary_parts.append("상충 %d쌍: " % len(conflict) + ", ".join(
+                f"{p['name1']}-{p['name2']}({p['elementLabel']})" for p in conflict[:5]
+            ))
+        summary = " ".join(summary_parts) if summary_parts else "채워줌/상충 쌍이 없습니다."
+        return jsonify({
+            "success": True,
+            "supplement": supplement,
+            "conflict": conflict,
+            "summary": summary,
+        })
+    except Exception as e:
+        print(f"❌ 모임 오행 조합 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "supplement": [],
+            "conflict": [],
+            "summary": None,
+        }), 500
+
+
 @app.route("/api/generate", methods=["POST"])
 def generate_text():
     """
@@ -1359,6 +1485,7 @@ if __name__ == "__main__":
     print(f"   관상+사주 통합 분석: http://{host}:{port}/test-api/facemesh/personal")
     print(f"   🆕 관상+사주 스트리밍: http://{host}:{port}/test-api/facemesh/personal/stream")
     print(f"   사주 총평 (단독): http://{host}:{port}/api/saju/summary")
+    print(f"   모임 오행 조합 (RAG): http://{host}:{port}/api/group-oheng-combination")
     print(f"\n⚠️  서버를 중지하려면 Ctrl+C를 누르세요.\n")
     
     app.run(host=host, port=port, debug=debug)

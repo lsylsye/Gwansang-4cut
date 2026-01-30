@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
+import { useLocation } from "react-router-dom";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import {
@@ -37,6 +38,7 @@ import {
 } from "@/shared/ui/forms/select";
 import { motion, AnimatePresence } from "motion/react";
 import { AnalyzeMode, SajuData, GroupMember } from "@/shared/types";
+import { ROUTES } from "@/shared/config/routes";
 import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
 import { ConsentModal } from "./ConsentModal";
 import { FaceMeshWebcam } from "./FaceMeshWebcam";
@@ -47,13 +49,18 @@ import selfieImage from "@/assets/selfie.png";
 
 interface UploadSectionProps {
   mode: AnalyzeMode;
+  pathname?: string;
   onAnalyze: (
     images: string[],
     features: string[],
     sajuData: SajuData,
     groupMembers?: GroupMember[],
-    faceMeshMetadata?: any,  // 랜드마크 데이터 추가
+    faceMeshMetadata?: any,
   ) => void;
+  /** 그룹 모드: 사진 등록 후 인적사항 등록 페이지로 이동 */
+  onNavigateToMembers?: () => void;
+  /** 그룹 모드: 인적사항 페이지에서 업로드 페이지로 돌아가기 */
+  onNavigateToUpload?: () => void;
 }
 
 const CAPTURE_STEPS = [
@@ -100,8 +107,13 @@ function getTodayDateString(): string {
 
 export const UploadSection: React.FC<UploadSectionProps> = ({
   mode,
+  pathname: pathnameProp = "",
   onAnalyze,
+  onNavigateToMembers,
+  onNavigateToUpload,
 }) => {
+  const location = useLocation();
+  const pathname = pathnameProp || location.pathname;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const groupFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -202,14 +214,15 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       );
       setGroupMembers(members);
       setIsSegmenting(false);
-      setCurrentStep(3);
+      if (onNavigateToMembers) onNavigateToMembers();
+      else setCurrentStep(3);
       analyzeGroupPhotoForApi(photo).then(setGroupUploadFaceMetadata).catch(() => {});
     } catch {
       setFaceDetectionError("얼굴 분석 중 오류가 발생했습니다.");
       setIsSegmenting(false);
       setIsGroupPhotoConfirming(true);
     }
-  }, []);
+  }, [onNavigateToMembers]);
 
   useEffect(() => {
     if (isCapturing || isCameraActive) {
@@ -243,7 +256,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           })();
         } else {
           setCapturedImages([result, null, null]);
-          setCurrentStep(3);
+          if (onNavigateToMembers) onNavigateToMembers();
+          else setCurrentStep(3);
         }
       };
       reader.readAsDataURL(file);
@@ -313,6 +327,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     faceMeshMetadata,
   ]);
 
+  // 인적사항 URL(/group/upload/members)로 직접 왔는데 멤버가 없으면 업로드 페이지로
+  useEffect(() => {
+    if (pathname === ROUTES.GROUP_UPLOAD_MEMBERS && mode === "group" && groupMembers.length < 2 && onNavigateToUpload) {
+      onNavigateToUpload();
+    }
+  }, [pathname, mode, groupMembers.length, onNavigateToUpload]);
+
   const handleRetake = () => {
     if (mode === "personal") {
       setCapturedImages([null]);
@@ -331,6 +352,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       setIsGroupPhotoConfirming(false);
       setFaceDetectionError(null);
       setCurrentStep(0);
+      if (pathname === ROUTES.GROUP_UPLOAD_MEMBERS && onNavigateToUpload) onNavigateToUpload();
       if (groupFileInputRef.current) groupFileInputRef.current.value = "";
       // 모임: 다시 촬영하기 → 모임 관상 확인하기(촬영/업로드 선택) 섹션으로
     }
@@ -435,17 +457,21 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         groupMembers: membersWithoutAvatar,
       };
     } else if (groupMembers.length >= 2 && groupMembers.every((m) => m.avatar)) {
-      // 멤버별 개인 사진 업로드: 각 멤버 avatar로 landmarks 추출 후 faces 조합
-      const now = new Date();
-      const offset = now.getTimezoneOffset() * 60000;
-      const timestamp = new Date(now.getTime() - offset).toISOString().slice(0, -1);
-      const faceResults = await Promise.all(
-        groupMembers.map((m) => (m.avatar ? analyzePersonalImage(m.avatar) : Promise.resolve(null)))
-      );
-      const faces = faceResults
-        .map((meta, i) => (meta?.faces?.[0] ? { ...meta.faces[0], faceIndex: i + 1 } : null))
-        .filter((f) => f != null) as Array<{ faceIndex: number; duration: number; landmarks: Array<{ index: number; x: number; y: number; z: number }> }>;
-      finalPayload = { timestamp, faces, groupMembers: membersWithoutAvatar };
+      // 멤버별 개인 사진 업로드: 각 멤버 avatar로 landmarks 추출 후 faces 조합 (실패해도 결과창으로 이동)
+      try {
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000;
+        const timestamp = new Date(now.getTime() - offset).toISOString().slice(0, -1);
+        const faceResults = await Promise.all(
+          groupMembers.map((m) => (m.avatar ? analyzePersonalImage(m.avatar) : Promise.resolve(null)))
+        );
+        const faces = faceResults
+          .map((meta, i) => (meta?.faces?.[0] ? { ...meta.faces[0], faceIndex: i + 1 } : null))
+          .filter((f) => f != null) as Array<{ faceIndex: number; duration: number; landmarks: Array<{ index: number; x: number; y: number; z: number }> }>;
+        finalPayload = { timestamp, faces, groupMembers: membersWithoutAvatar };
+      } catch (err) {
+        console.error("멤버 얼굴 분석 실패, 결과창으로 이동:", err);
+      }
     }
 
     if (finalPayload) {
@@ -459,8 +485,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       });
     }
 
+    const validImages = capturedImages.filter((img): img is string => img !== null);
     onAnalyze(
-      capturedImages as string[],
+      validImages,
       [],
       {
         birthDate: "",
@@ -913,7 +940,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               variant="orange-primary"
               onClick={() => {
                 setIsIndividualPhotoUpload(false);
-                setCurrentStep(3);
+                if (onNavigateToMembers) onNavigateToMembers();
+                else setCurrentStep(3);
               }}
               disabled={!allPhotosUploaded}
               className={`w-full py-6 transition-all duration-300 text-base ${!allPhotosUploaded
@@ -1502,8 +1530,10 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     );
   }
 
-  // --- Camera View ---
-  return (
+  // --- 인적사항 등록 (URL: /group/upload/members 또는 step 3) ---
+  const isMembersStep = mode === "group" && (pathname === ROUTES.GROUP_UPLOAD_MEMBERS || currentStep === 3);
+  if (isMembersStep) {
+    return (
     <div className="flex flex-col items-center justify-center gap-4 w-full max-w-4xl mx-auto pb-12 px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -1793,5 +1823,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         </div>
       </motion.div>
     </div>
-  );
+    );
+  }
+
+  return null;
 };
