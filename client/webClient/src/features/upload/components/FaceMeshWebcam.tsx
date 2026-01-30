@@ -25,7 +25,7 @@ function getEulerAngles(matrix: any) {
 }
 
 interface FaceMeshWebcamProps {
-  onCapture?: (image: string) => void;
+  onCapture?: (image: string, metadata?: unknown) => void;
   onClose?: () => void;
   onFaceCountChange?: (count: number) => void;
   maxFaces?: number;
