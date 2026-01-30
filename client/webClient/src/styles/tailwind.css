@@ -3,6 +3,17 @@
 
 @import 'tw-animate-css';
 
+/* 스크롤바 숨김 (특정 요소) */
+.scrollbar-hide {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* 스크롤바 스타일링 */
 .modal-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -24,4 +35,98 @@
 /* 스크롤바 화살표 버튼 숨기기 */
 .modal-scrollbar::-webkit-scrollbar-button {
   display: none;
+}
+
+/* 모바일에서 카드 전체 너비 확장 (부모 컨테이너 패딩 상쇄) */
+.mobile-full-width {
+  @apply -mx-4 sm:mx-0;
+  @apply -mt-8 sm:mt-0;
+  @apply w-[calc(100%+2rem)] sm:w-full;
+}
+
+/* 모바일에서 카드 자체의 rounded 제거 */
+.mobile-full-width > div > div {
+  @apply rounded-none sm:rounded-xl md:rounded-2xl;
+}
+
+/* 모바일 하단 고정 버튼 스타일 */
+.mo-fix {
+  @apply fixed bottom-0 left-0 right-0 z-50 sm:static sm:z-auto;
+  @apply rounded-none sm:rounded-2xl;
+  @apply shadow-md sm:shadow-pixel;
+  @apply border-b-0 sm:border-b-2;
+  @apply px-4 py-5 sm:px-8 sm:py-6;
+  @apply mx-0 sm:mx-auto;
+  @apply max-w-full sm:max-w-none;
+  /* 모바일에서 픽셀 스타일 및 애니메이션 제거 */
+  @apply transition-none sm:transition-all;
+  @apply active:scale-100 sm:active:scale-95;
+  /* 모바일에서 폰트 크기 */
+  @apply text-sm sm:text-sm md:text-base;
+}
+
+/* 모바일에서 mo-fix 버튼의 픽셀 그림자, border 및 애니메이션 제거 */
+@media (max-width: 639px) {
+  .mo-fix {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    border: none !important;
+    font-size: 0.875rem !important; /* 14px */
+    padding-top: 1.25rem !important; /* py-5 (20px) */
+    padding-bottom: 1.25rem !important; /* py-5 (20px) */
+    opacity: 1 !important; /* 완전히 불투명 */
+  }
+  
+  /* 배경색 투명도 제거 - 모든 mo-fix 버튼을 불투명하게 */
+  /* primary variant (brand-green) */
+  .mo-fix[class*="primary"]:not([class*="orange"]):not([class*="secondary"]) {
+    background-color: #00897B !important; /* brand-green 불투명 */
+  }
+  
+  /* orange-primary variant */
+  .mo-fix[class*="orange-primary"] {
+    background-color: #FF9800 !important; /* brand-orange-vibrant 불투명 */
+  }
+  
+  /* secondary variant */
+  .mo-fix[class*="secondary"]:not([class*="orange"]) {
+    background-color: #FFFFFF !important; /* white 불투명 */
+  }
+  
+  /* orange-secondary variant */
+  .mo-fix[class*="orange-secondary"] {
+    background-color: #FFFFFF !important; /* white 불투명 */
+  }
+  
+  /* gradient 배경도 불투명하게 (clay variant) */
+  .mo-fix[class*="gradient"] {
+    background: linear-gradient(to bottom right, #FFB74D, #FF9800) !important;
+  }
+  
+  .mo-fix:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+    transform: none !important;
+  }
+  
+  .mo-fix:active {
+    transform: none !important;
+  }
+  
+  .mo-fix.animate-bounce-subtle {
+    animation: none !important;
+  }
+  
+  /* shadow-pixel 클래스 오버라이드 */
+  .mo-fix.shadow-pixel,
+  .mo-fix.shadow-pixel-lg {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+  }
+  
+  /* border 제거 */
+  .mo-fix.border-2,
+  .mo-fix[class*="border"] {
+    border: none !important;
+  }
 }
