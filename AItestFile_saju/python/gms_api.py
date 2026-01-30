@@ -184,6 +184,125 @@ def call_gms_api(
         )
 
 
+def call_gms_api_streaming(
+    system_prompt: str,
+    user_prompt: str,
+    model: str = "gpt-5-mini",
+    timeout: int = 300
+):
+    """
+    GMS API 스트리밍 호출 (Server-Sent Events)
+    
+    Args:
+        system_prompt: 시스템 프롬프트
+        user_prompt: 사용자 프롬프트
+        model: 사용할 모델명 (기본값: "gpt-5-mini")
+        timeout: 요청 타임아웃 (초, 기본값: 300)
+        
+    Yields:
+        str: 청크 단위 텍스트
+    """
+    config = get_config()
+    api_key = config["apiKey"]
+    base_url = config["baseUrl"]
+    
+    request_body = {
+        "model": model,
+        "stream": True,  # 스트리밍 활성화
+        "input": [
+            {
+                "role": "system",
+                "content": [{"type": "input_text", "text": system_prompt}],
+            },
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": user_prompt}],
+            },
+        ],
+    }
+    
+    print(f"\n🔗 API 스트리밍 호출: {base_url}")
+    print(f"📤 모델: {model}")
+    
+    try:
+        response = requests.post(
+            base_url,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=request_body,
+            timeout=timeout,
+            stream=True  # 스트리밍 응답 활성화
+        )
+        
+        response.raise_for_status()
+        
+        # 스트리밍 응답 처리 (SSE 형식)
+        for line in response.iter_lines():
+            if line:
+                line_str = line.decode('utf-8')
+                
+                # SSE 형식: data: {...}
+                if line_str.startswith('data: '):
+                    data_str = line_str[6:]  # 'data: ' 제거
+                    
+                    # [DONE] 시그널 처리
+                    if data_str.strip() == '[DONE]':
+                        break
+                    
+                    try:
+                        data = json.loads(data_str)
+                        
+                        # 에러 체크
+                        if "error" in data and data["error"] is not None:
+                            error_info = data['error']
+                            if isinstance(error_info, dict):
+                                raise ValueError(f"API 에러: {error_info.get('message', str(error_info))}")
+                            else:
+                                raise ValueError(f"API 에러: {str(error_info)}")
+                        
+                        # 텍스트 추출 (delta 형식)
+                        if "choices" in data:
+                            for choice in data["choices"]:
+                                delta = choice.get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    yield content
+                        
+                        # output 형식
+                        elif "output" in data:
+                            for item in data["output"]:
+                                if "text" in item and item["text"]:
+                                    yield item["text"]
+                                elif "delta" in item:
+                                    delta = item.get("delta", {})
+                                    if isinstance(delta, str):
+                                        yield delta
+                                    elif isinstance(delta, dict):
+                                        content = delta.get("content", "") or delta.get("text", "")
+                                        if content:
+                                            yield content
+                        
+                        # output_text 형식
+                        elif "output_text" in data and data["output_text"]:
+                            yield data["output_text"]
+                            
+                    except json.JSONDecodeError:
+                        # JSON 파싱 실패 시 무시
+                        continue
+                        
+    except requests.exceptions.Timeout:
+        raise ValueError(
+            f"요청 타임아웃: {timeout}초 내에 응답을 받지 못했습니다."
+        )
+    except requests.exceptions.RequestException as e:
+        raise ValueError(
+            f"네트워크 오류: API 서버에 연결할 수 없습니다.\n"
+            f"URL: {base_url}\nError: {str(e)}"
+        )
+
+
 # Jupyter Notebook에서 편리하게 사용하기 위한 헬퍼 함수
 def generate_text(
     system_prompt: str,

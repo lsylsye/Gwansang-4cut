@@ -17,6 +17,21 @@ def dist(p1: Dict[str, float], p2: Dict[str, float]) -> float:
     return math.sqrt(dx * dx + dy * dy)
 
 
+def clamp_gauge_value(value: float, range_min: float, range_max: float) -> float:
+    """
+    gauge.value를 rangeMin~rangeMax 범위로 클램핑(정규화)
+    
+    Args:
+        value: 원본 측정값
+        range_min: 게이지 최소값
+        range_max: 게이지 최대값
+        
+    Returns:
+        클램핑된 값
+    """
+    return max(range_min, min(range_max, value))
+
+
 def angle_degrees(p1: Dict[str, float], center: Dict[str, float], p2: Dict[str, float]) -> float:
     """세 점으로 각도 계산 (중심점 기준, 도 단위)"""
     v1_x = p1['x'] - center['x']
@@ -36,10 +51,25 @@ def angle_degrees(p1: Dict[str, float], center: Dict[str, float], p2: Dict[str, 
 
 
 def get_landmark(landmarks: List[Dict], index: int) -> Optional[Dict[str, float]]:
-    """인덱스로 랜드마크 좌표 가져오기"""
+    """
+    인덱스로 랜드마크 좌표 가져오기
+    
+    주의: 프론트엔드에서 index는 1부터 시작하지만,
+    rules.md와 코드에서는 MediaPipe 원본 (0부터 시작)을 사용합니다.
+    따라서 index + 1로 검색합니다.
+    """
+    # 프론트엔드는 index를 1부터 시작하므로 +1 보정
+    search_index = index + 1
+    
+    for lm in landmarks:
+        if lm.get('index') == search_index:
+            return {'x': lm['x'], 'y': lm['y'], 'z': lm.get('z', 0)}
+    
+    # 혹시 0부터 시작하는 경우도 대비
     for lm in landmarks:
         if lm.get('index') == index:
             return {'x': lm['x'], 'y': lm['y'], 'z': lm.get('z', 0)}
+    
     return None
 
 
@@ -62,6 +92,31 @@ def get_brow_center(landmarks: List[Dict]) -> Dict[str, float]:
     avg_z = sum(p['z'] for p in points) / len(points)
     
     return {'x': avg_x, 'y': avg_y, 'z': avg_z}
+
+
+def get_brow_top(landmarks: List[Dict]) -> Dict[str, float]:
+    """
+    눈썹의 상단 경계점 계산 (이마 높이 측정용)
+    MediaPipe에서 y는 위에서 아래로 증가하므로, 가장 작은 y값이 상단
+    """
+    brow_indices = list(range(70, 106)) + list(range(300, 337))
+    points = []
+    
+    for idx in brow_indices:
+        lm = get_landmark(landmarks, idx)
+        if lm:
+            points.append(lm)
+    
+    if not points:
+        return {'x': 0.5, 'y': 0.25, 'z': 0}
+    
+    # 가장 위쪽(y값이 가장 작은) 점 찾기
+    top_point = min(points, key=lambda p: p['y'])
+    
+    # x는 중심값 사용
+    avg_x = sum(p['x'] for p in points) / len(points)
+    
+    return {'x': avg_x, 'y': top_point['y'], 'z': top_point['z']}
 
 
 def calculate_head_roll(landmarks: List[Dict]) -> float:
@@ -116,10 +171,10 @@ def calculate_face_shape(landmarks: List[Dict]) -> Dict[str, Any]:
         core_meaning = "얼굴이 넓고 당당한 형상이오. 이는 대외활동에 강하고 체력과 그릇이 큰 자의 상이오. 리더십이 돋보이며 사람들을 이끄는 능력이 있으나, 때로는 타인의 의견을 경청하는 자세가 필요하오."
         advice = "조직을 이끌거나 사업을 운영하는 데 적합한 상이니, 리더의 자리에서 능력을 발휘하시오."
     
-    # gauge 값 계산 (0~8 범위로 매핑)
-    # wh_ratio 0.6~0.9 범위를 0~8로 매핑
-    gauge_value = ((wh_ratio - 0.6) / 0.3) * 8
-    gauge_value = max(0, min(8, gauge_value))
+    # gauge 값 계산 (rules.md 기준: W/H 비율 그대로 사용)
+    # W/H 0.60~0.90 범위로 표시
+    gauge_min, gauge_max = 0.60, 0.90
+    gauge_value = clamp_gauge_value(wh_ratio, gauge_min, gauge_max)
     
     return {
         "measures": {
@@ -128,14 +183,14 @@ def calculate_face_shape(landmarks: List[Dict]) -> Dict[str, Any]:
             "wh": f"{wh_ratio:.3f}"
         },
         "gauge": {
-            "value": round(gauge_value, 2),
-            "rangeMin": 0,
-            "rangeMax": 8,
+            "value": round(gauge_value, 3),
+            "rangeMin": gauge_min,
+            "rangeMax": gauge_max,
             "unit": "",
             "segments": [
-                {"label": "좁음", "min": 0, "max": 2.5},
-                {"label": "보통", "min": 2.5, "max": 5.5},
-                {"label": "넓음", "min": 5.5, "max": 8}
+                {"label": "세장형", "min": 0.60, "max": 0.70},
+                {"label": "균형형", "min": 0.70, "max": 0.80},
+                {"label": "광대형", "min": 0.80, "max": 0.90}
             ]
         },
         "coreMeaning": core_meaning,
@@ -149,14 +204,14 @@ def _default_face_shape() -> Dict[str, Any]:
     return {
         "measures": {"w": "N/A", "h": "N/A", "wh": "N/A"},
         "gauge": {
-            "value": 4,
-            "rangeMin": 0,
-            "rangeMax": 8,
+            "value": 0.75,
+            "rangeMin": 0.60,
+            "rangeMax": 0.90,
             "unit": "",
             "segments": [
-                {"label": "좁음", "min": 0, "max": 2.5},
-                {"label": "보통", "min": 2.5, "max": 5.5},
-                {"label": "넓음", "min": 5.5, "max": 8}
+                {"label": "세장형", "min": 0.60, "max": 0.70},
+                {"label": "균형형", "min": 0.70, "max": 0.80},
+                {"label": "광대형", "min": 0.80, "max": 0.90}
             ]
         },
         "coreMeaning": "랜드마크 데이터가 부족하여 분석할 수 없습니다.",
@@ -169,21 +224,31 @@ def calculate_forehead(landmarks: List[Dict], h_face: float, w_face: float) -> D
     이마(초년운/판단력) 분석
     
     랜드마크:
-    - forehead_height = dist(10, brow_center)
+    - forehead_height = brow_top.y - p10.y (y좌표 차이, 정규화 좌표)
     - forehead_width = dist(109, 338)
+    
+    MediaPipe 좌표: y는 위에서 아래로 증가
+    - p10: 이마 상단 (y값이 작음)
+    - brow_top: 눈썹 상단 (y값이 더 큼)
     """
     p10 = get_landmark(landmarks, 10)
     p109 = get_landmark(landmarks, 109)
     p338 = get_landmark(landmarks, 338)
-    brow_center = get_brow_center(landmarks)
+    p152 = get_landmark(landmarks, 152)  # 턱 끝
+    brow_top = get_brow_top(landmarks)
     
-    if not all([p10, p109, p338]):
+    if not all([p10, p109, p338, p152]):
         return _default_forehead()
     
-    forehead_height = dist(p10, brow_center)
+    # 이마 높이: 눈썹 상단 y - 이마 상단 y (y좌표 차이)
+    forehead_height = brow_top['y'] - p10['y']
     forehead_width = dist(p109, p338)
     
-    height_ratio = forehead_height / h_face if h_face > 0 else 0
+    # 얼굴 전체 높이: 턱 끝 y - 이마 상단 y
+    face_height = p152['y'] - p10['y']
+    
+    # 비율 계산 (y좌표 기반)
+    height_ratio = forehead_height / face_height if face_height > 0 else 0
     width_ratio = forehead_width / w_face if w_face > 0 else 0
     
     # 높이 비율 해석
@@ -213,6 +278,10 @@ def calculate_forehead(landmarks: List[Dict], h_face: float, w_face: float) -> D
     
     core_meaning = f"{height_desc} {width_desc}"
     
+    # gauge 범위 정의 (rules.md 기준: < 0.28 / 0.28~0.35 / > 0.35)
+    gauge_min, gauge_max = 0.15, 0.45
+    gauge_value = clamp_gauge_value(height_ratio, gauge_min, gauge_max)
+    
     return {
         "measures": {
             "height": f"{forehead_height:.4f}",
@@ -221,14 +290,14 @@ def calculate_forehead(landmarks: List[Dict], h_face: float, w_face: float) -> D
             "widthRatio": f"{width_ratio:.3f}"
         },
         "gauge": {
-            "value": round(height_ratio, 3),
-            "rangeMin": 0.2,
-            "rangeMax": 0.5,
+            "value": round(gauge_value, 3),
+            "rangeMin": gauge_min,
+            "rangeMax": gauge_max,
             "unit": "",
             "segments": [
-                {"label": "낮음", "min": 0.2, "max": 0.28},
-                {"label": "보통", "min": 0.28, "max": 0.38},
-                {"label": "높음", "min": 0.38, "max": 0.5}
+                {"label": "낮음", "min": 0.15, "max": 0.28},
+                {"label": "보통", "min": 0.28, "max": 0.35},
+                {"label": "높음", "min": 0.35, "max": 0.45}
             ]
         },
         "coreMeaning": core_meaning,
@@ -247,13 +316,13 @@ def _default_forehead() -> Dict[str, Any]:
         },
         "gauge": {
             "value": 0.32,
-            "rangeMin": 0.2,
-            "rangeMax": 0.5,
+            "rangeMin": 0.15,
+            "rangeMax": 0.45,
             "unit": "",
             "segments": [
-                {"label": "낮음", "min": 0.2, "max": 0.28},
-                {"label": "보통", "min": 0.28, "max": 0.38},
-                {"label": "높음", "min": 0.38, "max": 0.5}
+                {"label": "낮음", "min": 0.15, "max": 0.28},
+                {"label": "보통", "min": 0.28, "max": 0.35},
+                {"label": "높음", "min": 0.35, "max": 0.45}
             ]
         },
         "coreMeaning": "랜드마크 데이터가 부족하여 분석할 수 없습니다.",
@@ -338,6 +407,10 @@ def calculate_eyes(landmarks: List[Dict], w_face: float) -> Dict[str, Any]:
     
     core_meaning = f"{open_desc} {asym_desc}"
     
+    # gauge 범위 정의 (rules.md 기준: <0.01 균형, 0.01~0.02 약간 차이, >0.02 비대칭)
+    gauge_min, gauge_max = 0, 0.03
+    gauge_value = clamp_gauge_value(asymmetry, gauge_min, gauge_max)
+    
     return {
         "measures": {
             "openL": f"{eye_open_l:.4f}",
@@ -349,14 +422,14 @@ def calculate_eyes(landmarks: List[Dict], w_face: float) -> Dict[str, Any]:
             "symmetry": f"{symmetry:.1f}%"
         },
         "gauge": {
-            "value": round(asymmetry, 4),
-            "rangeMin": 0,
-            "rangeMax": 0.15,
+            "value": round(gauge_value, 4),
+            "rangeMin": gauge_min,
+            "rangeMax": gauge_max,
             "unit": "",
             "segments": [
-                {"label": "균형 좋음", "min": 0, "max": 0.05},
-                {"label": "보통", "min": 0.05, "max": 0.1},
-                {"label": "차이 있음", "min": 0.1, "max": 0.15}
+                {"label": "균형", "min": 0, "max": 0.01},
+                {"label": "약간 차이", "min": 0.01, "max": 0.02},
+                {"label": "비대칭", "min": 0.02, "max": 0.03}
             ]
         },
         "coreMeaning": core_meaning,
@@ -377,14 +450,14 @@ def _default_eyes() -> Dict[str, Any]:
             "symmetry": "N/A"
         },
         "gauge": {
-            "value": 0.01,
+            "value": 0.005,
             "rangeMin": 0,
-            "rangeMax": 0.15,
+            "rangeMax": 0.03,
             "unit": "",
             "segments": [
-                {"label": "균형 좋음", "min": 0, "max": 0.05},
-                {"label": "보통", "min": 0.05, "max": 0.1},
-                {"label": "차이 있음", "min": 0.1, "max": 0.15}
+                {"label": "균형", "min": 0, "max": 0.01},
+                {"label": "약간 차이", "min": 0.01, "max": 0.02},
+                {"label": "비대칭", "min": 0.02, "max": 0.03}
             ]
         },
         "coreMeaning": "랜드마크 데이터가 부족하여 분석할 수 없습니다.",
@@ -427,6 +500,10 @@ def calculate_nose(landmarks: List[Dict], h_face: float) -> Dict[str, Any]:
         core_meaning = "코가 길고 우뜻한 형상이오. 이는 장기 투자형으로 인내로 큰 재물을 모으는 상이오. 신중한 판단으로 큰 결실을 맺으나, 고집이 세지면 타인의 조언을 늦게 듣는 경향이 있으니 주의하시오."
         advice = "장기적인 목표를 세우고 꾼준히 노력하면 큰 성공을 거두리라. 단, 타인의 의견에도 귀 기울이면 더욱 좋으리다."
     
+    # gauge 범위 정의 (rules.md 기준: < 0.22 / 0.22~0.28 / > 0.28)
+    gauge_min, gauge_max = 0.15, 0.35
+    gauge_value = clamp_gauge_value(length_ratio, gauge_min, gauge_max)
+    
     return {
         "measures": {
             "length": f"{nose_length:.4f}",
@@ -435,14 +512,14 @@ def calculate_nose(landmarks: List[Dict], h_face: float) -> Dict[str, Any]:
             "lengthCriteria": length_type
         },
         "gauge": {
-            "value": round(length_ratio, 3),
-            "rangeMin": 0.15,
-            "rangeMax": 0.3,
+            "value": round(gauge_value, 3),
+            "rangeMin": gauge_min,
+            "rangeMax": gauge_max,
             "unit": "",
             "segments": [
-                {"label": "짧음", "min": 0.15, "max": 0.2},
-                {"label": "보통", "min": 0.2, "max": 0.25},
-                {"label": "김", "min": 0.25, "max": 0.3}
+                {"label": "짧음", "min": 0.15, "max": 0.22},
+                {"label": "보통", "min": 0.22, "max": 0.28},
+                {"label": "김", "min": 0.28, "max": 0.35}
             ]
         },
         "coreMeaning": core_meaning,
@@ -460,14 +537,14 @@ def _default_nose() -> Dict[str, Any]:
             "lengthCriteria": "N/A"
         },
         "gauge": {
-            "value": 0.22,
+            "value": 0.25,
             "rangeMin": 0.15,
-            "rangeMax": 0.3,
+            "rangeMax": 0.35,
             "unit": "",
             "segments": [
-                {"label": "짧음", "min": 0.15, "max": 0.2},
-                {"label": "보통", "min": 0.2, "max": 0.25},
-                {"label": "김", "min": 0.25, "max": 0.3}
+                {"label": "짧음", "min": 0.15, "max": 0.22},
+                {"label": "보통", "min": 0.22, "max": 0.28},
+                {"label": "김", "min": 0.28, "max": 0.35}
             ]
         },
         "coreMeaning": "랜드마크 데이터가 부족하여 분석할 수 없습니다.",
@@ -496,16 +573,35 @@ def calculate_mouth(landmarks: List[Dict]) -> Dict[str, Any]:
     lip_thickness = dist(p13, p14)
     
     # 입꼬리 기울기 (도 단위)
-    dy = p291['y'] - p61['y']
-    dx = p291['x'] - p61['x']
-    corner_slope = math.degrees(math.atan2(dy, dx))
+    # MediaPipe 좌표: x는 왼쪽→오른쪽 증가, y는 위→아래 증가
+    # p61은 왼쪽 입꼬리, p291은 오른쪽 입꼬리
+    # 입꼬리가 올라감 = 오른쪽이 왼쪽보다 y가 작음 (화면에서 위쪽)
+    dy = p291['y'] - p61['y']  # 양수면 오른쪽이 아래, 음수면 오른쪽이 위
+    dx = p291['x'] - p61['x']  # 보통 양수 (오른쪽이 더 오른쪽)
+    
+    # atan2는 라디안 반환, 0도=수평, 양수=하향, 음수=상향
+    raw_slope = math.degrees(math.atan2(dy, dx))
+    
+    # 보정: raw_slope가 90도 이상이면 좌표가 뒤바뀐 것
+    if abs(raw_slope) > 45:
+        # 잘못된 좌표 순서 보정 (좌우 반전된 경우)
+        raw_slope = math.degrees(math.atan2(-dy, abs(dx)))
+    
+    corner_slope = raw_slope
     
     # 입꼬리 방향 해석
-    if corner_slope < -3:
+    # MediaPipe 좌표: y는 아래로 갈수록 커짐
+    # corner_slope > 0 이면 오른쪽이 아래 = 입꼬리 내려감 (하향)
+    # corner_slope < 0 이면 오른쪽이 위 = 입꼬리 올라감 (상향)
+    # rules.md: 상향(+3°↑) = 밝은 인상, 하향(-3°↓) = 진중한 인상
+    # 따라서 corner_slope의 부호를 반전하여 사용자 직관과 맞춤
+    display_slope = -corner_slope  # 부호 반전: 양수=상향, 음수=하향
+    
+    if display_slope > 3:
         corner_type = "상향"
         corner_desc = "입꼬리가 올라간 형상이오. 이는 밝은 인상을 주며 인덕운이 좋은 상이오. 첫인상에서 호감을 주며 낙천적인 성품을 가졌소."
         advice = "사람들과 어울리는 일에 적합하니, 서비스나 영업, 대인관계가 중요한 분야에서 능력을 발휘하시오."
-    elif corner_slope <= 3:
+    elif display_slope >= -3:
         corner_type = "수평"
         corner_desc = "입이 크고 입술이 평형을 이루며 두께도 적당하오. 이는 말에 무게가 있으며, 신뢰를 주는 언변을 가진 자요. 첫인상이 무난하고 신뢰감을 주는 상이오."
         advice = "진지한 관계에 강하지만, 표현력은 더 키워야 애정운이 더 활짝 피리라. 자신의 감정을 자주 표현하는 것이 중요하오."
@@ -527,17 +623,21 @@ def calculate_mouth(landmarks: List[Dict]) -> Dict[str, Any]:
     
     core_meaning = f"{corner_desc} {lip_desc}"
     
+    # gauge 범위 정의 (display_slope 사용: 양수=상향, 음수=하향)
+    gauge_min, gauge_max = -10, 10
+    gauge_value = clamp_gauge_value(display_slope, gauge_min, gauge_max)
+    
     return {
         "measures": {
             "width": f"{mouth_width:.4f}",
             "lipThickness": f"{lip_thickness:.4f}",
-            "cornerSlope": f"{corner_slope:.2f}",
+            "cornerSlope": f"{display_slope:.2f}",
             "cornerCriteria": corner_type
         },
         "gauge": {
-            "value": round(corner_slope, 2),
-            "rangeMin": -10,
-            "rangeMax": 10,
+            "value": round(gauge_value, 2),
+            "rangeMin": gauge_min,
+            "rangeMax": gauge_max,
             "unit": "°",
             "segments": [
                 {"label": "내려감", "min": -10, "max": -3},
@@ -596,13 +696,12 @@ def calculate_chin(landmarks: List[Dict]) -> Dict[str, Any]:
     chin_length = dist(p14, p152)
     jaw_angle = angle_degrees(p148, p152, p377)
     
-    # 턱 각도 해석 (rules.md 기준과 다르게 실제 측정값은 더 클 수 있음)
-    # 실제 값은 보통 110~140도 범위
-    if jaw_angle < 118:
+    # 턱 각도 해석 (rules.md 기준: 65° 미만=각진, 65-75°=완만, 75° 초과=둥근)
+    if jaw_angle < 65:
         angle_type = "각진 턱"
         angle_desc = "턱선이 각지고 단정한 형상이오. 이는 의지력과 끈기가 강한 자의 상이오. 밀어붙이는 추진력이 뛰어나나, 고집이 세질 수 있으니 주의하시오."
         advice = "꾸준함이 무기요. 시간이 지날수록 신망이 쌓이는 상이니 중도 포기만 피하시오. 타인의 의견에도 귀 기울이면 더욱 좋으리라."
-    elif jaw_angle <= 132:
+    elif jaw_angle <= 75:
         angle_type = "완만한 턱"
         angle_desc = "턱선이 단정하고 좌우 밸런스가 좋으며 각이 너무 날카롭지 않구려. 이는 인내심 있고 자기 관리가 철저한 자의 상이오. 말년에 외롭지 않고, 꾸준히 자신의 삶을 책임질 수 있는 운이 들어있소."
         advice = "꾸준함이 무기요. 시간이 지날수록 신망이 쌓이는 상이니 중도 포기만 피하시오."
@@ -624,6 +723,10 @@ def calculate_chin(landmarks: List[Dict]) -> Dict[str, Any]:
     
     core_meaning = f"{angle_desc} {width_desc}"
     
+    # gauge 범위 정의 (rules.md 기준: 55~85도 범위)
+    gauge_min, gauge_max = 55, 85
+    gauge_value = clamp_gauge_value(jaw_angle, gauge_min, gauge_max)
+    
     return {
         "measures": {
             "length": f"{chin_length:.4f}",
@@ -632,14 +735,14 @@ def calculate_chin(landmarks: List[Dict]) -> Dict[str, Any]:
             "angleCriteria": angle_type
         },
         "gauge": {
-            "value": round(jaw_angle, 2),
-            "rangeMin": 110,
-            "rangeMax": 140,
+            "value": round(gauge_value, 2),
+            "rangeMin": gauge_min,
+            "rangeMax": gauge_max,
             "unit": "°",
             "segments": [
-                {"label": "뾰족", "min": 110, "max": 118},
-                {"label": "보통", "min": 118, "max": 132},
-                {"label": "둥근편", "min": 132, "max": 140}
+                {"label": "각진", "min": 55, "max": 65},
+                {"label": "보통", "min": 65, "max": 75},
+                {"label": "둥근편", "min": 75, "max": 85}
             ]
         },
         "coreMeaning": core_meaning,
@@ -657,14 +760,14 @@ def _default_chin() -> Dict[str, Any]:
             "angleCriteria": "N/A"
         },
         "gauge": {
-            "value": 125,
-            "rangeMin": 110,
-            "rangeMax": 140,
+            "value": 70,
+            "rangeMin": 55,
+            "rangeMax": 85,
             "unit": "°",
             "segments": [
-                {"label": "뾰족", "min": 110, "max": 118},
-                {"label": "보통", "min": 118, "max": 132},
-                {"label": "둥근편", "min": 132, "max": 140}
+                {"label": "각진", "min": 55, "max": 65},
+                {"label": "보통", "min": 65, "max": 75},
+                {"label": "둥근편", "min": 75, "max": 85}
             ]
         },
         "coreMeaning": "랜드마크 데이터가 부족하여 분석할 수 없습니다.",
