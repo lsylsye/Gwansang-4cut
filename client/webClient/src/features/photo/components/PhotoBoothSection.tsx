@@ -14,13 +14,10 @@ import frame02 from "@/assets/frame_02.png";
 import ssafy02 from "@/assets/ssafy_02.png";
 import shutterSound from "@/assets/shutter_sound.mp3";
 
-export type PhotoBoothStep = "frame-selection" | "shooting" | "best-shot" | "customization";
-
 interface PhotoBoothSectionProps {
   onBack: () => void;
   onComplete: (photos: string[]) => void;
   mode?: AnalyzeMode;
-  onStepChange?: (step: PhotoBoothStep) => void;
 }
 
 type FrameType = "vertical" | "horizontal";
@@ -33,7 +30,6 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
   onBack,
   onComplete,
   mode = "personal",
-  onStepChange,
 }) => {
   const isPersonal = mode === "personal";
 
@@ -60,21 +56,6 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
   const [frameColor, setFrameColor] = useState("");
   const [customText, setCustomText] = useState("아자스");
   const [isCustomInput, setIsCustomInput] = useState(false);
-  
-  // 스크롤 따라오는 플로팅 사이드바
-  const [sidebarTop, setSidebarTop] = useState(0);
-  const [isDesktop, setIsDesktop] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // 단계 변경 시 상위에 알림 (헤더 표시 등)
-  useEffect(() => {
-    if (!onStepChange) return;
-    if (!frameType) onStepChange("frame-selection");
-    else if (!showSelection) onStepChange("shooting");
-    else if (!showCustomization) onStepChange("best-shot");
-    else onStepChange("customization");
-  }, [frameType, showSelection, showCustomization, onStepChange]);
 
   const PRESET_TEXTS = [
     "아자스",
@@ -109,66 +90,6 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
     if (frameType === "vertical") setFrameColor("#BFE7FF");
     else if (frameType === "horizontal") setFrameColor("#F4F1EE");
   }, [frameType]);
-
-  // 데스크톱 여부 확인
-  useEffect(() => {
-    const checkDesktop = () => {
-      setIsDesktop(window.innerWidth >= 1024);
-    };
-    checkDesktop();
-    window.addEventListener("resize", checkDesktop);
-    return () => window.removeEventListener("resize", checkDesktop);
-  }, []);
-
-  // 스크롤 따라오는 플로팅 사이드바 효과 (퀵메뉴 스타일)
-  useEffect(() => {
-    if (!showCustomization || !isDesktop) return;
-
-    const handleScroll = () => {
-      if (!containerRef.current || !sidebarRef.current) return;
-
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const containerHeight = containerRef.current.offsetHeight;
-      const containerOffsetTop = containerRef.current.offsetTop;
-      const sidebarHeight = sidebarRef.current.offsetHeight;
-      
-      // 프레임 상단 기준으로 사이드바 배치 (기본값: 프레임 옆)
-      const frameTopOffset = 60; // 프레임 시작 위치 (제목 + 여백)
-      const minTopOffset = 20; // 최소 상단 여백
-      
-      const endPoint = containerHeight - sidebarHeight - minTopOffset;
-      let point = frameTopOffset;
-
-      if (scrollTop < containerOffsetTop) {
-        // 컨테이너 시작 전: 프레임 옆 위치 유지
-        point = frameTopOffset;
-      } else if (scrollTop - containerOffsetTop > endPoint) {
-        // 컨테이너 끝 이후: 하단 고정
-        point = endPoint;
-      } else {
-        // 컨테이너 내부: 스크롤에 따라 이동하되 프레임 위치 기준
-        const scrollOffset = scrollTop - containerOffsetTop;
-        point = Math.max(minTopOffset, frameTopOffset + scrollOffset);
-      }
-
-      setSidebarTop(point);
-    };
-
-    const handleResize = () => {
-      handleScroll();
-    };
-
-    // 초기 위치 설정
-    handleScroll();
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleResize);
-    
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [showCustomization, isDesktop]);
 
   // Canvas에 프레임과 이미지 그리기
   useEffect(() => {
@@ -977,67 +898,51 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
   // Step 4: Customization Screen
   if (showCustomization) {
     return (
-      <div ref={containerRef} className="flex flex-col lg:flex-row w-full bg-gray-50/20 relative overflow-x-hidden scrollbar-hide" style={{ minHeight: '100vh' }}>
-        {/* Main Content Area - Frame Preview */}
-        <div 
-          className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12 pb-24 lg:pb-12 lg:max-w-[calc(100%-20rem)] xl:max-w-[calc(100%-24rem)] scrollbar-hide" 
-          style={{ minHeight: '100vh' }}
-        >
-          {/* Header */}
-          <div className="w-full max-w-5xl mb-6 sm:mb-8 md:mb-12">
-            <div className="text-center space-y-2 sm:space-y-3">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 font-display tracking-tight">프레임 꾸미기</h2>
-              <p className="text-gray-500 text-sm sm:text-base md:text-lg font-medium">나만의 취향이 담긴 배경 색상을 골라보세요.</p>
-            </div>
-          </div>
-
-          {/* Frame Preview */}
-          <div className="relative w-full max-w-5xl flex-1 flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              className="relative transform transition-transform duration-700 flex justify-center w-full"
-            >
-              {/* Canvas로 프레임과 이미지 렌더링 */}
-              <canvas
-                ref={frameCanvasRef}
-                className="mx-auto w-full"
-                style={{
-                  aspectRatio: frameType === "vertical" ? "579 / 1740" : "1800 / 1200",
-                  maxWidth: frameType === "vertical" ? "min(40vw, 450px)" : "min(75vw, 1000px)",
-                  transition: "background-color 0.5s ease"
-                }}
-              />
-            </motion.div>
+      <div className="flex flex-col items-center justify-start w-full min-h-[85vh] pb-24 px-4 bg-gray-50/20">
+        {/* Header */}
+        <div className="w-full max-w-7xl pt-12 pb-8">
+          <div className="text-center space-y-4">
+            <h2 className="text-5xl font-black text-gray-900 font-display tracking-tight">프레임 꾸미기</h2>
+            <p className="text-gray-500 text-lg font-medium">나만의 취향이 담긴 배경 색상을 골라보세요.</p>
           </div>
         </div>
 
-        {/* Sidebar - Controls (플로팅바처럼 따라오기) */}
         <motion.div
-          ref={sidebarRef}
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ 
-            opacity: 1, 
-            x: 0
-          }}
-          transition={{ 
-            x: { duration: 0.5 }
-          }}
-          className="w-full lg:w-80 xl:w-96 bg-white lg:border-r border-t lg:border-t-0 border-gray-200 shadow-lg flex flex-col p-6 sm:p-7 md:p-8 lg:p-10 rounded-t-2xl lg:rounded-tr-2xl lg:rounded-br-2xl overflow-y-auto lg:overflow-visible scrollbar-hide fixed lg:absolute bottom-0 lg:bottom-auto left-0 right-0 lg:left-auto lg:right-0 z-40 max-h-[60vh] lg:max-h-none"
-          style={{
-            top: isDesktop ? `${sidebarTop}px` : 'auto',
-            transition: isDesktop ? 'top 1s ease-out' : 'none'
-          }}
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
         >
-          <div className="space-y-4 sm:space-y-5 md:space-y-6">
-            {/* 배경 색상 선택 */}
-            <div className="space-y-2 sm:space-y-3 md:space-y-4">
-              <div className="flex items-center gap-2">
-                <div className={`w-1 h-5 sm:w-1.5 sm:h-6 ${isPersonal ? "bg-brand-green" : "bg-brand-orange"} rounded-full shadow-sm`} />
-                <h3 className="text-sm sm:text-base md:text-lg font-bold text-gray-900">배경 색상</h3>
+          {/* Left: Frame Preview (더 크게) */}
+          <div className="lg:col-span-9 flex justify-center order-1">
+            <div className="relative w-full">
+              <div className={`absolute inset-0 scale-[1.2] blur-[120px] opacity-30 -z-10 transition-colors duration-1000`}
+                style={{ backgroundColor: frameColor }}
+              />
+
+              <div className="relative transform transition-transform duration-700 flex justify-center">
+                {/* Canvas로 프레임과 이미지 렌더링 */}
+                <canvas
+                  ref={frameCanvasRef}
+                  className="mx-auto w-full"
+                  style={{
+                    aspectRatio: frameType === "vertical" ? "579 / 1740" : "1800 / 1200",
+                    maxWidth: frameType === "vertical" ? "20vw" : "60vw",
+                    transition: "background-color 0.5s ease"
+                  }}
+                />
               </div>
-              <div className="grid grid-cols-8 lg:grid-cols-4 gap-2.5 sm:gap-3 md:gap-3 lg:gap-4 w-full max-w-[420px] sm:max-w-[480px] lg:max-w-none mx-auto">
+            </div>
+          </div>
+
+          {/* Right: Color Selection (세로 정렬, 작게) */}
+          <div className="lg:col-span-3 space-y-6 order-2 lg:sticky lg:top-8 lg:self-start">
+            <GlassCard className="bg-white/90 backdrop-blur-md p-4 border-2 border-white/50">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className={`w-1.5 h-5 ${isPersonal ? "bg-brand-green" : "bg-brand-orange"} rounded-full shadow-sm`} />
+                  <h3 className="text-sm font-bold text-gray-900">배경 색상</h3>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
                   {PRESET_COLORS.map((color) => (
                     <motion.button
                       key={color.name}
@@ -1054,22 +959,24 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
                       {frameColor === color.value && (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className={color.value === "#000000" || color.value === "#333333" ? "text-white" : "text-gray-900"}>
-                            <Check className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" strokeWidth={3} />
+                            <Check size={12} strokeWidth={3} />
                           </div>
                         </div>
                       )}
                     </motion.button>
                   ))}
+                </div>
               </div>
-            </div>
+            </GlassCard>
 
             {/* 가로 프레임 말풍선 커스텀 문구 (가로 프레임일 때만 표시) */}
             {frameType === "horizontal" && (
-              <div className="space-y-3 sm:space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className={`w-1.5 h-6 ${isPersonal ? "bg-brand-green" : "bg-brand-orange"} rounded-full shadow-sm`} />
-                  <h3 className="text-base sm:text-lg font-bold text-gray-900">말풍선 문구</h3>
-                </div>
+              <GlassCard className="bg-white/90 backdrop-blur-md p-4 border-2 border-white/50">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-1.5 h-5 ${isPersonal ? "bg-brand-green" : "bg-brand-orange"} rounded-full shadow-sm`} />
+                    <h3 className="text-sm font-bold text-gray-900">말풍선 문구</h3>
+                  </div>
                   <select
                     value={isCustomInput ? "직접입력" : customText}
                     onChange={(e) => {
@@ -1081,7 +988,7 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
                         setCustomText(value);
                       }
                     }}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border-2 border-gray-200 focus:border-brand-green focus:outline-none text-sm font-medium bg-white"
+                    className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-brand-green focus:outline-none text-sm font-medium"
                   >
                     {PRESET_TEXTS.map((text) => (
                       <option key={text} value={text}>
@@ -1090,41 +997,42 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
                     ))}
                   </select>
                   {isCustomInput && (
-                    <>
-                      <input
-                        type="text"
-                        value={customText}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value.length <= 8) {
-                            setCustomText(value);
-                          }
-                        }}
-                        placeholder="최대 8글자까지 입력 가능"
-                        maxLength={8}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border-2 border-gray-200 focus:border-brand-green focus:outline-none text-sm font-hand bg-white"
-                      />
-                      <p className="text-xs text-gray-500">
-                        {customText.length}/8 글자
-                      </p>
-                    </>
+                    <input
+                      type="text"
+                      value={customText}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value.length <= 8) {
+                          setCustomText(value);
+                        }
+                      }}
+                      placeholder="최대 8글자까지 입력 가능"
+                      maxLength={8}
+                      className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-brand-green focus:outline-none text-sm font-hand"
+                    />
+                  )}
+                  {isCustomInput && (
+                    <p className="text-xs text-gray-500">
+                      {customText.length}/8 글자
+                    </p>
                   )}
                 </div>
+              </GlassCard>
             )}
 
             {/* Action Buttons */}
-            <div className="flex flex-col gap-3 mt-auto pt-4 sm:pt-6">
+            <div className="flex flex-col gap-3">
               <ActionButton
                 onClick={handleFinish}
                 variant={isPersonal ? "primary" : "orange-primary"}
-                className="w-full text-sm sm:text-base py-4 sm:py-5"
+                className="w-full"
               >
                 저장하고 결과보러 가기
               </ActionButton>
               <ActionButton
                 variant={isPersonal ? "secondary" : "orange-secondary"}
                 onClick={() => setShowCustomization(false)}
-                className="w-full flex items-center justify-center gap-2 text-sm sm:text-base py-4 sm:py-5"
+                className="w-full flex items-center justify-center gap-2"
               >
                 <ArrowLeft size={18} />
                 사진 선택으로

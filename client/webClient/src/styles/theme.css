@@ -322,14 +322,3 @@
     line-height: 1.5;
   }
 }
-
-/* 스크롤바 숨김 (뷰포트) - theme에서 마지막 적용 */
-html, body, #root {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-html::-webkit-scrollbar, body::-webkit-scrollbar, #root::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}

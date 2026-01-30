@@ -178,26 +178,23 @@ export default function App() {
 
     // ----- [개발용] 단체 모드: /analyzing 생략, 바로 /result. DEV_SKIP_ANALYZING_FOR_GROUP=false 시 아래 원래 흐름 사용 -----
     if (mode === "group" && DEV_SKIP_ANALYZING_FOR_GROUP) {
-      setAnalysisDone(true);
-      navigate(ROUTES.GROUP_RESULT);
-      return;
-    }
-
-    // ----- 원래 흐름: /analyzing 이동 → ANALYSIS_LOADING_MS 후 /result -----
-    navigate(mode === "personal" ? ROUTES.PERSONAL_ANALYZING : ROUTES.GROUP_ANALYZING);
-    setTimeout(() => {
-      setAnalysisDone(true);
-      const currentPath = pathnameRef.current;
-      if (mode === "personal") {
-        if (!isPhotoBoothPath(currentPath)) {
-          navigate(ROUTES.PERSONAL_RESULT);
-        }
-      } else {
-        if (isAnalyzingPath(currentPath)) {
+      setTimeout(() => {
+        setAnalysisDone(true);
+        // 싸피네컷 다 안 찍었는데 분석 끝난 경우: /photo-booth에 있으면 /result로 보내지 않음
+        if (isAnalyzingPath(pathnameRef.current)) {
           navigate(ROUTES.GROUP_RESULT);
         }
-      }
-    }, ANALYSIS_LOADING_MS);
+      }, ANALYSIS_LOADING_MS);
+    } else if (mode === "group") {
+      // 그룹 모드 (DEV_SKIP_ANALYZING_FOR_GROUP=false): /analyzing으로 이동 후 ANALYSIS_LOADING_MS 후 /result로 이동
+      navigate(ROUTES.GROUP_ANALYZING);
+      setTimeout(() => {
+        setAnalysisDone(true);
+        if (isAnalyzingPath(pathnameRef.current)) {
+          navigate(ROUTES.GROUP_RESULT);
+        }
+      }, ANALYSIS_LOADING_MS);
+    }
   };
 
   const handleViewRanking = (score?: number, name?: string) => {
@@ -247,8 +244,8 @@ export default function App() {
   return (
     <Layout>
       <HideTurtleGuideProvider>
-      {(!isPhotoBooth || !isPhotoBoothShooting) && (
-        <header className="w-full h-14 sm:h-16 px-3 sm:px-6 flex justify-between items-center bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40 shadow-sm">
+      {!isPhotoBooth && (
+        <header className="w-full h-16 px-6 flex justify-between items-center bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40">
         <div
           className="flex items-center gap-0.5 cursor-pointer"
           onClick={() => navigate(ROUTES.HOME)}
@@ -256,25 +253,24 @@ export default function App() {
           <img
             src={logoImage}
             alt="Logo"
-            className="h-6 sm:h-8 object-contain"
+            className="h-8 object-contain"
           />
-          <h1 className="text-base sm:text-xl font-bold text-gray-900 tracking-tight font-display">
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight font-display">
             관상네컷
           </h1>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-3">
           {/* Ranking Button */}
           <button
             onClick={() => {
               setFromAnalysis(false);
               navigate(ROUTES.RANKING);
             }}
-            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white hover:bg-gray-50 transition-all font-bold text-gray-900 text-xs sm:text-sm shadow-sm hover:shadow-md border border-gray-200"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white hover:bg-gray-50 transition-all font-bold text-gray-900 text-sm shadow-sm hover:shadow-md border border-gray-200"
           >
-            <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline">모임 랭킹</span>
-            <span className="xs:hidden">랭킹</span>
+            <Trophy className="w-4 h-4" />
+            모임 랭킹
           </button>
         </div>
       </header>
@@ -336,23 +332,16 @@ export default function App() {
               </motion.div>
             )}
 
-            {(pathname === ROUTES.PERSONAL_RESULT || pathname === ROUTES.GROUP_RESULT) && (
+            {pathname === ROUTES.PERSONAL_RESULT && (
               <motion.div
-                key={pathname === ROUTES.GROUP_RESULT ? "group-result" : "personal-result"}
+                key="personal-result"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4 }}
                 className="w-full h-full"
               >
-                {pathname === ROUTES.GROUP_RESULT ? (
-                  <GroupAnalysisSection
-                    groupMembers={groupMembers}
-                    groupImage={images[0]}
-                    onRestart={handleRestart}
-                    onViewRanking={handleViewRanking}
-                  />
-                ) : (
+                {mode === "personal" ? (
                   <AnalysisSection
                     images={images}
                     onRestart={handleRestart}
@@ -406,7 +395,6 @@ export default function App() {
               >
                 <PhotoBoothSection
                   mode={mode}
-                  onStepChange={(step) => setIsPhotoBoothShooting(step === "shooting")}
                   onBack={() => {
                     // analyzing이 완료된 상태면 결과창으로, 진행 중이면 analyzing으로
                     if (analysisDone) {

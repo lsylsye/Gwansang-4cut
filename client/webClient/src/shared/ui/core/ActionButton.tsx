@@ -14,7 +14,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   className,
   ...props
 }) => {
-  const baseStyles = "rounded-2xl font-bold text-sm sm:text-base py-4 px-4 sm:py-6 sm:px-8 transition-all duration-200 active:scale-95 cursor-pointer flex items-center justify-center font-sans whitespace-nowrap";
+  const baseStyles = "rounded-2xl font-bold text-base py-6 px-8 transition-all duration-200 active:scale-95 cursor-pointer flex items-center justify-center font-sans";
   const variants = {
     primary: "bg-brand-green hover:bg-brand-green-deep text-white shadow-pixel hover:shadow-pixel-lg border-2 border-brand-black",
     secondary: "bg-white hover:bg-gray-50 text-gray-800 border-2 border-brand-black shadow-pixel hover:shadow-pixel-lg",

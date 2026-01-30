@@ -88,32 +88,32 @@ export const ModeSelectionCard: React.FC<ModeSelectionCardProps> = ({
       <div className={glowVariants({ mode })} />
       
       <GlassCard 
-        className={`relative p-4 sm:p-6 hover:bg-white/80 transition-all duration-300 border border-white/50 flex items-center gap-3 sm:gap-5 ${
+        className={`relative p-6 hover:bg-white/80 transition-all duration-300 border border-white/50 flex items-center gap-5 ${
           isPersonal ? "group-hover:border-brand-green/50" : "group-hover:border-brand-orange/50"
         }`}
       >
-        <div className={`${iconWrapperVariants({ mode }).split(' ')[0]} w-12 h-12 sm:w-16 sm:h-16`}>
-          <Icon className={`w-6 h-6 sm:w-8 sm:h-8 ${isPersonal ? "text-brand-green" : "text-brand-orange-dark"}`} />
-          <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 sm:p-1.5 shadow-sm border border-gray-100">
-            <Camera className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-600" />
+        <div className={iconWrapperVariants({ mode })}>
+          <Icon className={`w-8 h-8 ${isPersonal ? "text-brand-green" : "text-brand-orange-dark"}`} />
+          <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1.5 shadow-sm border border-gray-100">
+            <Camera className="w-3 h-3 text-gray-600" />
           </div>
         </div>
         
-        <div className="flex-1 text-left min-w-0">
-          <h3 className={`text-base sm:text-xl font-bold font-display mb-0.5 sm:mb-1 transition-colors ${
+        <div className="flex-1 text-left">
+          <h3 className={`text-xl font-bold font-display mb-1 transition-colors ${
             isPersonal ? "text-gray-800 group-hover:text-brand-green" : "text-gray-800 group-hover:text-brand-orange-dark"
           }`}>
             {title}
           </h3>
-          <div className="text-gray-500 text-xs sm:text-sm leading-tight font-hand" style={{ wordBreak: 'keep-all' }}>
+          <div className="text-gray-500 text-sm leading-tight font-hand">
             {description}
           </div>
         </div>
         
-        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-100 flex items-center justify-center transition-colors shrink-0 ${
+        <div className={`w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center transition-colors ${
           isPersonal ? "group-hover:bg-brand-green" : "group-hover:bg-brand-orange"
         }`}>
-          <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-hover:text-white" />
+          <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-white" />
         </div>
       </GlassCard>
     </div>
