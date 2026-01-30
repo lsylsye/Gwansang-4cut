@@ -15,10 +15,10 @@ interface LandingSectionProps {
 
 export const LandingSection: React.FC<LandingSectionProps> = ({ onStart }) => {
     return (
-        <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 w-full max-w-6xl mx-auto min-h-[70vh]">
+        <div className="flex flex-col lg:flex-row items-center justify-center gap-6 sm:gap-8 lg:gap-16 w-full max-w-6xl mx-auto min-h-[70vh] px-3 sm:px-4">
 
             {/* Left Content Area */}
-            <div className="flex-1 text-center md:text-left space-y-6 z-10 w-full md:w-auto">
+            <div className="flex-1 text-center lg:text-left space-y-6 z-10 w-full lg:w-auto">
 
 
                 <div className="space-y-2">
@@ -26,15 +26,15 @@ export const LandingSection: React.FC<LandingSectionProps> = ({ onStart }) => {
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ delay: 0.1, duration: 0.5 }}
-                        className="text-5xl md:text-7xl font-extrabold text-gray-900 leading-tight tracking-tight drop-shadow-sm font-display"
+                        className="text-3xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 leading-tight tracking-tight drop-shadow-sm font-display"
                     >
                         <span className="block text-gray-800 mb-1">나의 운명,</span>
-                        <span className="text-brand-green flex items-center justify-center md:justify-start gap-3">
+                        <span className="text-brand-green flex items-center justify-center lg:justify-start gap-3">
                             관상네컷
                             <img
                                 src={logoImage}
                                 alt="Logo"
-                                className="h-16 md:h-20 object-contain inline-block"
+                                className="h-12 sm:h-16 md:h-20 object-contain inline-block"
                             />
                         </span>
                     </motion.h1>
@@ -43,7 +43,7 @@ export const LandingSection: React.FC<LandingSectionProps> = ({ onStart }) => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.2 }}
-                        className="text-gray-500 text-lg md:text-xl font-light pt-2"
+                        className="text-gray-500 text-sm sm:text-lg md:text-xl font-light pt-1 sm:pt-2"
                     >
                         100년 산 거북 도사가 당신과 모임의 운명을 찾아드립니다.
                     </motion.p>
@@ -54,7 +54,7 @@ export const LandingSection: React.FC<LandingSectionProps> = ({ onStart }) => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="hidden md:flex items-center w-full max-w-[540px] mt-10 bg-white/40 border border-white/50 rounded-2xl p-1.5 backdrop-blur-sm shadow-sm"
+                    className="hidden lg:flex items-center w-full max-w-[540px] mt-6 sm:mt-10 mx-auto lg:mx-0 bg-white/40 border border-white/50 rounded-2xl p-1 sm:p-1.5 backdrop-blur-sm shadow-sm"
                 >
                     {/* Label Area */}
                     <div className="shrink-0 px-4 py-2 flex items-center gap-2 border-r border-gray-400/20 mr-1">
@@ -141,13 +141,13 @@ export const LandingSection: React.FC<LandingSectionProps> = ({ onStart }) => {
                 initial={{ x: 50, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
-                className="w-full md:w-[480px] z-10 flex flex-col gap-4"
+                className="w-full lg:w-[480px] z-10 flex flex-col gap-3 sm:gap-4"
             >
                 {/* Security Disclaimer (Moved to top) */}
                 <div className="mb-1 text-center">
-                    <p className="text-xs text-gray-500/90 flex items-center justify-center gap-1.5 font-hand bg-white/40 py-1.5 px-3 rounded-full border border-white/50 backdrop-blur-sm inline-flex shadow-sm">
-                        <ShieldCheck className="w-3.5 h-3.5 text-gray-600" />
-                        <span>업로드된 사진은 분석 후 즉시 폐기되며 절대 저장되지 않습니다.</span>
+                    <p className="text-[10px] sm:text-xs text-gray-500/90 flex items-center justify-center gap-1 sm:gap-1.5 font-hand bg-white/40 py-1 sm:py-1.5 px-2 sm:px-3 rounded-full border border-white/50 backdrop-blur-sm inline-flex shadow-sm">
+                        <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-600 shrink-0" />
+                        <span className="break-keep">업로드된 사진은 분석 후 즉시 폐기되며 절대 저장되지 않습니다.</span>
                     </p>
                 </div>
 
