@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { motion, AnimatePresence } from "motion/react";
-import { Sparkles, Search, Brain, Loader2, Camera, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Sparkles, Search, Brain, Loader2, Camera, AlertCircle, CheckCircle2, RefreshCcw } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { ANALYSIS_STEP_INTERVAL_MS } from "@/shared/config/analysis";
 
@@ -18,6 +18,7 @@ interface AnalyzingSectionProps {
   isAnalyzing?: boolean;
   analysisError?: string | null;
   analysisComplete?: boolean;
+  onRetry?: () => void;
 }
 
 // 줌 위치 정의 (거북도사의 신비로운 거울 컨셉)
@@ -44,7 +45,8 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({
   onNavigateToPhotoBooth,
   isAnalyzing = true,
   analysisError = null,
-  analysisComplete = false
+  analysisComplete = false,
+  onRetry
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -128,6 +130,51 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({
   };
 
   const currentRagContent = getRagContent();
+
+  // 에러 상태일 때 표시할 UI
+  if (analysisError) {
+    return (
+      <div 
+        ref={containerRef}
+        className="flex flex-col items-center justify-center w-full min-h-[75vh] py-8 px-4 overflow-hidden rounded-[40px] relative"
+      >
+        {/* Background */}
+        <div className="absolute inset-0 pointer-events-none opacity-40">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-red-500/10 blur-[150px] rounded-full" />
+        </div>
+        
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center gap-6 z-30 max-w-md text-center"
+        >
+          {/* Error Icon */}
+          <div className="w-24 h-24 rounded-full bg-red-100 flex items-center justify-center">
+            <AlertCircle className="w-12 h-12 text-red-500" />
+          </div>
+          
+          {/* Error Message */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-gray-900">분석 중 오류가 발생했습니다</h2>
+            <p className="text-gray-600">{analysisError}</p>
+          </div>
+          
+          {/* Retry Button */}
+          {onRetry && (
+            <ActionButton
+              variant="primary"
+              size="md"
+              onClick={onRetry}
+              className="mt-4"
+            >
+              <RefreshCcw className="w-5 h-5 mr-2" />
+              다시 시도하기
+            </ActionButton>
+          )}
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div 

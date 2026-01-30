@@ -6,7 +6,12 @@ import { FaceAnalysis } from "./face/components/FaceAnalysis";
 import { StatsAnalysis, type ConstitutionPhase } from "./stats/components/StatsAnalysis";
 import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
 import { SajuAnalysisResponse } from "@/shared/api/sajuApi";
-import { USE_MOCK_RESULTS } from "@/shared/config/analysis";
+import { 
+    Stage1Response, 
+    TotalReview, 
+    FaceAnalysisResult,
+    transformToFaceAnalysisFeatures 
+} from "@/shared/api/faceAnalysisApi";
 import html2canvas from "html2canvas";
 import { useHideTurtleGuide } from "@/shared/contexts/HideTurtleGuideContext";
 
@@ -17,6 +22,10 @@ interface AnalysisSectionProps {
     onNavigateToPhotoBooth?: () => void;
     frameImage?: string;
     fromPhotoBooth?: boolean;
+    // 실제 API 결과 데이터 (옵션)
+    faceAnalysisResult?: Stage1Response | null;
+    totalReview?: TotalReview | null;
+    isLoading?: boolean;
 }
 
 // --- Mock Data (부위별 상세: values, criteria, interpretation, advice) ---
@@ -299,7 +308,16 @@ const MOCK_DATA = {
 };
 
 // --- Main Component ---
-export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], onRestart, onNavigateToPhotoBooth, frameImage, fromPhotoBooth }) => {
+export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ 
+    images = [], 
+    onRestart, 
+    onNavigateToPhotoBooth, 
+    frameImage, 
+    fromPhotoBooth,
+    faceAnalysisResult,
+    totalReview: totalReviewProp,
+    isLoading = false 
+}) => {
     const [currentTab, setCurrentTab] = useState<"physiognomy" | "constitution" | "future" | "ssafy-cut">(
         "physiognomy"
     );
@@ -310,6 +328,28 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
         setHideTurtleGuide(currentTab === "constitution");
         return () => setHideTurtleGuide(false);
     }, [currentTab, setHideTurtleGuide]);
+
+    // API 결과가 있으면 변환하여 사용
+    const featuresData = React.useMemo(() => {
+        if (faceAnalysisResult?.faceAnalysis && faceAnalysisResult?.meta) {
+            console.log('✅ 실제 API 데이터 사용');
+            return transformToFaceAnalysisFeatures(
+                faceAnalysisResult.faceAnalysis,
+                faceAnalysisResult.meta
+            );
+        }
+        console.log('⚠️ API 결과 없음 - 데이터 로드 필요');
+        return null;
+    }, [faceAnalysisResult]);
+
+    // totalReview 데이터
+    const totalReviewData = React.useMemo(() => {
+        if (totalReviewProp) {
+            console.log('✅ 실제 totalReview 사용');
+            return totalReviewProp;
+        }
+        return undefined; // FaceAnalysis 컴포넌트에서 기본값 사용
+    }, [totalReviewProp]);
 
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
@@ -465,11 +505,19 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
                 >
                     {/* --- Tab 1: Physiognomy Analysis --- */}
                     {currentTab === "physiognomy" && (
-                        <FaceAnalysis
-                            image={images[0] || ""}
-                            scores={MOCK_DATA.scores}
-                            features={MOCK_DATA.features}
-                        />
+                        featuresData ? (
+                            <FaceAnalysis
+                                image={images[0] || ""}
+                                features={featuresData}
+                                totalReview={totalReviewData}
+                            />
+                        ) : (
+                            <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-500">
+                                <div className="animate-spin w-12 h-12 border-4 border-brand-green border-t-transparent rounded-full mb-4" />
+                                <p className="text-lg font-medium">분석 결과를 불러오는 중...</p>
+                                <p className="text-sm text-gray-400 mt-2">잠시만 기다려주세요</p>
+                            </div>
+                        )
                     )}
 
                     {/* --- Tab 2 & 3: Constitution & Future --- */}

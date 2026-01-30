@@ -52,6 +52,7 @@ interface UploadSectionProps {
     features: string[],
     sajuData: SajuData,
     groupMembers?: GroupMember[],
+    faceMeshMetadata?: any,  // 랜드마크 데이터 추가
   ) => void;
 }
 
@@ -281,27 +282,16 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           console.error("이전 촬영 데이터 삭제 실패:", error);
         }
 
-        if (faceMeshMetadata) {
-          const finalPayload = {
-            ...faceMeshMetadata,
-            sajuData: sajuData,
-          };
-
-          console.log("🚀 백엔드 전송 데이터 (Personal):", finalPayload);
-
-          fetch(API_ENDPOINTS.FACEMESH_PERSONAL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(finalPayload),
-          }).catch((err) => {
-            console.error("최종 데이터 전송 실패:", err);
-          });
-        }
+        // App.tsx에서 API 호출하도록 metadata 전달
+        // 더 이상 여기서 fetch 하지 않음
+        console.log("🚀 분석 시작 - metadata 전달:", faceMeshMetadata);
 
         onAnalyze(
           capturedImages as string[],
           [],
           sajuData,
+          undefined,  // groupMembers
+          faceMeshMetadata,  // metadata 전달
         );
       }
     } else {

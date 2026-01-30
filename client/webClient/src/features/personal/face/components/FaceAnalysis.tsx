@@ -6,7 +6,7 @@ import { Sparkles, X } from "lucide-react";
 // --- Types ---
 interface FaceAnalysisProps {
     image: string;
-    scores: any[];
+    scores?: any[];  // 선택적으로 변경
     features: any;
     totalReview?: TotalReview; // 거북 도사의 총평 데이터 (백엔드에서 받아옴)
 }
@@ -20,6 +20,13 @@ interface TotalReview {
     comprehensive?: string; // 종합 운세 해석
     improvement?: string; // 운을 좋게 만드는 방법 제안
 }
+
+// 백엔드 응답이 없을 때 표시할 기본 예시 데이터
+const DEFAULT_TOTAL_REVIEW: TotalReview = {
+    harmony: "이마가 넓고 눈이 균형 잡혀 있으며, 코와 입의 비율이 조화롭습니다. 전체적으로 상중하 삼정(三停)이 고르게 발달해 있어, 초년·중년·말년 운이 안정적으로 흘러갈 가능성이 높습니다. 특히 이마와 턱이 서로 받쳐주는 구조로, 생각한 것을 끝까지 실행하는 힘이 돋보입니다.",
+    comprehensive: "당신은 '부드러운 카리스마'를 가진 얼굴입니다. 첫인상은 다소 차분해 보일 수 있으나, 시간이 지날수록 신뢰를 얻는 타입입니다. 재물운은 급격한 상승보다는 꾸준한 축적형이며, 대인관계에서는 넓은 포용력으로 다양한 사람들과 조화를 이룹니다. 직업운은 기획·분석·관리 분야에서 두각을 나타낼 수 있으며, 30대 중반 이후 운이 본격적으로 상승하는 구조입니다.",
+    improvement: "✔ 녹색 계열의 소품이나 식물을 가까이 두면 기운이 풀리고 유연해집니다.\n✔ 중요한 결정 전에는 충분한 휴식을 취해 판단력을 높이세요.\n✔ 감정 표현을 조금 더 적극적으로 하면 대인관계가 더욱 원활해집니다.\n✔ 꾸준한 운동으로 하체를 강화하면 지구력과 끈기가 더해집니다."
+};
 
 // highlightIndex: 0=얼굴형(공통·얼굴형), 1=이마, 2=눈, 3=코, 4=입, 5=턱
 const HIGHLIGHT_ORDER = 6;
@@ -141,11 +148,12 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
         );
     };
 
-    /** 이마 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
+    /** 이마 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 + 조언 */
     const renderForeheadBlock = (f: {
         measures?: { height?: string; heightRatio?: string; width?: string; widthRatio?: string };
         gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
         coreMeaning?: string;
+        advice?: string;
     } | undefined) => {
         if (!f) return null;
         const m = f.measures || {};
@@ -174,15 +182,23 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         <p className="text-gray-700">{f.coreMeaning}</p>
                     </section>
                 )}
+
+                {f.advice && (
+                    <section>
+                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">💡 조언</h5>
+                        <p className="text-gray-700">{f.advice}</p>
+                    </section>
+                )}
             </div>
         );
     };
 
-    /** 눈 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
+    /** 눈 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 + 조언 */
     const renderEyesBlock = (f: {
         measures?: { openL?: string; openR?: string; asymmetry?: string; asymmetryCriteria?: string; interDist?: string; widthRatio?: string; symmetry?: string };
         gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
         coreMeaning?: string;
+        advice?: string;
     } | undefined) => {
         if (!f) return null;
         const m = f.measures || {};
@@ -218,15 +234,23 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         <p className="text-gray-700">{f.coreMeaning}</p>
                     </section>
                 )}
+
+                {f.advice && (
+                    <section>
+                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">💡 조언</h5>
+                        <p className="text-gray-700">{f.advice}</p>
+                    </section>
+                )}
             </div>
         );
     };
 
-    /** 코 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
+    /** 코 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 + 조언 */
     const renderNoseBlock = (f: {
         measures?: { length?: string; lengthRatio?: string; width?: string; lengthCriteria?: string };
         gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
         coreMeaning?: string;
+        advice?: string;
     } | undefined) => {
         if (!f) return null;
         const m = f.measures || {};
@@ -255,15 +279,23 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         <p className="text-gray-700">{f.coreMeaning}</p>
                     </section>
                 )}
+
+                {f.advice && (
+                    <section>
+                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">💡 조언</h5>
+                        <p className="text-gray-700">{f.advice}</p>
+                    </section>
+                )}
             </div>
         );
     };
 
-    /** 입 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
+    /** 입 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 + 조언 */
     const renderMouthBlock = (f: {
         measures?: { width?: string; lipThickness?: string; cornerSlope?: string; cornerCriteria?: string };
         gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
         coreMeaning?: string;
+        advice?: string;
     } | undefined) => {
         if (!f) return null;
         const m = f.measures || {};
@@ -292,15 +324,23 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         <p className="text-gray-700">{f.coreMeaning}</p>
                     </section>
                 )}
+
+                {f.advice && (
+                    <section>
+                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">💡 조언</h5>
+                        <p className="text-gray-700">{f.advice}</p>
+                    </section>
+                )}
             </div>
         );
     };
 
-    /** 턱 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
+    /** 턱 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 + 조언 */
     const renderChinBlock = (f: {
         measures?: { length?: string; width?: string; angle?: string; angleCriteria?: string };
         gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
         coreMeaning?: string;
+        advice?: string;
     } | undefined) => {
         if (!f) return null;
         const m = f.measures || {};
@@ -329,15 +369,23 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         <p className="text-gray-700">{f.coreMeaning}</p>
                     </section>
                 )}
+
+                {f.advice && (
+                    <section>
+                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">💡 조언</h5>
+                        <p className="text-gray-700">{f.advice}</p>
+                    </section>
+                )}
             </div>
         );
     };
 
-    /** 공통·얼굴형: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
+    /** 공통·얼굴형: 측정 데이터 + 게이지(기준값만) + 핵심의미 + 조언 */
     const renderCommonAndFaceShape = (_common: any, faceShape: any) => {
         const fs = faceShape || {};
         const gauge = fs.gauge ? { rangeMin: 0, rangeMax: 8, ...fs.gauge } : null;
         const coreMeaning = fs.coreMeaning || fs.summary;
+        const advice = fs.advice;
         const hasMeasures = fs.measures?.w != null || fs.measures?.h != null || fs.measures?.wh != null;
 
         return (
@@ -361,6 +409,13 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                     <section>
                         <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 얼굴형이 말해주는 핵심 의미</h5>
                         <p className="text-gray-700">{coreMeaning}</p>
+                    </section>
+                )}
+
+                {advice && (
+                    <section>
+                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">💡 조언</h5>
+                        <p className="text-gray-700">{advice}</p>
                     </section>
                 )}
             </div>
@@ -388,26 +443,26 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
 
                     <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 space-y-5 max-h-[50vh]">
                         {/* 1. 부위 간의 조화 및 균형 해석 */}
-                        {totalReview?.harmony && (
+                        {(totalReview?.harmony || DEFAULT_TOTAL_REVIEW.harmony) && (
                             <section>
                                 <h4 className="text-gray-800 font-bold text-base mb-2">1. 부위 간의 조화 및 균형 해석</h4>
-                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview.harmony}</p>
+                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview?.harmony || DEFAULT_TOTAL_REVIEW.harmony}</p>
                             </section>
                         )}
 
                         {/* 2. 종합 운세 해석 */}
-                        {totalReview?.comprehensive && (
+                        {(totalReview?.comprehensive || DEFAULT_TOTAL_REVIEW.comprehensive) && (
                             <section>
                                 <h4 className="text-gray-800 font-bold text-base mb-2">2. 종합 운세 해석</h4>
-                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview.comprehensive}</p>
+                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview?.comprehensive || DEFAULT_TOTAL_REVIEW.comprehensive}</p>
                             </section>
                         )}
 
                         {/* 3. 운을 좋게 만드는 방법 제안 */}
-                        {totalReview?.improvement && (
+                        {(totalReview?.improvement || DEFAULT_TOTAL_REVIEW.improvement) && (
                             <section>
                                 <h4 className="text-gray-800 font-bold text-base mb-2">3. 운을 좋게 만드는 방법 제안</h4>
-                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview.improvement}</p>
+                                <p className="text-gray-700 text-base leading-[1.75] whitespace-pre-line">{totalReview?.improvement || DEFAULT_TOTAL_REVIEW.improvement}</p>
                             </section>
                         )}
                     </div>
@@ -606,16 +661,16 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                                 </div>
                                 <div className="detail-card-content flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 text-base leading-relaxed [&_>div]:text-base [&_h4]:text-base [&_h4]:font-bold [&_h4]:border-b [&_h4]:border-brand-green/20 [&_h4]:pb-1.5 [&_h4]:mt-4 [&_h4]:first:mt-0 [&_h5]:text-base [&_h5]:font-bold [&_h5]:mt-3 [&_h5]:mb-1.5 [&_p]:leading-[1.7] [&_p]:text-base [&_ul]:space-y-1 [&_ul]:pl-4 [&_li]:text-gray-700">
                                     {activeFeature === "commonAndFaceShape" && renderCommonAndFaceShape(features.common, features.faceShape)}
-                                    {activeFeature === "forehead" && features.forehead && (features.forehead as any).oneLineSummary && renderForeheadBlock(features.forehead)}
-                                    {activeFeature === "forehead" && features.forehead && !(features.forehead as any).oneLineSummary && renderBlock(features.forehead)}
-                                    {activeFeature === "eyes" && features.eyes && (features.eyes as any).oneLineSummary && renderEyesBlock(features.eyes)}
-                                    {activeFeature === "eyes" && features.eyes && !(features.eyes as any).oneLineSummary && renderBlock(features.eyes)}
-                                    {activeFeature === "nose" && features.nose && (features.nose as any).oneLineSummary && renderNoseBlock(features.nose)}
-                                    {activeFeature === "nose" && features.nose && !(features.nose as any).oneLineSummary && renderBlock(features.nose)}
-                                    {activeFeature === "mouth" && features.mouth && (features.mouth as any).oneLineSummary && renderMouthBlock(features.mouth)}
-                                    {activeFeature === "mouth" && features.mouth && !(features.mouth as any).oneLineSummary && renderBlock(features.mouth)}
-                                    {activeFeature === "chin" && features.chin && (features.chin as any).oneLineSummary && renderChinBlock(features.chin)}
-                                    {activeFeature === "chin" && features.chin && !(features.chin as any).oneLineSummary && renderBlock(features.chin)}
+                                    {activeFeature === "forehead" && features.forehead && (features.forehead as any).coreMeaning && renderForeheadBlock(features.forehead)}
+                                    {activeFeature === "forehead" && features.forehead && !(features.forehead as any).coreMeaning && renderBlock(features.forehead)}
+                                    {activeFeature === "eyes" && features.eyes && (features.eyes as any).coreMeaning && renderEyesBlock(features.eyes)}
+                                    {activeFeature === "eyes" && features.eyes && !(features.eyes as any).coreMeaning && renderBlock(features.eyes)}
+                                    {activeFeature === "nose" && features.nose && (features.nose as any).coreMeaning && renderNoseBlock(features.nose)}
+                                    {activeFeature === "nose" && features.nose && !(features.nose as any).coreMeaning && renderBlock(features.nose)}
+                                    {activeFeature === "mouth" && features.mouth && (features.mouth as any).coreMeaning && renderMouthBlock(features.mouth)}
+                                    {activeFeature === "mouth" && features.mouth && !(features.mouth as any).coreMeaning && renderBlock(features.mouth)}
+                                    {activeFeature === "chin" && features.chin && (features.chin as any).coreMeaning && renderChinBlock(features.chin)}
+                                    {activeFeature === "chin" && features.chin && !(features.chin as any).coreMeaning && renderBlock(features.chin)}
                                 </div>
                             </GlassCard>
                         </motion.div>

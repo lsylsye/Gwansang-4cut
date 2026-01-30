@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import "../styles/fonts.css";
 import "../styles/theme.css";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
@@ -31,6 +31,11 @@ import {
   isPhotoBoothPath,
   isAnalyzingPath,
 } from "@/shared/config/routes";
+import { 
+  analyzeFace, 
+  FaceAnalysisApiResponse,
+  TotalReview 
+} from "@/shared/api/faceAnalysisApi";
 
 export default function App() {
   const navigate = useNavigate();
@@ -48,6 +53,13 @@ export default function App() {
   const [analysisDone, setAnalysisDone] = useState(false);
   const [frameImageState, setFrameImageState] = useState<string | null>(null);
   const [fromPhotoBoothState, setFromPhotoBoothState] = useState(false);
+  
+  // API 응답 상태 관리
+  const [faceAnalysisResult, setFaceAnalysisResult] = useState<FaceAnalysisApiResponse | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  // faceMeshMetadata를 App에서 관리
+  const [faceMeshMetadata, setFaceMeshMetadata] = useState<any>(null);
   const pathnameRef = useRef(location.pathname);
 
   // location.state 변경 감지
@@ -78,40 +90,90 @@ export default function App() {
     navigate(getUploadPath(selectedMode));
   };
 
-  const handleAnalyze = (
+  const handleAnalyze = async (
     capturedImages: string[],
     selectedFeatures: string[],
     sajuData: SajuData,
     members?: GroupMember[],
+    metadata?: any,  // faceMeshMetadata 추가
   ) => {
     setAnalysisDone(false);
+    setAnalysisError(null);
+    setFaceAnalysisResult(null);
     setImages(capturedImages);
     setFeatures(selectedFeatures);
     setSaju(sajuData);
+    if (metadata) {
+      setFaceMeshMetadata(metadata);
+    }
     if (members) {
       setGroupMembers(members);
       setUserTeamName("기운찬 도사님들의 모임");
     }
 
-    // 개인 모드: /analyzing으로 이동 후 ANALYSIS_LOADING_MS 후 /result로 이동
+    // 개인 모드: /analyzing으로 이동 후 API 호출
     if (mode === "personal") {
       navigate(ROUTES.PERSONAL_ANALYZING);
-      setTimeout(() => {
-        console.log("⏰ 분석 완료 - result로 이동합니다", { 
-          currentPath: pathnameRef.current,
-          analysisDone: analysisDone 
-        });
-        setAnalysisDone(true);
-        // 싸피네컷 다 안 찍었는데 분석 끝난 경우: /photo-booth에 있으면 /result로 보내지 않음
-        const currentPath = pathnameRef.current;
-        const isPhotoBooth = isPhotoBoothPath(currentPath);
-        if (!isPhotoBooth) {
-          console.log("✅ /personal/result로 이동");
-          navigate(ROUTES.PERSONAL_RESULT);
+      setIsAnalyzing(true);
+      
+      try {
+        // faceMeshMetadata가 있으면 API 호출
+        console.log("📋 받은 metadata:", metadata);
+        console.log("📋 faces 배열:", metadata?.faces);
+        console.log("📋 첫 번째 얼굴 landmarks 수:", metadata?.faces?.[0]?.landmarks?.length);
+        
+        if (metadata?.faces && metadata.faces.length > 0) {
+          console.log("🚀 관상 분석 API 호출 시작...");
+          
+          const requestData = {
+            timestamp: new Date().toISOString(),
+            faces: metadata.faces,
+            sajuData: {
+              gender: sajuData.gender as 'male' | 'female',
+              calendarType: sajuData.calendarType as 'solar' | 'lunar',
+              birthDate: sajuData.birthDate,
+              birthTime: sajuData.birthTime,
+              birthTimeUnknown: sajuData.birthTimeUnknown,
+            },
+          };
+          
+          console.log("📤 API 요청 데이터:", JSON.stringify(requestData, null, 2).substring(0, 500));
+          
+          const result = await analyzeFace(requestData);
+          
+          if (result.error) {
+            console.error("❌ API 오류:", result.error);
+            setAnalysisError(result.error);
+            setIsAnalyzing(false);
+            // 에러 시 result 페이지로 이동하지 않음
+            return;
+          }
+          
+          console.log("✅ 관상 분석 완료:", result);
+          setFaceAnalysisResult(result);
+          setAnalysisDone(true);
+          setIsAnalyzing(false);
+          
+          // 분석 완료 후 result 페이지로 이동
+          const currentPath = pathnameRef.current;
+          const isPhotoBooth = isPhotoBoothPath(currentPath);
+          if (!isPhotoBooth) {
+            console.log("✅ /personal/result로 이동");
+            navigate(ROUTES.PERSONAL_RESULT);
+          } else {
+            console.log("⚠️ photo-booth에 있어서 자동 이동하지 않음:", currentPath);
+          }
         } else {
-          console.log("⚠️ photo-booth에 있어서 자동 이동하지 않음:", currentPath);
+          // metadata가 없으면 에러 처리
+          console.error("❌ 랜드마크 데이터가 없습니다.");
+          setAnalysisError("얼굴 분석 데이터가 없습니다. 다시 촬영해주세요.");
+          setIsAnalyzing(false);
         }
-      }, ANALYSIS_LOADING_MS);
+      } catch (error) {
+        console.error("❌ 분석 중 오류:", error);
+        setAnalysisError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
+        setIsAnalyzing(false);
+      }
     }
 
     // ----- [개발용] 단체 모드: /analyzing 생략, 바로 /result. DEV_SKIP_ANALYZING_FOR_GROUP=false 시 아래 원래 흐름 사용 -----
@@ -258,6 +320,14 @@ export default function App() {
                   onNavigateToPhotoBooth={() =>
                     navigate(getPhotoBoothPath(mode), { state: { from: "analyzing" } })
                   }
+                  isAnalyzing={isAnalyzing}
+                  analysisError={analysisError}
+                  analysisComplete={analysisDone}
+                  onRetry={() => {
+                    // 재시도: upload 페이지로 돌아가기
+                    setAnalysisError(null);
+                    navigate(getUploadPath(mode));
+                  }}
                 />
               </motion.div>
             )}
@@ -280,6 +350,9 @@ export default function App() {
                     }
                     frameImage={frameImageState || location.state?.frameImage}
                     fromPhotoBooth={fromPhotoBoothState || location.state?.fromPhotoBooth}
+                    faceAnalysisResult={faceAnalysisResult?.stage1}
+                    totalReview={faceAnalysisResult?.totalReview}
+                    isLoading={isAnalyzing}
                   />
                 ) : (
                   <GroupAnalysisSection
