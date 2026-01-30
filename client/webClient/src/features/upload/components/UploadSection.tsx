@@ -6,6 +6,7 @@ import React, {
 } from "react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
+import { FixedBottomButton } from "@/shared/ui/core/FixedBottomButton";
 import {
   RefreshCcw,
   Camera,
@@ -720,19 +721,17 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             </GlassCard>
           </div>
 
-          <div className="mt-8 flex justify-center">
-            <ActionButton
-              variant="primary"
-              onClick={handleNextStep}
-              disabled={!sajuData.birthDate}
-              className={`px-12 py-5 text-lg font-bold flex items-center gap-2 transition-all duration-300 ${
-                !sajuData.birthDate ? "opacity-50 grayscale cursor-not-allowed" : "animate-bounce-subtle"
-              }`}
-            >
-              <Sparkles size={20} />
-              거북 도사님께 풀이 받기
-            </ActionButton>
-          </div>
+          <FixedBottomButton
+            variant="primary"
+            onClick={handleNextStep}
+            disabled={!sajuData.birthDate}
+            className={`flex items-center gap-2 ${
+              !sajuData.birthDate ? "opacity-50 grayscale cursor-not-allowed" : ""
+            }`}
+          >
+            <Sparkles size={20} />
+            거북 도사님께 풀이 받기
+          </FixedBottomButton>
         </motion.div>
       </div>
     );
@@ -741,8 +740,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   // --- Segmenting Animation Overlay (모임 관상 단체 사진 MediaPipe 분석 중) ---
   if (isSegmenting) {
     return (
-      <div className="flex flex-col items-center justify-center w-full min-h-[50vh]">
-        <div className="relative w-48 h-48 mb-8">
+      <div className="flex flex-col items-center justify-center w-full min-h-[50vh] px-4">
+        <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 mb-6 sm:mb-8">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{
@@ -750,19 +749,19 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               repeat: Infinity,
               ease: "linear",
             }}
-            className="absolute inset-0 border-4 border-dashed border-brand-orange rounded-full"
+            className="absolute inset-0 border-3 sm:border-4 border-dashed border-brand-orange rounded-full"
           />
-          <div className="absolute inset-4 bg-white/40 backdrop-blur-md rounded-full flex items-center justify-center shadow-clay-sm">
+          <div className="absolute inset-3 sm:inset-4 bg-white/40 backdrop-blur-md rounded-full flex items-center justify-center shadow-clay-sm">
             <Users
-              size={48}
-              className="text-brand-orange animate-pulse"
+              size={32}
+              className="sm:w-10 sm:h-10 md:w-12 md:h-12 text-brand-orange animate-pulse"
             />
           </div>
         </div>
-        <h2 className="text-2xl font-bold text-gray-800 font-display">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 font-display text-center px-2">
           인원 분석 및 세그멘테이션 중...
         </h2>
-        <p className="text-gray-500 mt-2">
+        <p className="text-gray-500 mt-1.5 sm:mt-2 text-sm sm:text-base text-center px-2">
           각 멤버의 얼굴을 개별적으로 추출하고 있습니다.
         </p>
       </div>
@@ -804,16 +803,16 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           animate={{ opacity: 1, y: 0 }}
           className="w-full"
         >
-          <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3 font-display">
+          <div className="text-center mb-6 sm:mb-8 md:mb-10">
+            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 font-display">
               멤버별 사진 등록
             </h2>
-            <p className="text-lg text-gray-600 font-sans">
+            <p className="text-sm sm:text-base md:text-lg text-gray-600 font-sans px-2">
               각 멤버의 얼굴 사진을 업로드해주세요.
             </p>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-4 mb-8">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8">
             {groupMembers.map((member, index) => (
               <motion.div
                 key={member.id}
@@ -821,24 +820,24 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.1 }}
                 layout
-                className="w-[48%] sm:w-[23%] min-w-[140px]"
+                className="w-[45%] sm:w-[23%] min-w-[100px] sm:min-w-[140px]"
               >
-                <GlassCard className="p-4 sm:p-6 flex flex-col items-center gap-4 sm:gap-6 hover:border-teal-200 transition-all w-full h-full relative group/card">
+                <GlassCard className="p-2 sm:p-4 md:p-6 flex flex-col items-center gap-2 sm:gap-4 md:gap-6 hover:border-teal-200 transition-all w-full h-full relative group/card">
                   {groupMembers.length > 2 && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         removeGroupMember(member.id);
                       }}
-                      className="absolute top-2 right-2 text-gray-300 hover:text-red-500 transition-colors p-1.5 hover:bg-red-50 rounded-full opacity-0 group-hover/card:opacity-100"
+                      className="absolute top-1 right-1 sm:top-2 sm:right-2 text-gray-300 hover:text-red-500 transition-colors p-1 sm:p-1.5 hover:bg-red-50 rounded-full opacity-0 group-hover/card:opacity-100"
                       title="멤버 삭제"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={14} className="sm:w-4 sm:h-4" />
                     </button>
                   )}
                   <div className="relative">
                     <div
-                      className={`w-40 h-40 rounded-3xl overflow-hidden shadow-clay-md border-4 border-white bg-gray-50 transition-all flex items-center justify-center ${member.avatar
+                      className={`w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-xl sm:rounded-2xl md:rounded-3xl overflow-hidden shadow-none sm:shadow-clay-md border-2 sm:border-3 md:border-4 border-white bg-gray-50 transition-all flex items-center justify-center ${member.avatar
                         ? ""
                         : "cursor-pointer hover:bg-gray-100"
                         }`}
@@ -858,18 +857,18 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="flex flex-col items-center justify-center text-gray-300 gap-3">
-                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                            <Camera size={32} />
+                        <div className="flex flex-col items-center justify-center text-gray-300 gap-1.5 sm:gap-2 md:gap-3">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                            <Camera size={20} className="sm:w-6 sm:h-6 md:w-8 md:h-8" />
                           </div>
-                          <span className="text-sm font-bold text-center text-gray-400">
+                          <span className="text-[10px] sm:text-xs md:text-sm font-bold text-center text-gray-400">
                             사진 업로드
                           </span>
                         </div>
                       )}
                     </div>
                     {memberAvatarErrorId === member.id && (
-                      <p className="mt-2 text-xs text-red-500 font-medium text-center">
+                      <p className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-red-500 font-medium text-center">
                         얼굴을 인식하지 못했습니다.
                       </p>
                     )}
@@ -883,17 +882,17 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       }
                     />
                     {member.avatar && (
-                      <div className="absolute -top-2 -right-2 w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+                      <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-teal-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
                         <CheckCircle2
-                          size={16}
-                          className="text-white"
+                          size={12}
+                          className="sm:w-4 sm:h-4 text-white"
                         />
                       </div>
                     )}
                   </div>
 
                   <div className="text-center">
-                    <div className="bg-teal-50 px-4 py-2 rounded-full text-sm font-bold text-teal-700">
+                    <div className="bg-teal-50 px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 md:py-2 rounded-full text-[10px] sm:text-xs md:text-sm font-bold text-teal-700">
                       멤버 {index + 1}
                     </div>
                   </div>
@@ -926,7 +925,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                 setCurrentStep(3);
               }}
               disabled={!allPhotosUploaded}
-              className={`w-full py-6 transition-all duration-300 text-base ${!allPhotosUploaded
+              className={`mo-fix w-full py-6 transition-all duration-300 text-base ${!allPhotosUploaded
                 ? "opacity-50 grayscale cursor-not-allowed"
                 : ""
                 }`}
@@ -1514,14 +1513,14 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
   // --- Camera View ---
   return (
-    <div className="flex flex-col items-center justify-center gap-4 w-full max-w-4xl mx-auto pb-12 px-4">
+    <div className="flex flex-col items-center justify-center gap-4 w-full max-w-4xl mx-auto pb-0 sm:pb-12 px-0 sm:px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full"
+        className="w-full mobile-full-width"
       >
         <div className="w-full">
-          <div className="w-full p-5 sm:p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-clay-md border-4 border-white relative">
+          <div className="w-full p-3 sm:p-5 md:p-6 bg-white rounded-xl sm:rounded-2xl shadow-none sm:shadow-clay-md border-2 sm:border-4 border-white relative">
             {/* Decorative background element */}
             <div className="absolute top-0 right-0 w-24 h-24 bg-brand-orange-muted rounded-full -mr-12 -mt-12 opacity-50 blur-2xl"></div>
 
@@ -1790,16 +1789,16 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               </AnimatePresence>
             </div>
           </div>
-          <ActionButton
+          <FixedBottomButton
             variant="orange-primary"
             onClick={handleGroupAnalyze}
             disabled={!isReady}
-            className={`w-full py-5 mt-4 transition-all duration-300 text-sm sm:text-base ${!isReady ? "opacity-50 grayscale cursor-not-allowed" : "animate-bounce-subtle"}`}
+            className={`w-full ${!isReady ? "opacity-50 grayscale cursor-not-allowed" : ""}`}
           >
             {isReady
               ? "모임 궁합 분석하기"
               : "모든 멤버의 정보(이름, 사진, 생년월일)를 입력해주세요"}
-          </ActionButton>
+          </FixedBottomButton>
         </div>
       </motion.div>
     </div>

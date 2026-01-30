@@ -183,7 +183,7 @@ export default function App() {
     <Layout>
       <HideTurtleGuideProvider>
       {!isPhotoBooth && (
-        <header className="w-full h-16 px-6 flex justify-between items-center bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40">
+        <header className="w-full h-14 sm:h-16 px-3 sm:px-6 flex justify-between items-center bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40 shadow-sm">
         <div
           className="flex items-center gap-0.5 cursor-pointer"
           onClick={() => navigate(ROUTES.HOME)}
@@ -191,24 +191,25 @@ export default function App() {
           <img
             src={logoImage}
             alt="Logo"
-            className="h-8 object-contain"
+            className="h-6 sm:h-8 object-contain"
           />
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight font-display">
+          <h1 className="text-base sm:text-xl font-bold text-gray-900 tracking-tight font-display">
             관상네컷
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Ranking Button */}
           <button
             onClick={() => {
               setFromAnalysis(false);
               navigate(ROUTES.RANKING);
             }}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white hover:bg-gray-50 transition-all font-bold text-gray-900 text-sm shadow-sm hover:shadow-md border border-gray-200"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white hover:bg-gray-50 transition-all font-bold text-gray-900 text-xs sm:text-sm shadow-sm hover:shadow-md border border-gray-200"
           >
-            <Trophy className="w-4 h-4" />
-            모임 랭킹
+            <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">모임 랭킹</span>
+            <span className="xs:hidden">랭킹</span>
           </button>
         </div>
       </header>
