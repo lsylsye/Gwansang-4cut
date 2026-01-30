@@ -131,20 +131,24 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
       const containerHeight = containerRef.current.offsetHeight;
       const containerOffsetTop = containerRef.current.offsetTop;
       const sidebarHeight = sidebarRef.current.offsetHeight;
-      const topOffset = 186; // 상단 여백
       
-      const endPoint = containerHeight - sidebarHeight - topOffset;
-      let point = topOffset;
+      // 프레임 상단 기준으로 사이드바 배치 (기본값: 프레임 옆)
+      const frameTopOffset = 60; // 프레임 시작 위치 (제목 + 여백)
+      const minTopOffset = 20; // 최소 상단 여백
+      
+      const endPoint = containerHeight - sidebarHeight - minTopOffset;
+      let point = frameTopOffset;
 
       if (scrollTop < containerOffsetTop) {
-        // 컨테이너 시작 전: 상단 고정 (여백 포함)
-        point = topOffset;
-      } else if (scrollTop > containerOffsetTop + endPoint) {
+        // 컨테이너 시작 전: 프레임 옆 위치 유지
+        point = frameTopOffset;
+      } else if (scrollTop - containerOffsetTop > endPoint) {
         // 컨테이너 끝 이후: 하단 고정
         point = endPoint;
       } else {
-        // 컨테이너 내부: 스크롤에 따라 이동
-        point = scrollTop - containerOffsetTop + topOffset;
+        // 컨테이너 내부: 스크롤에 따라 이동하되 프레임 위치 기준
+        const scrollOffset = scrollTop - containerOffsetTop;
+        point = Math.max(minTopOffset, frameTopOffset + scrollOffset);
       }
 
       setSidebarTop(point);
