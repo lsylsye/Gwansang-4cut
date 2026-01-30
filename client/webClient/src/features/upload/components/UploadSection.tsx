@@ -614,11 +614,11 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
                 {/* Birth Time */}
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <Label className="text-sm font-bold text-gray-600">
-                      태어난 시간
-                    </Label>
-                    <label className="flex items-center gap-2 cursor-pointer group">
+                  <Label className="text-sm font-bold text-gray-600">
+                    태어난 시간
+                  </Label>
+                  <div className="relative w-full max-w-[50%]">
+                    <label className="absolute -top-6 right-0 flex items-center gap-2 cursor-pointer group z-10">
                       <Checkbox
                         checked={sajuData.birthTimeUnknown || false}
                         onCheckedChange={(checked) => {
@@ -633,9 +633,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                         모름
                       </span>
                     </label>
-                  </div>
                   {!sajuData.birthTimeUnknown ? (
-                    <div className="grid grid-cols-2 gap-2 w-full max-w-[50%]">
+                    <div className="grid grid-cols-2 gap-2 w-full">
                       <div className="relative min-w-0">
                         <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange pointer-events-none z-10" />
                         <Select
@@ -716,6 +715,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       </div>
                     </div>
                   )}
+                  </div>
                 </div>
               </div>
             </GlassCard>
@@ -1307,46 +1307,47 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           animate={{ opacity: 1, y: 0 }}
           className="w-full"
         >
-          <GlassCard className="p-0 w-full aspect-[4/3] relative overflow-hidden flex items-center justify-center bg-gray-900 shadow-clay-lg rounded-[32px] border-8 border-white">
-            {/* Background Image */}
-            <img
-              src={
-                mode === "personal"
-                  ? capturedImages[currentStep]!
-                  : capturedImages[0]!
-              }
-              alt="Captured Photo"
-              className={`w-full h-full object-cover ${mode === "personal" ? "transform scale-x-[-1]" : ""}`}
-            />
+          <GlassCard className="p-0 w-full flex flex-col overflow-hidden bg-gray-900 shadow-clay-lg rounded-[32px] border-8 border-white">
+            {/* 사진 영역 (aspect 4:3) */}
+            <div className="relative w-full aspect-[4/3] flex-shrink-0 flex items-center justify-center">
+              <img
+                src={
+                  mode === "personal"
+                    ? capturedImages[currentStep]!
+                    : capturedImages[0]!
+                }
+                alt="Captured Photo"
+                className={`w-full h-full object-cover ${mode === "personal" ? "transform scale-x-[-1]" : ""}`}
+              />
 
-            {/* Top Overlay - Title & Description */}
-            <div className="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-black/70 via-black/40 to-transparent text-white text-center pointer-events-none">
-              <div className={`inline-block px-4 py-1.5 ${accentColor} rounded-full text-xs font-bold mb-3 shadow-sm`}>
-                {mode === "personal" ? "촬영 완료" : `${detectedCount > 0 ? detectedCount : "?"}명 감지됨`}
-              </div>
-              <h3 className="text-2xl md:text-3xl font-bold font-display mb-1 drop-shadow-lg">
-                {titleText}
-              </h3>
-              <p className="text-sm opacity-90 drop-shadow-md">
-                촬영된 사진을 확인하세요
-              </p>
-              {mode === "group" && faceDetectionError && (
-                <p className="mt-3 text-sm text-red-200 bg-red-900/60 px-3 py-2 rounded-lg">
-                  {faceDetectionError}
+              {/* Top Overlay - Title & Description */}
+              <div className="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-black/70 via-black/40 to-transparent text-white text-center pointer-events-none">
+                <div className={`inline-block px-4 py-1.5 ${accentColor} rounded-full text-xs font-bold mb-3 shadow-sm`}>
+                  {mode === "personal" ? "촬영 완료" : `${detectedCount > 0 ? detectedCount : "?"}명 감지됨`}
+                </div>
+                <h3 className="text-2xl md:text-3xl font-bold font-display mb-1 drop-shadow-lg">
+                  {titleText}
+                </h3>
+                <p className="text-sm opacity-90 drop-shadow-md">
+                  촬영된 사진을 확인하세요
                 </p>
-              )}
-            </div>
+                {mode === "group" && faceDetectionError && (
+                  <p className="mt-3 text-sm text-red-200 bg-red-900/60 px-3 py-2 rounded-lg">
+                    {faceDetectionError}
+                  </p>
+                )}
+              </div>
 
-            {/* Top Right Controls */}
-            <div className="absolute top-5 right-5 flex gap-2 pointer-events-auto">
-              <button
-                onClick={handleRetake}
-                className={`${mode === "personal" ? "bg-brand-green hover:bg-brand-green/80" : "bg-brand-orange hover:bg-brand-orange/80"} text-white p-2.5 rounded-full backdrop-blur-md transition-colors`}
-                title="다시 찍기"
-              >
-                <RefreshCcw size={20} />
-              </button>
-            </div>
+              {/* Top Right Controls */}
+              <div className="absolute top-5 right-5 flex gap-2 pointer-events-auto">
+                <button
+                  onClick={handleRetake}
+                  className={`${mode === "personal" ? "bg-brand-green hover:bg-brand-green/80" : "bg-brand-orange hover:bg-brand-orange/80"} text-white p-2.5 rounded-full backdrop-blur-md transition-colors`}
+                  title="다시 찍기"
+                >
+                  <RefreshCcw size={20} />
+                </button>
+              </div>
 
             {/* Bottom Center Button: 모임에서 얼굴 인식 실패 시 다음 버튼 숨김 */}
             {!(mode === "group" && faceDetectionError) && (
@@ -1362,6 +1363,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                 </ActionButton>
               </div>
             )}
+            </div>
           </GlassCard>
         </motion.div>
       </div>
@@ -1391,13 +1393,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           {!hasCapturedImage ? (
             <div className="absolute inset-0">
               <FaceMeshWebcam
-                onCapture={(img, metadata) => {
+                onCapture={(image: string, metadata?: unknown) => {
                   setCapturedImages((prev) => {
                     const newImages = [...prev];
                     if (mode === "personal") {
-                      newImages[currentStep] = img;
+                      newImages[currentStep] = image;
                     } else {
-                      newImages[0] = img;
+                      newImages[0] = image;
                     }
                     return newImages;
                   });
@@ -1555,7 +1557,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
             <div className="space-y-4 relative z-10">
               <AnimatePresence>
-                {groupMembers.map((member, index) => (
+                {groupMembers.map((member) => (
                     <motion.div
                       key={member.id}
                       initial={{ opacity: 0, scale: 0.95 }}
@@ -1671,12 +1673,12 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-1 w-full min-w-0">
-                          <div className="flex justify-between items-center min-h-[1.25rem]">
-                            <Label className="text-xs font-bold text-gray-700 ml-1">
-                              태어난 시간
-                            </Label>
-                            <label className="flex items-center gap-2 cursor-pointer group">
+                        <div className="flex flex-col gap-2 w-full min-w-0">
+                          <Label className="text-sm font-bold text-gray-700 ml-1.5">
+                            태어난 시간
+                          </Label>
+                          <div className="relative w-full min-w-0 max-w-[50%]">
+                            <label className="absolute -top-6 right-0 flex items-center gap-2 cursor-pointer group z-10">
                               <Checkbox
                                 checked={member.birthTimeUnknown || false}
                                 onCheckedChange={(checked) => {
@@ -1696,9 +1698,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                               />
                               <span className="text-sm font-medium text-gray-600 group-hover:text-brand-orange transition-colors">모름</span>
                             </label>
-                          </div>
                           {!member.birthTimeUnknown ? (
-                            <div className="grid grid-cols-2 gap-2 w-full min-w-0 max-w-[50%]">
+                            <div className="grid grid-cols-2 gap-2 w-full min-w-0">
                               <div className="relative min-w-0">
                                 <Clock
                                   className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange pointer-events-none z-10"
@@ -1782,6 +1783,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                               </div>
                             </div>
                           )}
+                          </div>
                         </div>
                       </div>
                     </motion.div>
@@ -1793,7 +1795,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             variant="orange-primary"
             onClick={handleGroupAnalyze}
             disabled={!isReady}
-            className={`w-full ${!isReady ? "opacity-50 grayscale cursor-not-allowed" : ""}`}
+            className={`block w-1/2 min-w-[200px] mx-auto py-6 mt-6 transition-all duration-300 text-base ${!isReady ? "opacity-50 grayscale cursor-not-allowed" : "animate-bounce-subtle"}`}
           >
             {isReady
               ? "모임 궁합 분석하기"

@@ -94,46 +94,28 @@ export default function App() {
       setUserTeamName("기운찬 도사님들의 모임");
     }
 
-    // 개인 모드: /analyzing으로 이동 후 ANALYSIS_LOADING_MS 후 /result로 이동
-    if (mode === "personal") {
-      navigate(ROUTES.PERSONAL_ANALYZING);
-      setTimeout(() => {
-        console.log("⏰ 분석 완료 - result로 이동합니다", { 
-          currentPath: pathnameRef.current,
-          analysisDone: analysisDone 
-        });
-        setAnalysisDone(true);
-        // 싸피네컷 다 안 찍었는데 분석 끝난 경우: /photo-booth에 있으면 /result로 보내지 않음
-        const currentPath = pathnameRef.current;
-        const isPhotoBooth = isPhotoBoothPath(currentPath);
-        if (!isPhotoBooth) {
-          console.log("✅ /personal/result로 이동");
-          navigate(ROUTES.PERSONAL_RESULT);
-        } else {
-          console.log("⚠️ photo-booth에 있어서 자동 이동하지 않음:", currentPath);
-        }
-      }, ANALYSIS_LOADING_MS);
-    }
-
     // ----- [개발용] 단체 모드: /analyzing 생략, 바로 /result. DEV_SKIP_ANALYZING_FOR_GROUP=false 시 아래 원래 흐름 사용 -----
     if (mode === "group" && DEV_SKIP_ANALYZING_FOR_GROUP) {
-      setTimeout(() => {
-        setAnalysisDone(true);
-        // 싸피네컷 다 안 찍었는데 분석 끝난 경우: /photo-booth에 있으면 /result로 보내지 않음
-        if (isAnalyzingPath(pathnameRef.current)) {
-          navigate(ROUTES.GROUP_RESULT);
-        }
-      }, ANALYSIS_LOADING_MS);
-    } else if (mode === "group") {
-      // 그룹 모드 (DEV_SKIP_ANALYZING_FOR_GROUP=false): /analyzing으로 이동 후 ANALYSIS_LOADING_MS 후 /result로 이동
-      navigate(ROUTES.GROUP_ANALYZING);
-      setTimeout(() => {
-        setAnalysisDone(true);
-        if (isAnalyzingPath(pathnameRef.current)) {
-          navigate(ROUTES.GROUP_RESULT);
-        }
-      }, ANALYSIS_LOADING_MS);
+      setAnalysisDone(true);
+      navigate(ROUTES.GROUP_RESULT);
+      return;
     }
+
+    // ----- 원래 흐름: /analyzing 이동 → ANALYSIS_LOADING_MS 후 /result -----
+    navigate(mode === "personal" ? ROUTES.PERSONAL_ANALYZING : ROUTES.GROUP_ANALYZING);
+    setTimeout(() => {
+      setAnalysisDone(true);
+      const currentPath = pathnameRef.current;
+      if (mode === "personal") {
+        if (!isPhotoBoothPath(currentPath)) {
+          navigate(ROUTES.PERSONAL_RESULT);
+        }
+      } else {
+        if (isAnalyzingPath(currentPath)) {
+          navigate(ROUTES.GROUP_RESULT);
+        }
+      }
+    }, ANALYSIS_LOADING_MS);
   };
 
   const handleViewRanking = (score?: number, name?: string) => {
@@ -264,16 +246,23 @@ export default function App() {
               </motion.div>
             )}
 
-            {pathname === ROUTES.PERSONAL_RESULT && (
+            {(pathname === ROUTES.PERSONAL_RESULT || pathname === ROUTES.GROUP_RESULT) && (
               <motion.div
-                key="personal-result"
+                key={pathname === ROUTES.GROUP_RESULT ? "group-result" : "personal-result"}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4 }}
                 className="w-full h-full"
               >
-                {mode === "personal" ? (
+                {pathname === ROUTES.GROUP_RESULT ? (
+                  <GroupAnalysisSection
+                    groupMembers={groupMembers}
+                    groupImage={images[0]}
+                    onRestart={handleRestart}
+                    onViewRanking={handleViewRanking}
+                  />
+                ) : (
                   <AnalysisSection
                     images={images}
                     onRestart={handleRestart}
@@ -282,13 +271,6 @@ export default function App() {
                     }
                     frameImage={frameImageState || location.state?.frameImage}
                     fromPhotoBooth={fromPhotoBoothState || location.state?.fromPhotoBooth}
-                  />
-                ) : (
-                  <GroupAnalysisSection
-                    groupMembers={groupMembers}
-                    groupImage={images[0]}
-                    onRestart={handleRestart}
-                    onViewRanking={handleViewRanking}
                   />
                 )}
               </motion.div>
