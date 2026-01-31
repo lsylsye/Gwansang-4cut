@@ -8,7 +8,6 @@ GMS API 텍스트 생성 서버 (FastAPI 버전)
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 import os
@@ -21,7 +20,7 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
-from gms_api import call_gms_api, call_gms_api_streaming
+from gms_api import call_gms_api
 from saju_prompt_builder import build_saju_system_prompt, build_saju_user_prompt
 from rag_search import (
     load_knowledge_base,
@@ -49,11 +48,8 @@ from saju_summary_service import (
 )
 from face_prompt_builder import (
     summarize_face_analysis_for_search,
-    build_face_analysis_system_prompt,
-    build_face_analysis_user_prompt,
     build_total_review_prompt,
-    parse_face_analysis_response,
-    parse_streaming_total_review
+    parse_total_review
 )
 
 # FastAPI 앱 초기화
@@ -639,139 +635,88 @@ async def analyze_face_api(request: FaceAnalysisRequest):
         
         print(f"✅ 관상 분석 완료 - 품질: {meta.get('qualityNote', 'N/A')}")
         
-        # 2. 사주 계산
+        # 2. 사주 계산 (필수)
         saju_data = request.sajuData
-        saju_info = None
-        myeongri = None
-        
-        if saju_data and saju_data.birthDate:
-            try:
-                print(f"🔮 사주 계산 시작...")
-                print(f"   성별: {saju_data.gender}")
-                print(f"   생년월일: {saju_data.birthDate}")
-                print(f"   시간: {saju_data.birthTime or '미상'}")
-                
-                birth_info = parse_birth_info(saju_data.dict())
-                saju = calculate_saju(birth_info)
-                print(f"   사주: {saju['yearPillar']} {saju['monthPillar']} {saju['dayPillar']} {saju['hourPillar']}")
-                
-                myeongri = calculate_myeongri(saju)
-                
-                saju_info = {
-                    "yearPillar": saju['yearPillar'],
-                    "monthPillar": saju['monthPillar'],
-                    "dayPillar": saju['dayPillar'],
-                    "hourPillar": saju['hourPillar'],
-                    "yearStem": saju['yearStem'],
-                    "yearBranch": saju['yearBranch'],
-                    "monthStem": saju['monthStem'],
-                    "monthBranch": saju['monthBranch'],
-                    "dayStem": saju['dayStem'],
-                    "dayBranch": saju['dayBranch'],
-                    "hourStem": saju['hourStem'],
-                    "hourBranch": saju['hourBranch'],
-                    "solarTerm": saju['solarTerm'],
-                    "fiveElements": myeongri['fiveElements']
-                }
-                
-                print("✅ 사주 계산 완료")
-                
-            except Exception as e:
-                print(f"⚠️ 사주 계산 중 오류: {e}")
-                import traceback
-                traceback.print_exc()
-        else:
-            print("⚠️ sajuData가 없거나 birthDate가 없어 사주 계산을 건너뜁니다.")
-        
-        # 3. RAG 검색 + LLM으로 관상 해석 생성
-        total_review = None
+        if not saju_data or not saju_data.birthDate:
+            raise HTTPException(status_code=400, detail="sajuData와 birthDate는 필수입니다.")
         
         try:
+            print(f"🔮 사주 계산 시작...")
+            birth_info = parse_birth_info(saju_data.dict())
+            saju = calculate_saju(birth_info)
+            myeongri = calculate_myeongri(saju)
+            saju_info = {
+                "yearPillar": saju['yearPillar'],
+                "monthPillar": saju['monthPillar'],
+                "dayPillar": saju['dayPillar'],
+                "hourPillar": saju['hourPillar'],
+                "yearStem": saju['yearStem'],
+                "yearBranch": saju['yearBranch'],
+                "monthStem": saju['monthStem'],
+                "monthBranch": saju['monthBranch'],
+                "dayStem": saju['dayStem'],
+                "dayBranch": saju['dayBranch'],
+                "hourStem": saju['hourStem'],
+                "hourBranch": saju['hourBranch'],
+                "solarTerm": saju['solarTerm'],
+                "fiveElements": myeongri['fiveElements']
+            }
+            print(f"   사주: {saju['yearPillar']} {saju['monthPillar']} {saju['dayPillar']} {saju['hourPillar']}")
+            print("✅ 사주 계산 완료")
+        except Exception as e:
+            print(f"⚠️ 사주 계산 중 오류: {e}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=400, detail=f"사주 계산 오류: {str(e)}")
+        
+        # 3. RAG 검색 + LLM 1회 호출 (관상 3키 + 전체적인 체질 특성 = 4키)
+        total_review = None
+        try:
             print("🔍 RAG 검색 시작...")
-            
             search_query = summarize_face_analysis_for_search(analysis_result)
-            print(f"   검색 쿼리: {search_query[:60]}...")
-            
             use_redis = should_use_redis()
             rag_context = ""
-            
             if use_redis:
                 try:
                     relevant_chunks = search_by_vector(search_query, topK=8)
                     rag_context = format_search_context(relevant_chunks)
-                    print(f"✅ Redis 벡터 검색 완료: {len(relevant_chunks)}개 문서")
                 except Exception as e:
-                    print(f"⚠️ Redis 검색 실패, 파일 기반 검색으로 전환: {e}")
                     chunks = get_knowledge_chunks()
                     if chunks:
                         relevant_chunks = search_chunks(chunks, search_query, topK=8)
                         rag_context = format_context(relevant_chunks)
-                        print(f"✅ 파일 검색 완료: {len(relevant_chunks)}개 문서")
             else:
                 chunks = get_knowledge_chunks()
                 if chunks:
                     relevant_chunks = search_chunks(chunks, search_query, topK=8)
                     rag_context = format_context(relevant_chunks)
-                    print(f"✅ 파일 검색 완료: {len(relevant_chunks)}개 문서")
             
-            # LLM 프롬프트 생성
-            print("📝 LLM 프롬프트 생성 중...")
-            system_prompt = build_face_analysis_system_prompt(rag_context, saju_info)
-            user_prompt = build_face_analysis_user_prompt(analysis_result, meta)
-            
-            # LLM 호출
-            print("🤖 LLM 호출 중...")
+            # LLM 1회 호출: [조화][종합][조언][전체적인 체질 특성] 한 번에 생성
+            print("📝 LLM 프롬프트 생성 중 (관상+사주 4키)...")
+            system_prompt, user_prompt = build_total_review_prompt(analysis_result, saju_info, rag_context)
+            print("🤖 LLM 호출 중 (1회)...")
             llm_result = call_gms_api(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 model=request.model,
                 timeout=request.timeout
             )
+            total_review = parse_total_review(llm_result)
+            total_review.setdefault("total_user_saju_information", total_review.get("전체적인 체질 특성", ""))
+            total_review.setdefault("전체적인 체질 특성", "")
             
-            # LLM 응답 파싱
-            print("📄 LLM 응답 파싱 중...")
-            parsed_result = parse_face_analysis_response(llm_result)
-            
-            # 각 부위별 summary 업데이트
-            part_summaries = parsed_result.get("partSummaries", {})
-            for part_name, summary in part_summaries.items():
-                if part_name in analysis_result and summary:
-                    analysis_result[part_name]["summary"] = summary
-            
-            # LLM summary가 없는 부위는 coreMeaning + advice로 대체
-            for part_name in ["faceShape", "forehead", "eyes", "nose", "mouth", "chin"]:
-                if part_name in analysis_result and "summary" not in analysis_result[part_name]:
-                    core = analysis_result[part_name].get("coreMeaning", "")
-                    advice = analysis_result[part_name].get("advice", "")
-                    if core:
-                        analysis_result[part_name]["summary"] = f"{core} {advice}".strip()
-            
-            # totalReview 추출
-            total_review = parsed_result.get("totalReview", {})
-            if not total_review or not total_review.get("comprehensive"):
-                total_review = {
-                    "harmony": "관상 분석 결과를 바탕으로 전체적인 조화를 분석합니다.",
-                    "comprehensive": "종합적인 성격과 운세를 분석합니다.",
-                    "improvement": "더 나은 삶을 위한 조언을 제공합니다."
-                }
-            
-            print("✅ LLM 기반 관상 해석 생성 완료")
-            
+            print("✅ LLM 기반 관상+체질 해석 생성 완료 (4키)")
         except Exception as e:
-            print(f"⚠️ RAG+LLM 처리 중 오류 (Rule-based 결과는 유지): {e}")
+            print(f"⚠️ RAG+LLM 처리 중 오류: {e}")
             import traceback
             traceback.print_exc()
             total_review = {
                 "harmony": "관상 분석 결과를 바탕으로 전체적인 조화를 분석합니다.",
                 "comprehensive": "종합적인 성격과 운세를 분석합니다.",
-                "improvement": "더 나은 삶을 위한 조언을 제공합니다."
+                "improvement": "더 나은 삶을 위한 조언을 제공합니다.",
+                "total_user_saju_information": "",
+                "전체적인 체질 특성": "",
             }
-            for part_name in ["faceShape", "forehead", "eyes", "nose", "mouth", "chin"]:
-                if part_name in analysis_result and "summary" not in analysis_result[part_name]:
-                    core = analysis_result[part_name].get("coreMeaning", "")
-                    advice = analysis_result[part_name].get("advice", "")
-                    if core:
-                        analysis_result[part_name]["summary"] = f"{core} {advice}".strip()
         
         # 4. 통합 응답 반환
         response = {
@@ -783,14 +728,10 @@ async def analyze_face_api(request: FaceAnalysisRequest):
                 "headRoll": meta.get("headRoll", 0),
                 "qualityNote": meta.get("qualityNote", ""),
                 "overallSymmetry": meta.get("symmetry", 0)
-            }
+            },
+            "totalReview": total_review,
+            "sajuInfo": saju_info,
         }
-        
-        if total_review:
-            response["totalReview"] = total_review
-        if saju_info:
-            response["sajuInfo"] = saju_info
-        
         return response
         
     except HTTPException:
@@ -800,220 +741,6 @@ async def analyze_face_api(request: FaceAnalysisRequest):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"관상 분석 오류: {str(e)}")
-
-
-@app.post("/test-api/facemesh/personal/stream")
-async def analyze_face_streaming(request: FaceAnalysisRequest):
-    """관상 분석 + 사주 총평 2단계 스트리밍 API (SSE)"""
-    
-    async def generate_sse_response():
-        """SSE 스트리밍 응답 생성기"""
-        try:
-            # 1단계: Rule-based 분석 (즉시 전송)
-            faces = request.faces
-            if not faces or len(faces) == 0:
-                yield f"data: {json.dumps({'error': 'faces 배열이 비어있습니다.'}, ensure_ascii=False)}\n\n"
-                return
-            
-            face = faces[0]
-            landmarks = [{"index": lm.index, "x": lm.x, "y": lm.y, "z": lm.z} for lm in face.landmarks]
-            
-            if not landmarks or len(landmarks) < 100:
-                yield f"data: {json.dumps({'error': 'landmarks 데이터가 부족합니다.'}, ensure_ascii=False)}\n\n"
-                return
-            
-            print(f"🔍 [스트리밍] 1단계: 관상 분석 시작 - landmarks 수: {len(landmarks)}")
-            
-            analysis_result = analyze_face(landmarks)
-            meta = analysis_result.pop("_meta", {})
-            
-            # 사주 계산
-            saju_data = request.sajuData
-            saju_info = None
-            enhanced_saju_data = None
-            
-            if saju_data and saju_data.birthDate:
-                try:
-                    birth_info = parse_birth_info(saju_data.dict())
-                    saju = calculate_saju(birth_info)
-                    myeongri = calculate_myeongri(saju)
-                    
-                    saju_info = {
-                        "yearPillar": saju['yearPillar'],
-                        "monthPillar": saju['monthPillar'],
-                        "dayPillar": saju['dayPillar'],
-                        "hourPillar": saju['hourPillar'],
-                        "yearStem": saju['yearStem'],
-                        "yearBranch": saju['yearBranch'],
-                        "monthStem": saju['monthStem'],
-                        "monthBranch": saju['monthBranch'],
-                        "dayStem": saju['dayStem'],
-                        "dayBranch": saju['dayBranch'],
-                        "hourStem": saju['hourStem'],
-                        "hourBranch": saju['hourBranch'],
-                        "solarTerm": saju['solarTerm'],
-                        "fiveElements": myeongri['fiveElements']
-                    }
-                    
-                    enhanced_saju_data = {
-                        **saju_data.dict(),
-                        "yearPillar": saju['yearPillar'],
-                        "monthPillar": saju['monthPillar'],
-                        "dayPillar": saju['dayPillar'],
-                        "hourPillar": saju['hourPillar'],
-                        "dayStem": saju['dayStem'],
-                        "fiveElements": myeongri['fiveElements']
-                    }
-                except Exception as e:
-                    print(f"⚠️ 사주 계산 오류: {e}")
-            
-            # 1단계 데이터 전송
-            stage1_response = {
-                "stage": 1,
-                "type": "analysis",
-                "data": {
-                    "success": True,
-                    "timestamp": request.timestamp or "",
-                    "faceIndex": face.faceIndex,
-                    "faceAnalysis": analysis_result,
-                    "meta": {
-                        "headRoll": meta.get("headRoll", 0),
-                        "qualityNote": meta.get("qualityNote", ""),
-                        "overallSymmetry": meta.get("symmetry", 0)
-                    }
-                }
-            }
-            
-            if saju_info:
-                stage1_response["data"]["sajuInfo"] = saju_info
-            
-            print(f"✅ [스트리밍] 1단계 전송: faceAnalysis + sajuInfo")
-            yield f"data: {json.dumps(stage1_response, ensure_ascii=False)}\n\n"
-            
-            # 2단계: RAG 검색 + LLM 스트리밍
-            try:
-                print(f"🔍 [스트리밍] 2단계: RAG 검색 시작...")
-                
-                search_query = summarize_face_analysis_for_search(analysis_result)
-                
-                use_redis = should_use_redis()
-                rag_context = ""
-                
-                if use_redis:
-                    try:
-                        relevant_chunks = search_by_vector(search_query, topK=8)
-                        rag_context = format_search_context(relevant_chunks)
-                        print(f"   Redis 검색 완료: {len(relevant_chunks)}개 문서")
-                    except Exception as e:
-                        chunks = get_knowledge_chunks()
-                        if chunks:
-                            relevant_chunks = search_chunks(chunks, search_query, topK=8)
-                            rag_context = format_context(relevant_chunks)
-                else:
-                    chunks = get_knowledge_chunks()
-                    if chunks:
-                        relevant_chunks = search_chunks(chunks, search_query, topK=8)
-                        rag_context = format_context(relevant_chunks)
-                
-                # totalReview 생성 프롬프트
-                print(f"🔮 [스트리밍] LLM 호출 시작...")
-                system_prompt, user_prompt = build_total_review_prompt(
-                    analysis_result, 
-                    saju_info, 
-                    rag_context
-                )
-                
-                # LLM 스트리밍 호출
-                full_response = ""
-                current_field = "comprehensive"
-                
-                try:
-                    for chunk in call_gms_api_streaming(
-                        system_prompt=system_prompt,
-                        user_prompt=user_prompt,
-                        model=request.model,
-                        timeout=request.timeout
-                    ):
-                        full_response += chunk
-                        
-                        chunk_response = {
-                            "stage": 2,
-                            "type": "totalReview",
-                            "field": current_field,
-                            "content": chunk
-                        }
-                        yield f"data: {json.dumps(chunk_response, ensure_ascii=False)}\n\n"
-                        
-                        if "[조화]" in full_response and current_field == "comprehensive":
-                            current_field = "harmony"
-                        elif "[종합]" in full_response and current_field == "harmony":
-                            current_field = "comprehensive"
-                        elif "[조언]" in full_response:
-                            current_field = "improvement"
-                
-                except Exception as streaming_error:
-                    print(f"⚠️ 스트리밍 모드 실패, 일반 모드로 재시도: {streaming_error}")
-                    full_response = call_gms_api(
-                        system_prompt=system_prompt,
-                        user_prompt=user_prompt,
-                        model=request.model,
-                        timeout=request.timeout
-                    )
-                    
-                    chunk_response = {
-                        "stage": 2,
-                        "type": "totalReview",
-                        "field": "all",
-                        "content": full_response
-                    }
-                    yield f"data: {json.dumps(chunk_response, ensure_ascii=False)}\n\n"
-                
-                # LLM 응답 파싱
-                print("   [스트리밍] 응답 파싱 중...")
-                total_review = parse_streaming_total_review(full_response)
-                
-                # 완료 이벤트 전송
-                complete_response = {
-                    "stage": 2,
-                    "type": "complete",
-                    "data": {
-                        "totalReview": total_review
-                    }
-                }
-                print(f"✅ [스트리밍] 2단계 완료: totalReview 전송")
-                yield f"data: {json.dumps(complete_response, ensure_ascii=False)}\n\n"
-                
-            except Exception as e:
-                print(f"⚠️ [스트리밍] RAG+LLM 오류: {e}")
-                import traceback
-                traceback.print_exc()
-                
-                error_response = {
-                    "stage": 2,
-                    "type": "error",
-                    "error": f"RAG+LLM 오류: {str(e)}"
-                }
-                yield f"data: {json.dumps(error_response, ensure_ascii=False)}\n\n"
-            
-            # 종료 이벤트
-            yield f"data: {json.dumps({'type': 'done'}, ensure_ascii=False)}\n\n"
-            
-        except Exception as e:
-            print(f"❌ [스트리밍] 전체 오류: {e}")
-            import traceback
-            traceback.print_exc()
-            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
-    
-    return StreamingResponse(
-        generate_sse_response(),
-        media_type='text/event-stream',
-        headers={
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
-            'X-Accel-Buffering': 'no',
-            'Access-Control-Allow-Origin': '*'
-        }
-    )
 
 
 @app.post("/api/group-oheng-combination")

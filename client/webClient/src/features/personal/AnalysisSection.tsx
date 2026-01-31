@@ -531,6 +531,8 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                             onConstitutionPhaseChange={setConstitutionPhase}
                             constitutionSelectedMenuIdx={constitutionSelectedMenuIdx}
                             onConstitutionSelectedMenuIdxChange={setConstitutionSelectedMenuIdx}
+                            sajuInfo={faceAnalysisResult?.sajuInfo}
+                            totalReview={totalReviewData ?? undefined}
                         />
                     )}
 

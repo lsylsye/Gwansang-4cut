@@ -81,14 +81,28 @@ interface FiveElementsDisplayProps {
     counts: OhengCounts;
     /** 제목 (선택) */
     title?: string;
+    /** 체질 요약 문구 (예: "불과 흙이 중심인 체질") — 없으면 counts 기반으로 표시 */
+    headLabel?: string;
     className?: string;
+}
+
+function getDefaultHeadLabel(counts: OhengCounts): string {
+    const entries = (Object.entries(counts) as [keyof OhengCounts, number][]).sort((a, b) => b[1] - a[1]);
+    if (entries.length === 0 || entries[0][1] === 0) return "오행 분포";
+    const top2 = entries.filter(([, v]) => v > 0).slice(0, 2);
+    const labels: Record<keyof OhengCounts, string> = { wood: "목", fire: "화", earth: "토", metal: "금", water: "수" };
+    if (top2.length >= 2 && top2[0][1] === top2[1][1])
+        return `${labels[top2[0][0]]}과 ${labels[top2[1][0]]}이 중심인 체질`;
+    return `${labels[entries[0][0]]}이 중심인 체질`;
 }
 
 export const FiveElementsDisplay: React.FC<FiveElementsDisplayProps> = ({
     counts,
     title = "오행 분포",
+    headLabel,
     className = "",
 }) => {
+    const displayHead = headLabel ?? getDefaultHeadLabel(counts);
     // 각 버튼에 대한 ref 생성
     const buttonRefs = [
         useRef<HTMLDivElement>(null), // 목
@@ -118,7 +132,7 @@ export const FiveElementsDisplay: React.FC<FiveElementsDisplayProps> = ({
                     {/* 오른쪽: 오행 버튼들 (외곽 박스로 감싸기) */}
                     <div className="flex-1 w-full">
                         <div className="bg-white/40">
-                            <p className="text-brand-green font-bold text-base mb-4">불과 흙이 중심인 체질</p>
+                            <p className="text-brand-green font-bold text-base mb-4">{displayHead}</p>
                             <div className="flex flex-wrap gap-3 sm:gap-4">
                                 {OHENG_LABELS.map(({ key, label, colorKey }, index) => {
                                     const count = counts[key];

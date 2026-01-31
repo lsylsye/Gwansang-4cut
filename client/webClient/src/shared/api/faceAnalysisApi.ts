@@ -1,9 +1,6 @@
 /**
  * 관상 분석 API 모듈
- * 
- * 2단계 스트리밍 API를 사용하여:
- * 1단계: Rule-based 분석 결과 즉시 수신 (faceAnalysis, sajuInfo, meta)
- * 2단계: LLM 스트리밍 결과 수신 (totalReview)
+ * 비스트리밍 API: 한 번의 호출로 faceAnalysis, sajuInfo, totalReview(관상 3키 + 전체적인 체질 특성 4키) 수신
  */
 
 // AI 서버 URL (환경 변수 또는 기본값) - Flask 서버 (port 8000)
@@ -144,11 +141,16 @@ export interface SajuInfo {
   fiveElements: Record<string, number>;
 }
 
-/** 총평 (LLM 생성) */
+/** 총평 (LLM 생성) — 관상 3키 + 체질 풀이(같은 LLM 한 번에 생성) */
 export interface TotalReview {
-  harmony?: string;       // 부위 간의 조화 및 균형 해석
-  comprehensive?: string; // 종합 운세 해석
-  improvement?: string;   // 운을 좋게 만드는 방법 제안
+  harmony?: string;       // 부위 간의 조화 및 균형 해석 (관상)
+  comprehensive?: string; // 종합 운세 해석 (관상)
+  improvement?: string;   // 운을 좋게 만드는 방법 제안 (관상)
+  /** 체질 풀이 전체 (사주 있을 때 같은 LLM이 생성) — API 키: total_user_saju_information 또는 "전체적인 체질 특성" */
+  constitutionSummary?: string;
+  total_user_saju_information?: string;
+  /** API에서 한글 키로 내려줄 수 있음 */
+  '전체적인 체질 특성'?: string;
 }
 
 /** 1단계 응답 (Rule-based) */
@@ -161,21 +163,10 @@ export interface Stage1Response {
   sajuInfo?: SajuInfo;
 }
 
-/** 전체 응답 (1단계 + 2단계) */
+/** 전체 응답 */
 export interface FaceAnalysisApiResponse {
   stage1: Stage1Response | null;
   totalReview: TotalReview | null;
-  streamingText: string;
-  error?: string;
-}
-
-/** SSE 이벤트 타입 */
-interface SSEEvent {
-  stage?: number;
-  type?: string;
-  data?: any;
-  field?: string;
-  content?: string;
   error?: string;
 }
 
@@ -184,123 +175,7 @@ interface SSEEvent {
 // ============================================================
 
 /**
- * 관상 분석 API 호출 (2단계 스트리밍)
- * 
- * @param requestData 요청 데이터 (faces, sajuData 포함)
- * @param onStage1 1단계 결과 콜백 (Rule-based 분석 결과)
- * @param onStreamChunk 스트리밍 청크 콜백 (LLM 응답 텍스트)
- * @param onComplete 완료 콜백 (totalReview)
- * @param onError 에러 콜백
- */
-export async function analyzeFaceStreaming(
-  requestData: {
-    timestamp?: string;
-    faces: Array<{
-      faceIndex: number;
-      duration?: number;
-      landmarks: Array<{ index: number; x: number; y: number; z?: number }>;
-    }>;
-    sajuData?: {
-      gender: 'male' | 'female';
-      calendarType: 'solar' | 'lunar';
-      birthDate: string;  // YYYY-MM-DD
-      birthTime?: string; // HH:mm
-      birthTimeUnknown?: boolean;
-    };
-    model?: string;
-    timeout?: number;
-  },
-  onStage1: (data: Stage1Response) => void,
-  onStreamChunk: (text: string, field: string) => void,
-  onComplete: (totalReview: TotalReview) => void,
-  onError: (error: string) => void
-): Promise<void> {
-  try {
-    const response = await fetch(`${AI_SERVER_URL}/test-api/facemesh/personal/stream`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...requestData,
-        timestamp: requestData.timestamp || new Date().toISOString(),
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error('Response body is not readable');
-    }
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      
-      // SSE 이벤트 파싱
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || ''; // 불완전한 마지막 라인 보존
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const dataStr = line.slice(6).trim();
-          if (!dataStr) continue;
-
-          try {
-            const event: SSEEvent = JSON.parse(dataStr);
-
-            // 에러 처리
-            if (event.error) {
-              onError(event.error);
-              continue;
-            }
-
-            // 1단계: Rule-based 분석 결과
-            if (event.stage === 1 && event.type === 'analysis') {
-              console.log('📥 1단계 수신: Rule-based 분석 결과');
-              onStage1(event.data as Stage1Response);
-            }
-            
-            // 2단계: LLM 스트리밍
-            else if (event.stage === 2 && event.type === 'totalReview') {
-              if (event.content) {
-                onStreamChunk(event.content, event.field || 'unknown');
-              }
-            }
-            
-            // 2단계 완료
-            else if (event.stage === 2 && event.type === 'complete') {
-              console.log('📥 2단계 완료: totalReview');
-              onComplete(event.data?.totalReview as TotalReview);
-            }
-            
-            // 전체 완료
-            else if (event.type === 'done') {
-              console.log('✅ 스트리밍 완료');
-            }
-
-          } catch (parseError) {
-            console.warn('SSE 파싱 오류:', parseError, dataStr);
-          }
-        }
-      }
-    }
-  } catch (error) {
-    console.error('❌ 관상 분석 API 오류:', error);
-    onError(error instanceof Error ? error.message : '알 수 없는 오류');
-  }
-}
-
-/**
- * 관상 분석 API 호출 (비스트리밍 - 기존 방식)
+ * 관상 분석 API 호출 (비스트리밍, 한 번의 호출로 4키 totalReview 수신)
  */
 export async function analyzeFace(
   requestData: {
@@ -356,7 +231,6 @@ export async function analyzeFace(
         sajuInfo: data.sajuInfo,
       },
       totalReview: data.totalReview || null,
-      streamingText: '',
     };
 
     console.log('✅ 관상 분석 완료:', result);
@@ -366,7 +240,6 @@ export async function analyzeFace(
     return {
       stage1: null,
       totalReview: null,
-      streamingText: '',
       error: error instanceof Error ? error.message : '알 수 없는 오류',
     };
   }
@@ -402,7 +275,6 @@ export function transformToFaceAnalysisFeatures(
       typeSub: '',
       gauge: faceAnalysis.faceShape.gauge,
       measures: faceAnalysis.faceShape.measures,
-      summary: faceAnalysis.faceShape.coreMeaning,
       oneLineSummary: faceAnalysis.faceShape.advice,
       coreMeaning: faceAnalysis.faceShape.coreMeaning,
       advice: faceAnalysis.faceShape.advice,
