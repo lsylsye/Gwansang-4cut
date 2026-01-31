@@ -684,7 +684,6 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
                             const oheng: OhengCounts = ohengFromApi ?? { wood: 0, fire: 0, earth: 0, metal: 0, water: 0 };
                             const constitutionBlock = totalReview && (
                                 (totalReview as Record<string, string>)["total_user_saju_information"] ??
-                                (totalReview as Record<string, string>)["전체적인 체질 특성"] ??
                                 totalReview.constitutionSummary
                             );
                             const { head } = getOhengHead(oheng);
