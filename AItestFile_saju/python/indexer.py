@@ -111,7 +111,12 @@ def main():
     
     # 스크립트 위치 기준으로 knowledge 폴더 찾기
     script_dir = Path(__file__).parent
-    knowledge_path = script_dir.parent / "knowledge"
+    # Docker 컨테이너 내에서는 /app/knowledge에 복사됨
+    knowledge_path = script_dir / "knowledge"
+    
+    # Docker 컨테이너 외부에서는 상위 디렉토리의 knowledge 폴더 사용
+    if not knowledge_path.exists():
+        knowledge_path = script_dir.parent / "knowledge"
     
     if not knowledge_path.exists():
         print(f"❌ Knowledge 폴더가 없습니다: {knowledge_path}")
