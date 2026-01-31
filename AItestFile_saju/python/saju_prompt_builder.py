@@ -217,12 +217,15 @@ def build_saju_user_prompt(
     is_leap = birth_info.get('isLeapMonth', False) if birth_info else False
     name = birth_info.get('name') if birth_info else None
     
+    # 이름 줄 생성 (f-string 내부 백슬래시 문제 해결)
+    name_line = f"\n- 이름: {name}" if name else ""
+    
     prompt = f"""## 사주 분석 요청
 
 ### 기본 정보
 - 생년월일시: {birth_datetime}
 - 성별: {gender}
-- 달력: {calendar}{' (윤달)' if calendar == '음력' and is_leap else ''}{f"\n- 이름: {name}" if name else ''}
+- 달력: {calendar}{' (윤달)' if calendar == '음력' and is_leap else ''}{name_line}
 
 ### 사주 4주 데이터
 {saju_text}
