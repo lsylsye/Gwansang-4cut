@@ -4,6 +4,7 @@ import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
 import { Utensils, Sparkles, TrendingUp, Download, Upload, X, CheckCircle2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { SajuAnalysisResponse } from "@/shared/api/sajuApi";
 import profileImage from "@/assets/profile.png";
 import selfieImage from "@/assets/selfie.png";
 import turtleImage from "@/assets/turtle.png";
@@ -288,7 +289,7 @@ interface FutureImages {
 
 /** 사주 기반 체질 풀이 블록 — data는 백에서 받아서 교체 가능 */
 function ConstitutionSajuBlock({ data }: { data: ConstitutionSajuData }) {
-    const { oheng, sections, daeunAndFoods } = data;
+    const { head, ilganSummary, oheng, sections, daeunAndFoods } = data;
     return (
         <div className="pt-4">
             <h3 className="text-2xl font-bold text-gray-900 mb-6 font-display text-center">당신의 체질 풀이</h3>
@@ -331,10 +332,10 @@ function ConstitutionSajuBlock({ data }: { data: ConstitutionSajuData }) {
 
 interface StatsAnalysisProps {
     tab: "constitution" | "future";
-    images?: string[];
+    images: string[];
     futureImage?: string | null;
     onFutureImageUpload?: (image: string | null) => void;
-    /** 체질 탭 제어용 (둘 다 넘기면 controlled) */
+    /** 체질 분석 단계 (상위에서 넘기면 탭 전환 후 복귀 시 마지막 뷰 유지) */
     constitutionPhase?: ConstitutionPhase;
     onConstitutionPhaseChange?: (phase: ConstitutionPhase) => void;
     constitutionSelectedMenuIdx?: number | null;
@@ -376,6 +377,7 @@ function getOhengHead(oheng: OhengCounts): { head: string; strongKey: keyof Ohen
 
 export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
     tab,
+    images,
     futureImage = null,
     onFutureImageUpload,
     constitutionPhase: constitutionPhaseProp,
@@ -396,7 +398,7 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
     const selectedMenuIdx = isControlled ? (constitutionSelectedMenuIdxProp ?? null) : internalMenuIdx;
     const setSelectedMenuIdx = isControlled ? onConstitutionSelectedMenuIdxChange! : setInternalMenuIdx;
 
-    const [_selectedCampus, _setSelectedCampus] = useState<Campus>("부울경");
+    const [selectedCampus, setSelectedCampus] = useState<Campus>("부울경");
     const futureFileInputRef = useRef<HTMLInputElement>(null);
 
     // 마운트 시점의 체질 phase (다른 탭 갔다가 복귀 시 마운트면 select/result일 수 있음)
