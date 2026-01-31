@@ -1,5 +1,5 @@
 {
-  "name": "@figma/my-make-file",
+  "name": "gwansang-necut",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -47,6 +47,7 @@
     "cmdk": "1.1.1",
     "date-fns": "3.6.0",
     "embla-carousel-react": "8.6.0",
+    "gsap": "^3.14.2",
     "html2canvas": "^1.4.1",
     "input-otp": "1.4.2",
     "lucide-react": "0.487.0",
@@ -59,6 +60,7 @@
     "react-hook-form": "7.55.0",
     "react-popper": "2.3.0",
     "react-resizable-panels": "2.1.7",
+    "react-router-dom": "^7.1.1",
     "react-responsive-masonry": "2.7.1",
     "react-slick": "0.31.0",
     "react-webcam": "^7.2.0",

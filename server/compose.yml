@@ -1,16 +1,4 @@
-services: # local 작업 용 compose.yml
-  cache-server:
-    container_name: localRedis
-    image: redis
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 5s
-      retries: 10
-    volumes:
-      - redis_data:/data
-
+services: # local 작업 용 compose.yml (스프링에서 사용할 디비)
   db-server:
     container_name: localDB
     image: mysql:8.0
@@ -25,5 +13,4 @@ services: # local 작업 용 compose.yml
       - mysql_data:/var/lib/mysql
 
 volumes:
-  redis_data:
   mysql_data:
