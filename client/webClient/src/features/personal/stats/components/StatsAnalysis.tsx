@@ -9,6 +9,7 @@ import profileImage from "@/assets/profile.png";
 import selfieImage from "@/assets/selfie.png";
 import turtleImage from "@/assets/turtle.png";
 import { FiveElementsDisplay, type OhengCounts } from "./FiveElementsDisplay";
+import type { SajuInfo, TotalReview } from "@/shared/api/faceAnalysisApi";
 
 /** 한 글자씩 채워지는 타이핑 효과. skipToEnd 시 애니 없이 전체 텍스트 즉시 노출 (복귀 시용) */
 function useTypewriter(
@@ -300,7 +301,7 @@ function ConstitutionSajuBlock({ data }: { data: ConstitutionSajuData }) {
                 </div>
 
                 <div className="mb-5">
-                    <FiveElementsDisplay counts={oheng} title="오행 분포" />
+                    <FiveElementsDisplay counts={oheng} title="오행 분포" headLabel={head} />
                 </div>
 
                 <div className="space-y-4 max-h-[45vh] overflow-y-auto custom-scrollbar pr-1">
@@ -339,10 +340,40 @@ interface StatsAnalysisProps {
     onConstitutionPhaseChange?: (phase: ConstitutionPhase) => void;
     constitutionSelectedMenuIdx?: number | null;
     onConstitutionSelectedMenuIdxChange?: (idx: number | null) => void;
+    /** API 오행·체질 풀이 (체질 탭에서 사용) */
+    sajuInfo?: SajuInfo | null;
+    totalReview?: TotalReview | null;
 }
 
 // FastAPI 서버 URL (환경변수 또는 기본값)
 const API_BASE_URL = import.meta.env.VITE_AI_SERVER_URL || "http://localhost:8000";
+
+/** 한글 오행 라벨 */
+const OHENG_LABELS: Record<keyof OhengCounts, string> = { wood: "목(木)", fire: "화(火)", earth: "토(土)", metal: "금(金)", water: "수(水)" };
+
+/** API fiveElements(한글 키) → OhengCounts */
+function fiveElementsToOheng(fe: Record<string, number> | undefined): OhengCounts | undefined {
+    if (!fe || typeof fe !== "object") return undefined;
+    return {
+        wood: Number(fe["목"]) || 0,
+        fire: Number(fe["화"]) || 0,
+        earth: Number(fe["토"]) || 0,
+        metal: Number(fe["금"]) || 0,
+        water: Number(fe["수"]) || 0,
+    };
+}
+
+/** 오행 개수로 가장 많은/적은 오행 키와 체질 요약 문구 */
+function getOhengHead(oheng: OhengCounts): { head: string; strongKey: keyof OhengCounts; weakKey: keyof OhengCounts } {
+    const entries = (Object.entries(oheng) as [keyof OhengCounts, number][]).sort((a, b) => b[1] - a[1]);
+    const strongKey = entries[0][0];
+    const weakKey = entries[entries.length - 1][0];
+    const top2 = entries.slice(0, 2).filter(([, v]) => v > 0);
+    const head = top2.length >= 2 && top2[0][1] === top2[1][1]
+        ? `${OHENG_LABELS[top2[0][0]].replace(/\(.*\)/, "").trim()}과 ${OHENG_LABELS[top2[1][0]].replace(/\(.*\)/, "").trim()}이 중심인 체질`
+        : `${OHENG_LABELS[strongKey].replace(/\(.*\)/, "").trim()}이 중심인 체질`;
+    return { head, strongKey, weakKey };
+}
 
 export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
     tab,
@@ -353,6 +384,8 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
     onConstitutionPhaseChange,
     constitutionSelectedMenuIdx: constitutionSelectedMenuIdxProp,
     onConstitutionSelectedMenuIdxChange,
+    sajuInfo = null,
+    totalReview = null,
 }) => {
     const [internalPhase, setInternalPhase] = useState<ConstitutionPhase>("intro");
     const [internalMenuIdx, setInternalMenuIdx] = useState<number | null>(null);
@@ -645,8 +678,46 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
                             </GlassCard>
                         </div>
 
-                        {/* 체험자 체질 풀이 — 사주 기반 (백 연동 시 CONSTITUTION_SAJU_DATA만 교체) */}
-                        <ConstitutionSajuBlock data={CONSTITUTION_SAJU_DATA} />
+                        {/* 체질 풀이 — API에서 받은 sajuInfo·totalReview로 오행 분포·체질 풀이 표시 (API 없으면 안내만) */}
+                        {(() => {
+                            const ohengFromApi = sajuInfo ? fiveElementsToOheng(sajuInfo.fiveElements) : null;
+                            const oheng: OhengCounts = ohengFromApi ?? { wood: 0, fire: 0, earth: 0, metal: 0, water: 0 };
+                            const constitutionBlock = totalReview && (
+                                (totalReview as Record<string, string>)["total_user_saju_information"] ??
+                                (totalReview as Record<string, string>)["전체적인 체질 특성"] ??
+                                totalReview.constitutionSummary
+                            );
+                            const { head } = getOhengHead(oheng);
+                            if (!sajuInfo && !constitutionBlock) {
+                                return (
+                                    <GlassCard className="w-full max-w-4xl mx-auto p-6 sm:p-8 border-4 border-white rounded-[32px] shadow-clay-md bg-white/50 mb-6">
+                                        <h3 className="text-2xl font-bold text-gray-900 mb-6 font-display text-center">당신의 체질 풀이</h3>
+                                        <p className="text-gray-600 text-center">
+                                            관상 분석을 먼저 진행해 주시면, 입력하신 사주 데이터를 바탕으로 오행 분포와 체질 풀이를 보여드립니다.
+                                        </p>
+                                    </GlassCard>
+                                );
+                            }
+                            const constitutionData: ConstitutionSajuData = constitutionBlock
+                                ? {
+                                      type: head,
+                                      head,
+                                      oheng,
+                                      sections: [{ text: constitutionBlock }],
+                                      daeunAndFoods: {
+                                          title: "건강 관리를 위해 꼭 챙기면 좋은 것들",
+                                          body: "",
+                                          priorityFoods: [],
+                                      },
+                                  }
+                                : {
+                                      ...CONSTITUTION_SAJU_DATA,
+                                      oheng,
+                                      head,
+                                      type: head,
+                                  };
+                            return <ConstitutionSajuBlock data={constitutionData} />;
+                        })()}
                     </div>
                 )}
             </div>
