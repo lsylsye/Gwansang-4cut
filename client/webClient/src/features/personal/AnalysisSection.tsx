@@ -332,20 +332,17 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
     // API 결과가 있으면 변환하여 사용
     const featuresData = React.useMemo(() => {
         if (faceAnalysisResult?.faceAnalysis && faceAnalysisResult?.meta) {
-            console.log('✅ 실제 API 데이터 사용');
             return transformToFaceAnalysisFeatures(
                 faceAnalysisResult.faceAnalysis,
                 faceAnalysisResult.meta
             );
         }
-        console.log('⚠️ API 결과 없음 - 데이터 로드 필요');
         return null;
     }, [faceAnalysisResult]);
 
     // totalReview 데이터
     const totalReviewData = React.useMemo(() => {
         if (totalReviewProp) {
-            console.log('✅ 실제 totalReview 사용');
             return totalReviewProp;
         }
         return undefined; // FaceAnalysis 컴포넌트에서 기본값 사용

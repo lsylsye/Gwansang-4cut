@@ -11,7 +11,7 @@ import {
     fetchGroupOhengCombination,
     type GroupOhengCombinationResponse,
 } from "@/shared/api/groupOhengApi";
-import { RelationshipLadder } from "./RelationshipLadder";
+import { OhengMatchingSection } from "./OhengMatchingSection";
 import {
     DestinyStickRelations,
     type Member,
@@ -102,6 +102,7 @@ interface GroupResultProps {
     onViewRanking?: (score: number, defaultName: string) => void;
 }
 
+// git pull 후 흰 화면 시: groupImage 반드시 구조 분해 (없으면 ReferenceError)
 export const GroupResult: React.FC<GroupResultProps> = ({
     groupImage,
     groupMembers = [],
@@ -386,120 +387,14 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                 </Card>
             </motion.div>
 
-            {/* 사주 오행 조합 (RAG) — 기운 채워줌 / 상충 */}
-            {(groupMembers.length >= 2 && (ohengLoading || ohengResult || ohengError)) && (
-                <motion.div
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.12, ease: "easeOut" }}
-                >
-                    <Card className="border border-gray-100 shadow-sm overflow-hidden">
-                        <CardHeader className="pb-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
-                                    <Sparkles className="w-5 h-5 text-violet-600" />
-                                </div>
-                                <CardTitle className="text-xl font-bold text-gray-900 font-display">
-                                    사주 오행 조합 (RAG)
-                                </CardTitle>
-                            </div>
-                            <p className="text-sm text-gray-500 mt-1">
-                                수·목·금·토·화 기운으로 보는 우리 모임 — 누가 누구 기운을 채워 주고, 같은 기운은 어디서 부딪히는지
-                            </p>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {ohengLoading && (
-                                <p className="text-sm text-gray-500">오행 조합 분석 중...</p>
-                            )}
-                            {!ohengLoading && ohengError && (
-                                <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-                                    {ohengError}
-                                    <span className="block mt-1 text-amber-600">
-                                        아래는 데모 데이터로 표시됩니다.
-                                    </span>
-                                </div>
-                            )}
-                            {!ohengLoading && ohengResult?.success && (
-                                <>
-                                    {ohengResult.supplement.length > 0 && (
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <Heart className="w-4 h-4 text-emerald-600" />
-                                                <span className="text-sm font-bold text-gray-900 font-display">
-                                                    기운 채워줌
-                                                </span>
-                                            </div>
-                                            <ul className="space-y-3">
-                                                {ohengResult.supplement.map((s, i) => (
-                                                    <li
-                                                        key={`sup-${i}`}
-                                                        className="bg-emerald-50/80 border border-emerald-100 rounded-xl p-4 text-sm text-gray-700"
-                                                    >
-                                                        <span className="font-semibold text-emerald-800">
-                                                            {s.fromName}
-                                                        </span>
-                                                        <span className="text-gray-500"> → </span>
-                                                        <span className="font-semibold text-emerald-800">
-                                                            {s.toName}
-                                                        </span>
-                                                        <Badge variant="secondary" className="ml-2 bg-emerald-100 text-emerald-800 text-xs">
-                                                            {s.elementLabel}
-                                                        </Badge>
-                                                        {s.explanation && (
-                                                            <p className="mt-2 text-gray-600 leading-relaxed whitespace-pre-line line-clamp-3">
-                                                                {s.explanation}
-                                                            </p>
-                                                        )}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
-                                    {ohengResult.conflict.length > 0 && (
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <Swords className="w-4 h-4 text-amber-600" />
-                                                <span className="text-sm font-bold text-gray-900 font-display">
-                                                    같은 기운 상충
-                                                </span>
-                                            </div>
-                                            <ul className="space-y-3">
-                                                {ohengResult.conflict.map((c, i) => (
-                                                    <li
-                                                        key={`conf-${i}`}
-                                                        className="bg-amber-50/80 border border-amber-100 rounded-xl p-4 text-sm text-gray-700"
-                                                    >
-                                                        <span className="font-semibold text-amber-800">{c.name1}</span>
-                                                        <span className="text-gray-500"> · </span>
-                                                        <span className="font-semibold text-amber-800">{c.name2}</span>
-                                                        <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-800 text-xs">
-                                                            {c.elementLabel}
-                                                        </Badge>
-                                                        {c.explanation && (
-                                                            <p className="mt-2 text-gray-600 leading-relaxed whitespace-pre-line line-clamp-3">
-                                                                {c.explanation}
-                                                            </p>
-                                                        )}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
-                                    {ohengResult.supplement.length === 0 && ohengResult.conflict.length === 0 && (
-                                        <p className="text-sm text-gray-500">
-                                            이번 모임에서는 기운 채워줌·상충 쌍이 없어요. 오행이 고르게 분포했을 수 있어요.
-                                        </p>
-                                    )}
-                                    {ohengResult.summary && (
-                                        <p className="text-xs text-gray-400 border-t border-gray-100 pt-3">
-                                            {ohengResult.summary}
-                                        </p>
-                                    )}
-                                </>
-                            )}
-                        </CardContent>
-                    </Card>
-                </motion.div>
+            {/* 오행 궁합 매칭 — 사주 오행 조합 + 두 사람 조합 통합 */}
+            {groupMembers.length >= 2 && (
+                <OhengMatchingSection
+                    groupMembers={groupMembers}
+                    ohengResult={ohengResult ?? null}
+                    ohengLoading={ohengLoading}
+                    ohengError={ohengError}
+                />
             )}
 
             {/* 운명의 작대기 — 선택한 1명 기준 나머지와의 관계선 시각화 */}
@@ -508,11 +403,6 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                     members={destinyMembers}
                     relationships={destinyRelationships}
                 />
-            )}
-
-            {/* 두 사람 조합 보기 — 한 명 고르고 다른 한 명 선택 */}
-            {groupMembers.length >= 2 && (
-                <RelationshipLadder groupMembers={groupMembers} ohengResult={ohengResult ?? null} />
             )}
 
             {/* 추천 활동·음식·시간 - 한 카드로 정리 */}

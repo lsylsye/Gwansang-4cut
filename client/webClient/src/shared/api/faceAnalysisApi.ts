@@ -215,8 +215,6 @@ export async function analyzeFace(
   }
 ): Promise<FaceAnalysisApiResponse> {
   try {
-    console.log('🔍 관상 분석 시작 (비스트리밍)');
-
     const response = await fetch(`${AI_SERVER_URL}/test-api/facemesh/personal`, {
       method: 'POST',
       headers: {
@@ -251,7 +249,6 @@ export async function analyzeFace(
       totalReview: data.totalReview || null,
     };
 
-    console.log('✅ 관상 분석 완료:', result);
     return result;
   } catch (error) {
     console.error('❌ 관상 분석 API 오류:', error);

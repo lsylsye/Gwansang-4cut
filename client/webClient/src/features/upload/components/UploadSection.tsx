@@ -297,8 +297,6 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
         // App.tsx에서 API 호출하도록 metadata 전달
         // 더 이상 여기서 fetch 하지 않음
-        console.log("🚀 분석 시작 - metadata 전달:", faceMeshMetadata);
-
         onAnalyze(
           capturedImages as string[],
           [],
@@ -474,7 +472,6 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     }
 
     if (finalPayload) {
-      console.log("🚀 백엔드 전송 데이터 (Group):", finalPayload);
       fetch(API_ENDPOINTS.FACEMESH_GROUP, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
