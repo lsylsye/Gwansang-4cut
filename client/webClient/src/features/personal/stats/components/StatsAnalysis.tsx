@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
@@ -9,7 +9,7 @@ import profileImage from "@/assets/profile.png";
 import selfieImage from "@/assets/selfie.png";
 import turtleImage from "@/assets/turtle.png";
 import { FiveElementsDisplay, type OhengCounts } from "./FiveElementsDisplay";
-import type { SajuInfo, TotalReview } from "@/shared/api/faceAnalysisApi";
+import type { SajuInfo, TotalReview, WelstoryMenuItem, RecommendedMenu } from "@/shared/api/faceAnalysisApi";
 
 /** 한 글자씩 채워지는 타이핑 효과. skipToEnd 시 애니 없이 전체 텍스트 즉시 노출 (복귀 시용) */
 function useTypewriter(
@@ -425,9 +425,30 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
             initialConstitutionPhaseRef.current === "select" ||
             hasBeenOnResultViewRef.current);
 
-    // 부울경 메뉴만 사용 (체질 게임) — 타입라이터 훅보다 위에 정의
-    const buulgyeongMenus = CAMPUS_MENUS["부울경"];
-    const recommendedMenu = buulgyeongMenus[CONSTITUTION_DATA.recommendedMenuIndex];
+    // API에서 받은 welstory 메뉴 또는 더미 메뉴 사용
+    const welstoryMenus = useMemo(() => {
+        const apiMenus = totalReview?.welstoryMenus;
+        if (apiMenus && apiMenus.length > 0) {
+            // API 메뉴를 프론트엔드 형식으로 변환
+            return apiMenus.map((menu) => ({
+                name: menu.name,
+                desc: menu.desc || "",
+                image: menu.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400",
+                reason: "", // API에서 reason은 recommendedMenu에만 있음
+            }));
+        }
+        // 폴백: 더미 메뉴
+        return CAMPUS_MENUS["부울경"];
+    }, [totalReview?.welstoryMenus]);
+
+    // API에서 받은 추천 메뉴 인덱스 또는 기본값
+    const apiRecommendedIndex = totalReview?.recommendedMenu?.index ?? 0;
+    const apiRecommendedReason = totalReview?.recommendedMenu?.reason ?? "";
+
+    // 현재 사용할 메뉴 목록과 추천 메뉴
+    const buulgyeongMenus = welstoryMenus;
+    const recommendedMenuIndex = apiRecommendedIndex < buulgyeongMenus.length ? apiRecommendedIndex : 0;
+    const recommendedMenu = buulgyeongMenus[recommendedMenuIndex];
 
     // 거북 도사 인트로 대사 (한 글자씩 타이핑)
     const introLine =
@@ -447,14 +468,16 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
     });
 
     // 결과 단계 거북 도사 긴 대사 (동적 메시지)
+    // API에서 받은 reason 또는 더미 reason 사용
+    const recommendedReason = apiRecommendedReason || recommendedMenu.reason || "오늘의 체질에 맞는 메뉴입니다.";
     const resultTurtleMessage =
         constitutionPhase === "result" && selectedMenuIdx !== null
             ? (() => {
                   const userPickedMenu = buulgyeongMenus[selectedMenuIdx];
-                  const isSame = userPickedMenu.name === recommendedMenu.name;
+                  const isSame = selectedMenuIdx === recommendedMenuIndex;
                   return isSame
-                      ? `오늘 너에게 가장 추천하는 메뉴는 「${recommendedMenu.name}」이오.\n\n"${recommendedMenu.reason}"`
-                      : `네가 고른 ${userPickedMenu.name}도 나쁘지 않다. 다만, 너의 몸에 가장 이로운 것은 다른 것이니……\n\n오늘 너에게 가장 추천하는 메뉴는 「${recommendedMenu.name}」이오.\n\n"${recommendedMenu.reason}"`;
+                      ? `오늘 너에게 가장 추천하는 메뉴는 「${recommendedMenu.name}」이오.\n\n"${recommendedReason}"`
+                      : `네가 고른 ${userPickedMenu.name}도 나쁘지 않다. 다만, 너의 몸에 가장 이로운 것은 다른 것이니……\n\n오늘 너에게 가장 추천하는 메뉴는 「${recommendedMenu.name}」이오.\n\n"${recommendedReason}"`;
               })()
             : "";
     const { text: resultMessageText, isComplete: resultMessageComplete } = useTypewriter(resultTurtleMessage, {
@@ -628,7 +651,7 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
                             {buulgyeongMenus.map((menu, i) => {
                                 const isUserChoice = i === selectedMenuIdx;
-                                const isTurtleRecommend = i === CONSTITUTION_DATA.recommendedMenuIndex;
+                                const isTurtleRecommend = i === recommendedMenuIndex;
                                 return (
                                     <div key={i} className="relative">
                                         <GlassCard

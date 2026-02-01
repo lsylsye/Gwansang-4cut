@@ -1,0 +1,30 @@
+services:
+  welstory-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: welstory-lunch-api
+    ports:
+      - "8002:8002"
+    environment:
+      - MATTERMOST_BASE_URL=${MATTERMOST_BASE_URL:-https://meeting.ssafy.com}
+      - MATTERMOST_WEBHOOK_PATHS=${MATTERMOST_WEBHOOK_PATHS:-["/hooks/채널1경로","/hooks/채널2경로"]}
+      - WELSTORY_USERNAME=${WELSTORY_USERNAME:-웰스토리아이디}
+      - WELSTORY_PASSWORD=${WELSTORY_PASSWORD:-웰스토리비밀번호}
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - welstory-network
+
+networks:
+  welstory-network:
+    driver: bridge

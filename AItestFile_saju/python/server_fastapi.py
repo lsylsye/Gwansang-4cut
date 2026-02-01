@@ -50,7 +50,14 @@ from face_prompt_builder import (
     summarize_face_analysis_for_search,
     build_total_review_prompt,
     parse_total_review,
+    build_menu_recommendation_prompt,
+    parse_menu_recommendation,
 )
+import httpx
+
+# welstoryLunch API URL (환경변수 또는 기본값)
+# Docker 컨테이너 내부에서는 host.docker.internal로 호스트에 접근
+WELSTORY_API_URL = os.getenv("WELSTORY_API_URL", "http://host.docker.internal:8002")
 
 # FastAPI 앱 초기화
 app = FastAPI(
@@ -126,6 +133,35 @@ def should_use_redis() -> bool:
         print(f"⚠️ Redis 사용 불가: {e}")
         _use_redis = False
         return False
+
+
+async def fetch_welstory_menus() -> List[Dict[str, Any]]:
+    """welstoryLunch API에서 오늘의 점심 메뉴를 가져옴"""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{WELSTORY_API_URL}/menu")
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status") == "success":
+                    menus = data.get("data", {}).get("점심", [])
+                    # 프론트엔드에서 사용할 형식으로 변환 (최대 4개)
+                    result = []
+                    for menu in menus[:4]:
+                        result.append({
+                            "name": menu.get("메뉴명", "알 수 없는 메뉴"),
+                            "desc": ", ".join(menu.get("구성", []))[:30] if menu.get("구성") else "",
+                            "image": menu.get("이미지") or "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400",
+                            "rating": menu.get("평균평점", 0),
+                            "corner": menu.get("코너", ""),
+                            "kcal": menu.get("칼로리", ""),
+                        })
+                    print(f"✅ welstory 메뉴 {len(result)}개 조회 성공")
+                    return result
+        print("⚠️ welstory API 응답 오류")
+        return []
+    except Exception as e:
+        print(f"⚠️ welstory 메뉴 조회 실패: {e}")
+        return []
 
 
 # ===== Pydantic 모델 정의 =====
@@ -715,7 +751,50 @@ async def analyze_face_api(request: FaceAnalysisRequest):
                 "constitutionSummary": "",
             }
         
-        # 4. 통합 응답 반환
+        # 4. welstory 메뉴 조회 및 LLM 추천
+        welstory_menus = []
+        recommended_menu = None
+        try:
+            print("🍽️ welstory 메뉴 조회 중...")
+            welstory_menus = await fetch_welstory_menus()
+            
+            if welstory_menus and len(welstory_menus) > 0:
+                print(f"   메뉴 {len(welstory_menus)}개 조회됨, LLM 추천 시작...")
+                constitution_summary = total_review.get("constitutionSummary", "") if total_review else ""
+                
+                # LLM으로 체질에 맞는 메뉴 추천
+                menu_system_prompt, menu_user_prompt = build_menu_recommendation_prompt(
+                    saju_info, welstory_menus, constitution_summary
+                )
+                menu_llm_result = call_gms_api(
+                    system_prompt=menu_system_prompt,
+                    user_prompt=menu_user_prompt,
+                    model=request.model,
+                    timeout=60  # 메뉴 추천은 짧은 타임아웃
+                )
+                menu_recommendation = parse_menu_recommendation(menu_llm_result, len(welstory_menus))
+                
+                recommended_idx = menu_recommendation.get("recommendedIndex", 0)
+                recommended_menu = {
+                    "index": recommended_idx,
+                    "menu": welstory_menus[recommended_idx],
+                    "reason": menu_recommendation.get("reason", "오늘의 체질에 맞는 메뉴입니다.")
+                }
+                print(f"✅ 메뉴 추천 완료: {welstory_menus[recommended_idx].get('name')}")
+            else:
+                print("⚠️ welstory 메뉴가 없습니다.")
+        except Exception as e:
+            print(f"⚠️ welstory 메뉴 추천 중 오류: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # totalReview에 메뉴 정보 추가
+        if total_review is None:
+            total_review = {}
+        total_review["welstoryMenus"] = welstory_menus
+        total_review["recommendedMenu"] = recommended_menu
+        
+        # 5. 통합 응답 반환
         response = {
             "success": True,
             "timestamp": request.timestamp or "",
