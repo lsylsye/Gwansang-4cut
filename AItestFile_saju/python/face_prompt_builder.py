@@ -527,3 +527,130 @@ def parse_section_based_response(response: str) -> Dict[str, Any]:
         result["totalReview"]["improvement"] = improvement_match.group(1).strip()
     
     return result
+
+
+def build_menu_recommendation_prompt(
+    saju_info: Dict[str, Any],
+    menus: List[Dict[str, Any]],
+    constitution_summary: str = ""
+) -> tuple:
+    """
+    체질에 맞는 메뉴 추천 프롬프트 생성
+    
+    Args:
+        saju_info: 사주 정보 (fiveElements 포함)
+        menus: welstory 메뉴 리스트 (name, desc, image 등)
+        constitution_summary: 체질 분석 요약 (선택)
+        
+    Returns:
+        tuple: (system_prompt, user_prompt)
+    """
+    five = saju_info.get("fiveElements") or {}
+    elements = {"목": five.get("목", 0), "화": five.get("화", 0), "토": five.get("토", 0), 
+                "금": five.get("금", 0), "수": five.get("수", 0)}
+    max_element = max(elements, key=elements.get) if elements else "목"
+    min_element = min(elements, key=elements.get) if elements else "금"
+    
+    # 메뉴 목록 문자열 생성
+    menu_list_str = ""
+    for i, menu in enumerate(menus):
+        menu_name = menu.get("name") or menu.get("메뉴명", f"메뉴{i+1}")
+        menu_desc = menu.get("desc") or ", ".join(menu.get("구성", []))[:50]
+        menu_list_str += f"{i}. {menu_name}: {menu_desc}\n"
+    
+    system_prompt = """당신은 전통 동양 명리학과 음식 건강학을 통합한 전문가 '거북 도사'입니다.
+사주 오행 분석을 바탕으로 오늘 점심 메뉴를 추천합니다.
+
+## 오행과 음식의 관계
+- 목(木): 신맛, 간/담낭 건강. 녹색 채소, 신선한 샐러드, 레몬/식초 드레싱
+- 화(火): 쓴맛, 심장/소장 건강. 쓴 채소, 볶음 요리, 양념이 강한 음식
+- 토(土): 단맛, 비장/위장 건강. 곡류, 뿌리채소, 구수한 국물, 된장
+- 금(金): 매운맛, 폐/대장 건강. 파, 마늘, 생강, 양파, 무, 매운탕
+- 수(水): 짠맛, 신장/방광 건강. 해조류, 생선, 콩류, 검은깨, 미역국
+
+## 추천 원칙
+1. 부족한 오행을 보충하는 음식 우선 추천
+2. 과다한 오행을 완화하는 음식 고려
+3. 메뉴의 주재료와 조리법 분석
+4. 반드시 주어진 메뉴 목록에서만 선택
+
+## 응답 형식 (JSON)
+반드시 아래 형식의 JSON만 출력하세요. 다른 텍스트는 출력하지 마세요.
+```json
+{
+    "recommendedIndex": 0,
+    "reason": "추천 이유를 2-3문장으로 작성. 체질과 메뉴의 연관성 설명."
+}
+```
+"""
+
+    user_prompt = f"""오늘 점심 메뉴 중에서 이 사람의 체질에 가장 맞는 메뉴를 추천해주세요.
+
+## 이 사용자의 사주 오행 분포
+- 목(木) {five.get('목', 0)}개, 화(火) {five.get('화', 0)}개, 토(土) {five.get('토', 0)}개, 금(金) {five.get('금', 0)}개, 수(水) {five.get('수', 0)}개
+- 가장 많은 오행: {max_element}({elements.get(max_element, 0)}개)
+- 가장 적은 오행: {min_element}({elements.get(min_element, 0)}개)
+- 일간: {saju_info.get('dayStem', '미상')}
+
+## 체질 요약
+{constitution_summary if constitution_summary else f'{max_element}이 강하고 {min_element}이 약한 체질'}
+
+## 오늘의 점심 메뉴 (인덱스 번호로 추천)
+{menu_list_str}
+
+위 메뉴 중 이 체질에 가장 적합한 메뉴의 인덱스(0부터 시작)와 추천 이유를 JSON 형식으로 답해주세요.
+'~하오', '~리라' 등 도사 어투로 reason을 작성하세요.
+"""
+    return system_prompt, user_prompt
+
+
+def parse_menu_recommendation(response: str, menu_count: int) -> Dict[str, Any]:
+    """
+    메뉴 추천 LLM 응답 파싱
+    
+    Args:
+        response: LLM 응답 텍스트
+        menu_count: 메뉴 개수 (유효성 검증용)
+        
+    Returns:
+        Dict: recommendedIndex, reason
+    """
+    result = {
+        "recommendedIndex": 0,
+        "reason": "오늘의 메뉴 중 체질에 맞는 음식을 추천합니다."
+    }
+    
+    try:
+        # JSON 블록 추출
+        json_match = re.search(r'```json\s*([\s\S]*?)\s*```', response)
+        if json_match:
+            json_str = json_match.group(1)
+        else:
+            # JSON 블록이 없으면 전체에서 JSON 객체 찾기
+            json_match = re.search(r'\{[\s\S]*"recommendedIndex"[\s\S]*\}', response)
+            if json_match:
+                json_str = json_match.group(0)
+            else:
+                json_str = response
+        
+        parsed = json.loads(json_str)
+        
+        idx = parsed.get("recommendedIndex", 0)
+        if isinstance(idx, int) and 0 <= idx < menu_count:
+            result["recommendedIndex"] = idx
+        
+        reason = parsed.get("reason", "")
+        if reason:
+            result["reason"] = reason
+            
+    except (json.JSONDecodeError, ValueError) as e:
+        print(f"⚠️ 메뉴 추천 JSON 파싱 실패: {e}")
+        # 텍스트에서 숫자 추출 시도
+        num_match = re.search(r'(\d+)', response)
+        if num_match:
+            idx = int(num_match.group(1))
+            if 0 <= idx < menu_count:
+                result["recommendedIndex"] = idx
+    
+    return result
+

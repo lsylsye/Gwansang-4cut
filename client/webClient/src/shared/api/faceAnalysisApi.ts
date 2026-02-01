@@ -141,6 +141,23 @@ export interface SajuInfo {
   fiveElements: Record<string, number>;
 }
 
+/** welstory 메뉴 아이템 */
+export interface WelstoryMenuItem {
+  name: string;
+  desc: string;
+  image: string;
+  rating?: number;
+  corner?: string;
+  kcal?: string;
+}
+
+/** 추천 메뉴 정보 */
+export interface RecommendedMenu {
+  index: number;
+  menu: WelstoryMenuItem;
+  reason: string;
+}
+
 /** 총평 (LLM 생성) — 관상 3키 + 체질 풀이(같은 LLM 한 번에 생성) */
 export interface TotalReview {
   harmony?: string;       // 부위 간의 조화 및 균형 해석 (관상)
@@ -148,6 +165,10 @@ export interface TotalReview {
   improvement?: string;   // 운을 좋게 만드는 방법 제안 (관상)
   /** 체질 풀이 전체 (사주 기반 건강/체질 분석) */
   constitutionSummary?: string;
+  /** welstory 오늘의 점심 메뉴 (최대 4개) */
+  welstoryMenus?: WelstoryMenuItem[];
+  /** LLM 추천 메뉴 */
+  recommendedMenu?: RecommendedMenu | null;
 }
 
 /** 1단계 응답 (Rule-based) */
