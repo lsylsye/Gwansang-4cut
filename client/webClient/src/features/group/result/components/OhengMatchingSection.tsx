@@ -461,53 +461,69 @@ export const OhengMatchingSection: React.FC<OhengMatchingSectionProps> = ({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.12 }}
-            className="rounded-2xl border border-gray-200 bg-white p-5 shadow-md sm:p-6"
+            className="overflow-hidden rounded-lg bg-white shadow-sm sm:rounded-lg"
         >
-            {/* 헤더 */}
-            <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-gray-100 pb-4">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-100 to-amber-100">
-                        <Zap className="h-6 w-6 text-violet-600" />
-                    </div>
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-900 font-display">
-                            오행 궁합 매칭
-                        </h2>
-                        <p className="text-sm text-gray-500">
-                            두 사람을 선택해서 기운이 어떻게 흐르는지 확인해보세요.
-                        </p>
+            {/* 헤더 — Tailwind UI section-headings with_description + with_actions */}
+            <div className="border-b border-gray-200 px-4 pb-5 pt-6 sm:px-6 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <div className="flex items-center gap-3">
+                        <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-violet-600">
+                            <Zap className="size-6 text-white" aria-hidden />
+                        </div>
+                        <div>
+                            <h2 className="text-base font-semibold text-gray-900">
+                                오행 궁합 매칭
+                            </h2>
+                            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                                두 사람을 선택해서 기운이 어떻게 흐르는지 확인해보세요.
+                            </p>
+                        </div>
                     </div>
                 </div>
                 {bestProvider && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                            최고의 기운 제공자
-                        </p>
-                        <p className="text-sm font-bold text-amber-900">{bestProvider}</p>
+                    <div className="mt-4 shrink-0 sm:mt-0 sm:ml-4">
+                        <div className="overflow-hidden rounded-lg bg-white px-4 py-4 shadow-sm ring-1 ring-gray-200 ring-inset sm:p-5">
+                            <p className="truncate text-xs font-medium uppercase tracking-wide text-amber-600">
+                                최고의 기운 제공자
+                            </p>
+                            <p className="mt-1 text-lg font-semibold tracking-tight text-gray-900">{bestProvider}</p>
+                        </div>
                     </div>
                 )}
             </div>
 
+            <div className="px-4 py-6 sm:px-6">
             {ohengLoading && (
-                <p className="py-8 text-center text-sm text-gray-500">오행 조합 분석 중...</p>
-            )}
-            {!ohengLoading && ohengError && (
-                <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-                    {ohengError}
-                    <span className="mt-1 block text-amber-600 text-xs">
-                        아래는 데모 데이터로 표시됩니다.
-                    </span>
+                <div className="text-center py-12">
+                    <div className="mx-auto size-12 rounded-full border-2 border-gray-200 border-t-violet-600 animate-spin" aria-hidden />
+                    <p className="mt-3 text-sm font-semibold text-gray-900">오행 조합 분석 중</p>
+                    <p className="mt-1 text-sm text-gray-500">잠시만 기다려 주세요.</p>
                 </div>
             )}
-
+            {!ohengLoading && ohengError && (
+                <div className="rounded-md bg-amber-50 p-4 ring-1 ring-amber-100">
+                    <div className="flex">
+                        <div className="shrink-0">
+                            <Sparkles className="size-5 text-amber-500" aria-hidden />
+                        </div>
+                        <div className="ml-3">
+                            <h3 className="text-sm font-medium text-amber-800">데이터 일부만 표시돼요</h3>
+                            <div className="mt-2 text-sm text-amber-700">
+                                <p>{ohengError}</p>
+                                <p className="mt-1 text-amber-600">아래는 데모 데이터로 표시됩니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             {!ohengLoading && (ohengResult || ohengError) && (
                 <>
-                    {/* 프로필 선택 영역 — 가로 스크롤, 탭 두 번으로 조합 */}
-                    <div className="mb-4">
-                        <p className="mb-2 text-xs font-medium text-gray-500">
+                    {/* 프로필 선택 — Tailwind UI avatars + small_flat_pill badge */}
+                    <div className="mb-6">
+                        <p className="mb-3 text-sm font-medium text-gray-500">
                             두 명을 차례로 클릭하면 조합이 표시돼요
                         </p>
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
                             {groupMembers.map((m) => {
                                 const isFirst = selectedFirst?.id === m.id;
                                 const isSecond = selectedSecond?.id === m.id;
@@ -530,32 +546,32 @@ export const OhengMatchingSection: React.FC<OhengMatchingSectionProps> = ({
                                                 setSelectedSecond(null);
                                             }
                                         }}
-                                        className="member-card flex shrink-0 flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition-colors select-none touch-none cursor-pointer"
-                                        style={{
-                                            borderColor: isSelected ? "#8b5cf6" : "#e5e7eb",
-                                            backgroundColor: isSelected ? "#f5f3ff" : "#fafafa",
-                                        }}
+                                        className={`member-card relative flex shrink-0 flex-col items-center gap-2 rounded-lg px-4 py-4 transition-colors select-none touch-none cursor-pointer ring-1 shadow-sm sm:py-5 ${
+                                            isSelected
+                                                ? "bg-violet-50 ring-violet-200"
+                                                : "bg-white ring-gray-200 ring-inset hover:bg-gray-50"
+                                        }`}
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                     >
-                                        <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-white shadow ring-1 ring-gray-200">
+                                        <span className="relative inline-block">
                                             <img
                                                 src={m.avatar || "https://via.placeholder.com/56"}
                                                 alt=""
-                                                className="h-full w-full object-cover"
+                                                className="size-14 rounded-full object-cover ring-2 ring-white shadow-sm"
                                             />
                                             {isFirst && (
-                                                <span className="absolute bottom-0 right-0 rounded bg-violet-500 px-1 text-[9px] font-bold text-white">
+                                                <span className="absolute right-0 bottom-0 block size-5 rounded-full bg-violet-600 ring-2 ring-white flex items-center justify-center text-[10px] font-bold text-white">
                                                     1
                                                 </span>
                                             )}
                                             {isSecond && (
-                                                <span className="absolute bottom-0 right-0 rounded bg-amber-500 px-1 text-[9px] font-bold text-white">
+                                                <span className="absolute right-0 bottom-0 block size-5 rounded-full bg-amber-500 ring-2 ring-white flex items-center justify-center text-[10px] font-bold text-white">
                                                     2
                                                 </span>
                                             )}
-                                        </div>
-                                        <span className="max-w-[72px] truncate text-xs font-bold text-gray-800">
+                                        </span>
+                                        <span className="max-w-[80px] truncate text-sm font-semibold text-gray-900">
                                             {m.name || "멤버"}
                                         </span>
                                     </motion.button>
@@ -564,7 +580,7 @@ export const OhengMatchingSection: React.FC<OhengMatchingSectionProps> = ({
                         </div>
                     </div>
 
-                    {/* 두 사람 + 오행 관계 시각화 */}
+                    {/* 두 사람 + 오행 관계 — Tailwind UI card + description-list 스타일 */}
                     <AnimatePresence mode="wait">
                         {selectedFirst && selectedSecond ? (
                             <motion.div
@@ -572,140 +588,129 @@ export const OhengMatchingSection: React.FC<OhengMatchingSectionProps> = ({
                                 initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -8 }}
-                                className="rounded-xl border-2 border-violet-100 bg-gradient-to-r from-violet-50/50 via-white to-amber-50/50 p-5 sm:p-6"
+                                className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-gray-200 ring-inset"
                             >
-                                <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between sm:gap-6">
-                                    {/* 프로필 1 */}
-                                    <div className="flex flex-col items-center gap-2 text-center">
-                                        <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-white shadow-lg ring-2 ring-violet-200">
+                                <div className="px-4 py-6 sm:px-6">
+                                    <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between sm:gap-8">
+                                        {/* 프로필 1 — Tailwind UI avatar + flat_pill badge */}
+                                        <div className="flex flex-col items-center gap-2 text-center">
                                             <img
-                                                src={
-                                                    selectedFirst.avatar ||
-                                                    "https://via.placeholder.com/80"
-                                                }
+                                                src={selectedFirst.avatar || "https://via.placeholder.com/80"}
                                                 alt=""
-                                                className="h-full w-full object-cover"
+                                                className="size-20 rounded-full object-cover ring-2 ring-violet-200 shadow-sm"
                                             />
+                                            <p className="text-sm font-semibold text-gray-900">
+                                                {selectedFirst.name || "멤버"}
+                                            </p>
+                                            {isSupplement && providerName === name1 && (
+                                                <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">
+                                                    기운 제공자
+                                                </span>
+                                            )}
+                                            {isSupplement && receiverName === name1 && (
+                                                <span className="inline-flex items-center rounded-full bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700">
+                                                    기운 수혜자
+                                                </span>
+                                            )}
                                         </div>
-                                        <p className="text-sm font-bold text-gray-900">
-                                            {selectedFirst.name || "멤버"}
-                                        </p>
-                                        {isSupplement && providerName === name1 && (
-                                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
-                                                기운 제공자
-                                            </span>
-                                        )}
-                                        {isSupplement && receiverName === name1 && (
-                                            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800">
-                                                기운 수혜자
-                                            </span>
-                                        )}
-                                    </div>
 
-                                    {/* 오행 + 메시지 (중앙) */}
-                                    <div className="flex flex-col items-center gap-2">
-                                        {elementForDisplay && (
-                                            <motion.span
-                                                className="flex items-center justify-center"
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                transition={{
-                                                    type: "spring",
-                                                    stiffness: 300,
-                                                    damping: 20,
-                                                }}
-                                            >
-                                                <OhengIcon
-                                                    element={
-                                                        pairRelation?.type === "supplement"
-                                                            ? (pairRelation.data as SupplementPair).element
-                                                            : (pairRelation!.data as ConflictPair).element
-                                                    }
-                                                    className="size-8 text-gray-700"
-                                                />
-                                            </motion.span>
-                                        )}
-                                        {elementForDisplay && (
-                                            <span
-                                                className="text-sm font-bold text-gray-700"
-                                                style={{
-                                                    color:
-                                                        pairRelation?.type === "supplement"
-                                                            ? "#059669"
-                                                            : pairRelation?.type === "conflict"
-                                                              ? "#d97706"
-                                                              : "#6b7280",
-                                                }}
-                                            >
-                                                {elementForDisplay.label}
-                                            </span>
-                                        )}
-                                        {isSupplement && (
-                                            <span className="flex items-center gap-1 text-xs font-medium text-emerald-700">
-                                                <Heart className="h-3.5 w-3.5" />
-                                                채워줌
-                                            </span>
-                                        )}
-                                        {isConflict && (
-                                            <span className="flex items-center gap-1 text-xs font-medium text-amber-700">
-                                                <Swords className="h-3.5 w-3.5" />
-                                                주의
-                                            </span>
-                                        )}
-                                    </div>
+                                        {/* 오행 + 메시지 (중앙) */}
+                                        <div className="flex flex-col items-center gap-2">
+                                            {elementForDisplay && (
+                                                <motion.span
+                                                    className="flex items-center justify-center"
+                                                    initial={{ scale: 0 }}
+                                                    animate={{ scale: 1 }}
+                                                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                                >
+                                                    <OhengIcon
+                                                        element={
+                                                            pairRelation?.type === "supplement"
+                                                                ? (pairRelation.data as SupplementPair).element
+                                                                : (pairRelation!.data as ConflictPair).element
+                                                        }
+                                                        className="size-10 text-gray-700"
+                                                    />
+                                                </motion.span>
+                                            )}
+                                            {elementForDisplay && (
+                                                <span
+                                                    className="text-sm font-semibold text-gray-900"
+                                                    style={{
+                                                        color:
+                                                            pairRelation?.type === "supplement"
+                                                                ? "#059669"
+                                                                : pairRelation?.type === "conflict"
+                                                                  ? "#d97706"
+                                                                  : "#374151",
+                                                    }}
+                                                >
+                                                    {elementForDisplay.label}
+                                                </span>
+                                            )}
+                                            {isSupplement && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">
+                                                    <Heart className="size-3.5" />
+                                                    채워줌
+                                                </span>
+                                            )}
+                                            {isConflict && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
+                                                    <Swords className="size-3.5" />
+                                                    주의
+                                                </span>
+                                            )}
+                                        </div>
 
-                                    {/* 프로필 2 */}
-                                    <div className="flex flex-col items-center gap-2 text-center">
-                                        <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-white shadow-lg ring-2 ring-amber-200">
+                                        {/* 프로필 2 */}
+                                        <div className="flex flex-col items-center gap-2 text-center">
                                             <img
-                                                src={
-                                                    selectedSecond.avatar ||
-                                                    "https://via.placeholder.com/80"
-                                                }
+                                                src={selectedSecond.avatar || "https://via.placeholder.com/80"}
                                                 alt=""
-                                                className="h-full w-full object-cover"
+                                                className="size-20 rounded-full object-cover ring-2 ring-amber-200 shadow-sm"
                                             />
+                                            <p className="text-sm font-semibold text-gray-900">
+                                                {selectedSecond.name || "멤버"}
+                                            </p>
+                                            {isSupplement && providerName === name2 && (
+                                                <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">
+                                                    기운 제공자
+                                                </span>
+                                            )}
+                                            {isSupplement && receiverName === name2 && (
+                                                <span className="inline-flex items-center rounded-full bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700">
+                                                    기운 수혜자
+                                                </span>
+                                            )}
                                         </div>
-                                        <p className="text-sm font-bold text-gray-900">
-                                            {selectedSecond.name || "멤버"}
-                                        </p>
-                                        {isSupplement && providerName === name2 && (
-                                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
-                                                기운 제공자
-                                            </span>
-                                        )}
-                                        {isSupplement && receiverName === name2 && (
-                                            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800">
-                                                기운 수혜자
-                                            </span>
-                                        )}
                                     </div>
-                                </div>
 
-                                {/* 한 줄 메시지 */}
-                                <p className="mt-4 rounded-lg bg-white/80 px-4 py-3 text-center text-sm leading-relaxed text-gray-700 border border-gray-100">
-                                    {pairRelation?.message}
-                                </p>
+                                    <div className="mt-5 border-t border-gray-100 pt-5">
+                                        <p className="text-center text-sm leading-6 text-gray-700">
+                                            {pairRelation?.message}
+                                        </p>
+                                    </div>
 
-                                {/* 다른 조합 보기: 번호 칩 */}
-                                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                                    <span className="text-xs text-gray-500">다른 조합 보기:</span>
-                                    {groupMembers
-                                        .filter((m) => m.id !== selectedFirst.id)
-                                        .slice(0, 6)
-                                        .map((m) => (
-                                            <button
-                                                key={m.id}
-                                                type="button"
-                                                onClick={() => {
-                                                    setSelectedFirst(selectedFirst);
-                                                    setSelectedSecond(m);
-                                                }}
-                                                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-violet-50 hover:border-violet-200"
-                                            >
-                                                {m.name || "멤버"}
-                                            </button>
-                                        ))}
+                                    {/* 다른 조합 보기 — Tailwind UI secondary button */}
+                                    <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                                        <span className="text-sm text-gray-500">다른 조합 보기:</span>
+                                        {groupMembers
+                                            .filter((m) => m.id !== selectedFirst.id)
+                                            .slice(0, 6)
+                                            .map((m) => (
+                                                <button
+                                                    key={m.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedFirst(selectedFirst);
+                                                        setSelectedSecond(m);
+                                                    }}
+                                                    className="inline-flex rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50"
+                                                >
+                                                    {m.name || "멤버"}
+                                                </button>
+                                            ))}
+                                    </div>
                                 </div>
                             </motion.div>
                         ) : (
@@ -714,19 +719,18 @@ export const OhengMatchingSection: React.FC<OhengMatchingSectionProps> = ({
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 py-12 text-center"
+                                className="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
                             >
-                                <Sparkles className="mb-2 h-10 w-10 text-violet-400" />
-                                <p className="text-sm font-medium text-gray-500">
-                                    위에서 두 명을 차례로 클릭하면
-                                    <br />
-                                    오행 관계가 여기에 표시돼요.
+                                <Sparkles className="mx-auto size-12 text-gray-400" aria-hidden />
+                                <h3 className="mt-2 text-sm font-semibold text-gray-900">두 명을 선택해 주세요</h3>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    위에서 두 명을 차례로 클릭하면 오행 관계가 여기에 표시돼요.
                                 </p>
                                 {todayRecommend && (
-                                    <div className="mt-4 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs">
-                                        <Star className="h-4 w-4 text-amber-500 shrink-0" />
-                                        <span className="text-amber-800 font-medium">
-                                            오늘의 추천 조합: {todayRecommend.from} · {todayRecommend.to}{" "}
+                                    <div className="mt-6 inline-flex items-center gap-2 rounded-lg bg-amber-50 px-4 py-2.5 ring-1 ring-amber-100">
+                                        <Star className="size-4 shrink-0 text-amber-500" />
+                                        <span className="text-sm font-medium text-amber-800">
+                                            오늘의 추천: {todayRecommend.from} · {todayRecommend.to}{" "}
                                             <OhengIcon element={todayRecommend.element.short} className="inline size-3.5 text-amber-600" />
                                         </span>
                                     </div>
@@ -735,55 +739,67 @@ export const OhengMatchingSection: React.FC<OhengMatchingSectionProps> = ({
                         )}
                     </AnimatePresence>
 
-                    {/* 팀 오행 요약 — Tailwind UI 스타일, 컴팩트 레이아웃 */}
-                    <div className="summary-card mt-4 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-                        <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-gray-100">
-                            <div className="flex items-center gap-2">
-                                <BarChart3 className="h-5 w-5 text-violet-600" />
-                                <span className="text-base font-semibold text-gray-900">팀 오행 요약</span>
+                    {/* 팀 오행 요약 — Tailwind UI card-headings with_description_and_action + stats simple_in_cards */}
+                    <div className="summary-card mt-6 overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-gray-200 ring-inset">
+                        <div className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6">
+                            <div className="-mt-4 -ml-4 flex flex-wrap items-center justify-between sm:flex-nowrap">
+                                <div className="mt-4 ml-4 flex items-center gap-2">
+                                    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-violet-600">
+                                        <BarChart3 className="size-5 text-white" aria-hidden />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-semibold text-gray-900">팀 오행 요약</h3>
+                                        <p className="mt-1 text-sm text-gray-500">
+                                            기운 채워줌·상충 관계를 한눈에 볼 수 있어요.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="mt-4 ml-4 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSummaryExpanded((e) => !e)}
+                                        className="relative inline-flex items-center gap-x-1.5 rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
+                                    >
+                                        {summaryExpanded ? "접기" : "상세 목록 보기"}
+                                        {summaryExpanded ? (
+                                            <ChevronUp className="-mr-0.5 size-4" aria-hidden />
+                                        ) : (
+                                            <ChevronDown className="-mr-0.5 size-4" aria-hidden />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => setSummaryExpanded((e) => !e)}
-                                className="inline-flex items-center gap-x-1.5 rounded-md bg-violet-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 transition-colors"
-                            >
-                                {summaryExpanded ? "접기" : "상세 목록 보기"}
-                                {summaryExpanded ? (
-                                    <ChevronUp className="-mr-0.5 size-4" />
-                                ) : (
-                                    <ChevronDown className="-mr-0.5 size-4" />
-                                )}
-                            </button>
                         </div>
-                        <div className="px-4 py-3 space-y-3">
+                        <div className="px-4 py-5 sm:px-6 sm:py-6 space-y-5">
                             {summaryLines.length === 0 && !summaryExpanded && (
                                 <p className="text-sm text-gray-500">기운 채워줌·상충이 없어요.</p>
                             )}
                             {summaryLines.length > 0 && (
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                                     {summaryLines.map(({ element, supplement, conflict }) => (
-                                        <span key={element} className="flex items-center gap-1.5 text-sm text-gray-600">
+                                        <span key={element} className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-sm font-medium text-gray-700">
                                             <OhengIcon element={element} className="size-4 text-gray-500" />
-                                            {(supplement > 0 || conflict > 0) && (
-                                                <span className="text-xs font-medium text-gray-500">
-                                                    {supplement + conflict}
-                                                </span>
-                                            )}
+                                            {supplement + conflict}쌍
                                         </span>
                                     ))}
                                 </div>
                             )}
-                            <div className="grid grid-cols-2 gap-3 items-start">
-                                <div className="rounded-lg border border-emerald-200/80 bg-emerald-50/50 px-3 py-2.5 w-full">
-                                    <p className="text-sm font-semibold text-emerald-800 flex items-center gap-1.5 mb-1.5">
-                                        <Heart className="h-4 w-4 shrink-0" /> 기운 채워줌 ({ohengResult?.supplement.length ?? 0}쌍)
-                                    </p>
-                                    <ul className="space-y-0.5 text-[13px] leading-relaxed text-emerald-700">
+                            {/* Tailwind UI stats simple_in_cards — 2열 그리드 */}
+                            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow-sm ring-1 ring-gray-200 ring-inset sm:p-6">
+                                    <dt className="truncate text-sm font-medium text-gray-500 flex items-center gap-2">
+                                        <Heart className="size-4 shrink-0 text-emerald-500" />
+                                        기운 채워줌
+                                    </dt>
+                                    <dd className="mt-1 text-2xl font-semibold tracking-tight text-gray-900">
+                                        {ohengResult?.supplement.length ?? 0}쌍
+                                    </dd>
+                                    <ul className="mt-3 space-y-1 text-sm leading-6 text-gray-600">
                                         {supplementTable.map(({ element, rows }) => {
                                             const total = rows.reduce((s, r) => s + r.toNames.length, 0);
                                             return (
-                                                <li key={element} className="flex items-center gap-1.5 py-0.5">
-                                                    <OhengIcon element={element} className="size-3.5 shrink-0" />
+                                                <li key={element} className="flex items-center gap-2">
+                                                    <OhengIcon element={element} className="size-3.5 shrink-0 text-gray-400" />
                                                     {element}: {total}쌍
                                                 </li>
                                             );
@@ -793,17 +809,21 @@ export const OhengMatchingSection: React.FC<OhengMatchingSectionProps> = ({
                                         )}
                                     </ul>
                                 </div>
-                                <div className="rounded-lg border border-amber-200/80 bg-amber-50/50 px-3 py-2.5 w-full">
-                                    <p className="text-sm font-semibold text-amber-800 flex items-center gap-1.5 mb-1.5">
-                                        <Swords className="h-4 w-4 shrink-0" /> 같은 기운 상충 ({ohengResult?.conflict.length ?? 0}쌍)
-                                    </p>
-                                    <ul className="space-y-0.5 text-[13px] leading-relaxed text-amber-700">
+                                <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow-sm ring-1 ring-gray-200 ring-inset sm:p-6">
+                                    <dt className="truncate text-sm font-medium text-gray-500 flex items-center gap-2">
+                                        <Swords className="size-4 shrink-0 text-amber-500" />
+                                        같은 기운 상충
+                                    </dt>
+                                    <dd className="mt-1 text-2xl font-semibold tracking-tight text-gray-900">
+                                        {ohengResult?.conflict.length ?? 0}쌍
+                                    </dd>
+                                    <ul className="mt-3 space-y-1 text-sm leading-6 text-gray-600">
                                         {conflictTable.map(({ element, count, summary }) => (
-                                            <li key={element} className="flex items-center gap-1.5 py-0.5">
-                                                <OhengIcon element={element} className="size-3.5 shrink-0" />
+                                            <li key={element} className="flex items-center gap-2">
+                                                <OhengIcon element={element} className="size-3.5 shrink-0 text-gray-400" />
                                                 {element}: {count}쌍
                                                 {summary === "거의 모든 멤버 해당" && (
-                                                    <Zap className="size-3 shrink-0 text-amber-600 inline" />
+                                                    <Zap className="size-3 shrink-0 text-amber-500 inline" />
                                                 )}
                                             </li>
                                         ))}
@@ -812,103 +832,96 @@ export const OhengMatchingSection: React.FC<OhengMatchingSectionProps> = ({
                                         )}
                                     </ul>
                                 </div>
-                            </div>
-                        </div>
-                        {/* 펼침: 인사이트 + 2단 상세 테이블 */}
+                            </dl>
+                        {/* 펼침: 인사이트 + 상세 — Tailwind UI left_aligned_in_card / description-list */}
                         {summaryExpanded && ohengResult && (
-                            <div className="border-t border-gray-100 bg-gray-50/30">
-                                <div className="p-4 space-y-4">
+                            <div className="border-t border-gray-100 bg-gray-50/50">
+                                <div className="px-4 py-6 sm:px-6 space-y-6">
                                     {insightLines.length > 0 && (
-                                        <div className="rounded-lg bg-violet-50/80 border border-violet-100 px-3 py-2.5">
-                                            <p className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 mb-1.5">
-                                                <Lightbulb className="size-3.5" /> 인사이트
-                                            </p>
-                                            {insightLines.map((line, i) => (
-                                                <p key={i} className="text-[14px] leading-relaxed text-gray-800">
-                                                    {line}
-                                                </p>
-                                            ))}
+                                        <div className="rounded-md bg-violet-50 p-4 ring-1 ring-violet-100">
+                                            <div className="flex">
+                                                <div className="shrink-0">
+                                                    <Lightbulb className="size-5 text-violet-500" aria-hidden />
+                                                </div>
+                                                <div className="ml-3">
+                                                    <h3 className="text-sm font-medium text-violet-800">인사이트</h3>
+                                                    <div className="mt-2 text-sm leading-6 text-gray-700">
+                                                        {insightLines.map((line, i) => (
+                                                            <p key={i} className="leading-relaxed">
+                                                                {line}
+                                                            </p>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
-                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start">
-                                        {/* 좌: 기운 채워줌 상세 */}
-                                        <div className="flex flex-col rounded-lg border border-emerald-200/80 bg-emerald-50/40 overflow-hidden">
-                                            <p className="shrink-0 border-b border-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-700 flex items-center gap-1.5">
-                                                <Heart className="size-4" /> 기운 채워줌 ({ohengResult.supplement.length}쌍)
-                                            </p>
-                                            <div className="overflow-auto">
+                                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                        {/* 좌: 기운 채워줌 상세 — Tailwind UI card + divide-y */}
+                                        <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-gray-200 ring-inset">
+                                            <div className="px-4 py-4 sm:px-6 border-b border-gray-100">
+                                                <h3 className="text-base leading-7 font-semibold text-gray-900 flex items-center gap-2">
+                                                    <Heart className="size-4 text-emerald-500" />
+                                                    기운 채워줌 ({ohengResult.supplement.length}쌍)
+                                                </h3>
+                                                <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-500">멤버 → 멤버 관계</p>
+                                            </div>
+                                            <div className="border-t border-gray-100 divide-y divide-gray-100">
                                                 {ohengResult.supplement.length > 0 ? (
-                                                    <table className="w-full min-w-[200px] text-[14px]">
-                                                        <thead>
-                                                            <tr className="border-b border-emerald-100 bg-emerald-50/50">
-                                                                <th className="px-2 py-1.5 text-left font-semibold text-emerald-800 w-14 text-sm">오행</th>
-                                                                <th className="px-2 py-1.5 text-left font-semibold text-emerald-800 text-sm">멤버 → 멤버</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {supplementTable.flatMap(({ element, rows }) =>
-                                                                rows.map((row, i) => (
-                                                                    <tr
-                                                                        key={`${element}-${row.fromName}-${i}`}
-                                                                        className="border-b border-emerald-50 last:border-0"
-                                                                    >
-                                                                        {i === 0 && (
-                                                                            <td
-                                                                                className="px-2 py-1.5 align-top text-emerald-700"
-                                                                                rowSpan={rows.length}
-                                                                            >
-                                                                                <span className="flex items-center gap-1">
-                                                                                    <OhengIcon element={element} className="size-3.5" /> {element}
-                                                                                </span>
-                                                                            </td>
-                                                                        )}
-                                                                        <td className="px-2 py-1.5 text-gray-700 leading-relaxed">
+                                                    supplementTable.flatMap(({ element, rows }) =>
+                                                        rows.map((row, i) => (
+                                                            <div
+                                                                key={`${element}-${row.fromName}-${i}`}
+                                                                className="px-4 py-3 sm:px-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-3"
+                                                            >
+                                                                {i === 0 ? (
+                                                                    <>
+                                                                        <dt className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+                                                                            <OhengIcon element={element} className="size-3.5 text-emerald-600" />
+                                                                            {element}
+                                                                        </dt>
+                                                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
                                                                             {row.fromName} → {row.toNames.join(", ")}
-                                                                        </td>
-                                                                    </tr>
-                                                                ))
-                                                            )}
-                                                        </tbody>
-                                                    </table>
+                                                                        </dd>
+                                                                    </>
+                                                                ) : (
+                                                                    <dd className="text-sm leading-6 text-gray-700 sm:col-span-3 sm:mt-0">
+                                                                        {row.fromName} → {row.toNames.join(", ")}
+                                                                    </dd>
+                                                                )}
+                                                            </div>
+                                                        ))
+                                                    )
                                                 ) : (
-                                                    <p className="px-3 py-4 text-sm text-gray-500">—</p>
+                                                    <p className="px-4 py-6 text-sm text-gray-500 sm:px-6">—</p>
                                                 )}
                                             </div>
                                         </div>
                                         {/* 우: 같은 기운 상충 상세 */}
-                                        <div className="flex flex-col rounded-lg border border-amber-200/80 bg-amber-50/40 overflow-hidden">
-                                            <p className="shrink-0 border-b border-amber-100 px-3 py-2 text-sm font-semibold text-amber-700 flex items-center gap-1.5">
-                                                <Swords className="size-4" /> 같은 기운 상충 ({ohengResult.conflict.length}쌍)
-                                            </p>
-                                            <div className="overflow-auto">
+                                        <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-gray-200 ring-inset">
+                                            <div className="px-4 py-4 sm:px-6 border-b border-gray-100">
+                                                <h3 className="text-base leading-7 font-semibold text-gray-900 flex items-center gap-2">
+                                                    <Swords className="size-4 text-amber-500" />
+                                                    같은 기운 상충 ({ohengResult.conflict.length}쌍)
+                                                </h3>
+                                                <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-500">오행별 요약</p>
+                                            </div>
+                                            <div className="border-t border-gray-100 divide-y divide-gray-100">
                                                 {ohengResult.conflict.length > 0 ? (
-                                                    <table className="w-full min-w-[180px] text-[14px]">
-                                                        <thead>
-                                                            <tr className="border-b border-amber-100 bg-amber-50/50">
-                                                                <th className="px-2 py-1.5 text-left font-semibold text-amber-800 w-14 text-sm">오행</th>
-                                                                <th className="px-2 py-1.5 text-left font-semibold text-amber-800 w-12 text-sm">쌍</th>
-                                                                <th className="px-2 py-1.5 text-left font-semibold text-amber-800 text-sm">요약</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {conflictTable.map(({ element, count, summary }) => (
-                                                                <tr key={element} className="border-b border-amber-50 last:border-0">
-                                                                    <td className="px-2 py-1.5 text-amber-700">
-                                                                        <span className="flex items-center gap-1">
-                                                                            <OhengIcon element={element} className="size-3.5" /> {element}
-                                                                        </span>
-                                                                    </td>
-                                                                    <td className="px-2 py-1.5 font-medium text-amber-800">{count}쌍</td>
-                                                                    <td className="px-2 py-1.5 text-gray-700 leading-relaxed flex items-center gap-1">
-                                                                        {summary}
-                                                                        {summary === "거의 모든 멤버 해당" && <Zap className="size-3 shrink-0" />}
-                                                                    </td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
+                                                    conflictTable.map(({ element, count, summary }) => (
+                                                        <div key={element} className="px-4 py-4 sm:px-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-4">
+                                                            <dt className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+                                                                <OhengIcon element={element} className="size-3.5 text-amber-600" />
+                                                                {element}
+                                                            </dt>
+                                                            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0 flex items-center gap-1">
+                                                                {count}쌍 · {summary}
+                                                                {summary === "거의 모든 멤버 해당" && <Zap className="size-3 shrink-0 text-amber-500" />}
+                                                            </dd>
+                                                        </div>
+                                                    ))
                                                 ) : (
-                                                    <p className="px-3 py-4 text-sm text-gray-500">—</p>
+                                                    <p className="px-4 py-6 text-sm text-gray-500 sm:px-6">—</p>
                                                 )}
                                             </div>
                                         </div>
@@ -916,9 +929,11 @@ export const OhengMatchingSection: React.FC<OhengMatchingSectionProps> = ({
                                 </div>
                             </div>
                         )}
+                        </div>
                     </div>
                 </>
             )}
+            </div>
         </motion.section>
     );
 };
