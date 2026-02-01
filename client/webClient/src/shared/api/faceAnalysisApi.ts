@@ -146,9 +146,8 @@ export interface TotalReview {
   harmony?: string;       // 부위 간의 조화 및 균형 해석 (관상)
   comprehensive?: string; // 종합 운세 해석 (관상)
   improvement?: string;   // 운을 좋게 만드는 방법 제안 (관상)
-  /** 체질 풀이 전체 (사주 있을 때 같은 LLM이 생성) */
+  /** 체질 풀이 전체 (사주 기반 건강/체질 분석) */
   constitutionSummary?: string;
-  total_user_saju_information?: string;
 }
 
 /** 1단계 응답 (Rule-based) */

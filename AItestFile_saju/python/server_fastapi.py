@@ -45,13 +45,11 @@ from saju_summary_service import (
     build_saju_summary_prompt,
     build_saju_user_prompt_for_summary,
     parse_birth_info,
-    parse_total_review
 )
 from face_prompt_builder import (
     summarize_face_analysis_for_search,
     build_total_review_prompt,
-    parse_total_review
-    parse_total_review
+    parse_total_review,
 )
 
 # FastAPI 앱 초기화
@@ -638,12 +636,9 @@ async def analyze_face_api(request: FaceAnalysisRequest):
         print(f"✅ 관상 분석 완료 - 품질: {meta.get('qualityNote', 'N/A')}")
         
         # 2. 사주 계산 (필수)
-        # 2. 사주 계산 (필수)
         saju_data = request.sajuData
         if not saju_data or not saju_data.birthDate:
             raise HTTPException(status_code=400, detail="sajuData와 birthDate는 필수입니다.")
-        if not saju_data or not saju_data.birthDate:
-            raise HTTPException(status_code=400, detail="sajuData와 birthDate는 필수입니다.")
         
         try:
             print(f"🔮 사주 계산 시작...")
@@ -673,36 +668,7 @@ async def analyze_face_api(request: FaceAnalysisRequest):
             import traceback
             traceback.print_exc()
             raise HTTPException(status_code=400, detail=f"사주 계산 오류: {str(e)}")
-        try:
-            print(f"🔮 사주 계산 시작...")
-            birth_info = parse_birth_info(saju_data.dict())
-            saju = calculate_saju(birth_info)
-            myeongri = calculate_myeongri(saju)
-            saju_info = {
-                "yearPillar": saju['yearPillar'],
-                "monthPillar": saju['monthPillar'],
-                "dayPillar": saju['dayPillar'],
-                "hourPillar": saju['hourPillar'],
-                "yearStem": saju['yearStem'],
-                "yearBranch": saju['yearBranch'],
-                "monthStem": saju['monthStem'],
-                "monthBranch": saju['monthBranch'],
-                "dayStem": saju['dayStem'],
-                "dayBranch": saju['dayBranch'],
-                "hourStem": saju['hourStem'],
-                "hourBranch": saju['hourBranch'],
-                "solarTerm": saju['solarTerm'],
-                "fiveElements": myeongri['fiveElements']
-            }
-            print(f"   사주: {saju['yearPillar']} {saju['monthPillar']} {saju['dayPillar']} {saju['hourPillar']}")
-            print("✅ 사주 계산 완료")
-        except Exception as e:
-            print(f"⚠️ 사주 계산 중 오류: {e}")
-            import traceback
-            traceback.print_exc()
-            raise HTTPException(status_code=400, detail=f"사주 계산 오류: {str(e)}")
         
-        # 3. RAG 검색 + LLM 1회 호출 (관상 3키 + 전체적인 체질 특성 = 4키)
         # 3. RAG 검색 + LLM 1회 호출 (관상 3키 + 전체적인 체질 특성 = 4키)
         total_review = None
         try:
@@ -729,11 +695,6 @@ async def analyze_face_api(request: FaceAnalysisRequest):
             print("📝 LLM 프롬프트 생성 중 (관상+사주 4키)...")
             system_prompt, user_prompt = build_total_review_prompt(analysis_result, saju_info, rag_context)
             print("🤖 LLM 호출 중 (1회)...")
-            
-            # LLM 1회 호출: [조화][종합][조언][전체적인 체질 특성] 한 번에 생성
-            print("📝 LLM 프롬프트 생성 중 (관상+사주 4키)...")
-            system_prompt, user_prompt = build_total_review_prompt(analysis_result, saju_info, rag_context)
-            print("🤖 LLM 호출 중 (1회)...")
             llm_result = call_gms_api(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
@@ -745,14 +706,13 @@ async def analyze_face_api(request: FaceAnalysisRequest):
             print("✅ LLM 기반 관상+체질 해석 생성 완료 (4키)")
         except Exception as e:
             print(f"⚠️ RAG+LLM 처리 중 오류: {e}")
-            print(f"⚠️ RAG+LLM 처리 중 오류: {e}")
             import traceback
             traceback.print_exc()
             total_review = {
                 "harmony": "관상 분석 결과를 바탕으로 전체적인 조화를 분석합니다.",
                 "comprehensive": "종합적인 성격과 운세를 분석합니다.",
                 "improvement": "더 나은 삶을 위한 조언을 제공합니다.",
-                "total_user_saju_information": "",
+                "constitutionSummary": "",
             }
         
         # 4. 통합 응답 반환
@@ -765,10 +725,6 @@ async def analyze_face_api(request: FaceAnalysisRequest):
                 "headRoll": meta.get("headRoll", 0),
                 "qualityNote": meta.get("qualityNote", ""),
                 "overallSymmetry": meta.get("symmetry", 0)
-            },
-            "totalReview": total_review,
-            "sajuInfo": saju_info,
-        }
             },
             "totalReview": total_review,
             "sajuInfo": saju_info,
