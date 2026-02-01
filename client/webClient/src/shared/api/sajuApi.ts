@@ -175,8 +175,6 @@ function determineSectionType(title: string): 'physiognomy' | 'constitution' | '
  */
 export async function analyzeSaju(sajuData: SajuData): Promise<SajuAnalysisResponse> {
   try {
-    console.log('🔮 사주 분석 시작:', sajuData);
-
     // 생년월일시 파싱 - 다양한 형식 지원 (YYYY.MM.DD, YYYY-MM-DD, YYYY/MM/DD)
     const dateParts = sajuData.birthDate.split(/[.\-\/]/);
     const year = parseInt(dateParts[0], 10);
@@ -191,8 +189,6 @@ export async function analyzeSaju(sajuData: SajuData): Promise<SajuAnalysisRespo
       minute = parseInt(timeParts[1], 10) || 0;
     }
 
-    console.log('📅 파싱된 날짜:', { year, month, day, hour, minute });
-
     // Python 서버로 생년월일시만 전송
     const aiRequest = {
       year,
@@ -205,9 +201,6 @@ export async function analyzeSaju(sajuData: SajuData): Promise<SajuAnalysisRespo
       isLeapMonth: false, // TODO: 프론트엔드에서 윤달 정보 추가 필요 시
       useRedis: import.meta.env.VITE_USE_REDIS_RAG === 'true', // 환경변수로 Redis 사용 여부 설정
     };
-
-    console.log('📤 AI 서버로 요청 전송:', `${AI_SERVER_URL}/api/saju/analyze`);
-    console.log('📤 요청 데이터:', aiRequest);
 
     const response = await fetch(`${AI_SERVER_URL}/api/saju/analyze`, {
       method: 'POST',
@@ -243,7 +236,6 @@ export async function analyzeSaju(sajuData: SajuData): Promise<SajuAnalysisRespo
       parsedData: parsedData,
     };
 
-    console.log('✅ 사주 분석 완료:', result);
     return result;
   } catch (error) {
     console.error('❌ 사주 분석 API 호출 오류:', error);

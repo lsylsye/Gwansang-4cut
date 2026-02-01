@@ -20,6 +20,7 @@ interface PhotoBoothSectionProps {
   mode?: AnalyzeMode;
 }
 
+
 type FrameType = "vertical" | "horizontal";
 
 const TOTAL_PHOTOS = 8; // 총 8장 촬영
