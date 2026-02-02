@@ -93,12 +93,14 @@ def build_total_review_prompt(
 ) -> tuple:
     """
     totalReview 생성을 위한 프롬프트.
-    한 번의 LLM 호출로 [조화][종합][조언][전체적인 체질 특성] 4키를 생성.
-    사주는 항상 있다고 가정합니다.
+    한 번의 LLM 호출로 [전체 관상 종합][취업운][전체적인 체질 특성] 3키를 생성.
+    - 전체 관상 종합: 관상 데이터만 사용
+    - 취업운: 관상 + 사주 데이터 사용 (올해 취업운)
+    - 전체적인 체질 특성: 사주 데이터 사용
 
     Args:
         analysis: analyze_face() 함수의 결과
-        saju_info: 사주 정보 (필수)
+        saju_info: 사주 정보
         rag_context: RAG 검색 결과
 
     Returns:
@@ -112,8 +114,12 @@ def build_total_review_prompt(
     max_element = max(elements, key=elements.get) if elements else "목"
     min_element = min(elements, key=elements.get) if elements else "금"
     
+    # 올해 연도 계산
+    from datetime import datetime
+    current_year = datetime.now().year
+    
     system_prompt = f"""당신은 전통 동양 관상학과 명리학 전문가 '거북 도사'입니다.
-관상 분석 결과와 사주를 종합하여 총평을 작성합니다.
+관상 분석 결과와 사주를 바탕으로 총평을 작성합니다.
 
 ## 참고 지식
 {rag_context if rag_context else "[참고 자료 없음]"}
@@ -123,23 +129,30 @@ def build_total_review_prompt(
 2. 구체적이고 실용적인 조언 제공
 3. 자연스러운 문장으로 작성
 4. '~하오', '~리라', '~하시오' 등 도사 어투 사용
-5. 반드시 4개 섹션을 모두 작성
+5. 반드시 3개 섹션을 모두 작성
 
 ## 중요: 응답 형식
-반드시 아래 4개 섹션을 순서대로, 각 섹션 시작에 정확히 "###[섹션명]" 마커를 사용하세요.
+반드시 아래 3개 섹션을 순서대로, 각 섹션 시작에 정확히 "###[섹션명]" 마커를 사용하세요.
 마커 뒤에는 줄바꿈 후 내용을 작성하세요.
 
-###[조화]
-관상 각 부위(얼굴형, 이마, 눈, 코, 입, 턱)의 조화와 균형에 대한 분석.
-사주 오행과 얼굴형이 어떻게 조화되는지 3-4문장으로 작성.
+###[전체 관상 종합]
+관상 각 부위(얼굴형, 이마, 눈, 코, 입, 턱)를 종합한 전체적인 분석.
+각 부위의 조화, 균형, 성격, 운세, 특성을 통합하여 6-8문장으로 작성.
+(관상 데이터만 사용, 사주 정보는 사용하지 마시오)
 
-###[종합]
-종합적인 성격, 운세, 특성에 대한 분석.
-관상과 사주를 통합하여 이 사람의 전체적인 특성을 4-5문장으로 작성.
+###[취업운]
+{current_year}년 올해의 취업운을 관상과 사주를 종합하여 구체적이고 실용적으로 분석.
+아래 형식을 참고하여 6-8문장으로 작성:
 
-###[조언]
-더 나은 삶을 위한 구체적이고 실용적인 조언.
-관상과 사주 분석을 바탕으로 한 방향 제시 3-4문장.
+1. 올해 취업운의 본질/핵심 메시지 (운이 자동으로 오는 해인지, 준비한 사람이 가져가는 해인지 등)
+2. 합격을 결정하는 요소 (스펙 vs 실무경험/포트폴리오 등 구체적으로)
+3. 취업 흐름이 강하게 열리는 구체적 시기 (예: "**5~7월(특히 6월)**에 면접·합격 운이 집중")
+4. 상반기에 결과가 없어도 다시 기회가 오는 시기 (예: "9~10월에 현실적 기회")
+5. 잘 맞는 직무/분야 구체적 제시 (예: "기획·운영·콘텐츠·IT·분석처럼 생각하고 정리하고 실행하는 역할")
+6. 맞지 않는 직무 유형 (예: "단순 반복 업무는 오래 버티기 어려움")
+7. 가장 중요한 취업 전략 포인트 (예: "아무 데나 많이 넣기보다 직무 1~2개로 압축해 전략적으로")
+
+반드시 구체적인 월(月)을 언급하고, 직무명을 3~5개 제시하시오.
 
 ###[전체적인 체질 특성]
 사주 오행 분포를 바탕으로 건강 관점의 체질 풀이 작성.
@@ -172,10 +185,10 @@ def build_total_review_prompt(
 
     user_prompt = f"""다음 관상 분석 결과에 대한 종합 총평을 작성해주세요.
 
-## 관상 분석 요약
+## 관상 분석 요약 (전체 관상 종합 섹션에서는 이 데이터만 사용)
 {chr(10).join(analysis_summary) if analysis_summary else "관상 분석 데이터 없음"}
 
-## 이 사용자의 사주 정보 (반드시 이 수치만 사용할 것)
+## 사주 정보 (취업운, 전체적인 체질 특성 섹션에서 사용)
 - 연주: {saju_info.get('yearPillar', '미상')}
 - 월주: {saju_info.get('monthPillar', '미상')}
 - 일주: {saju_info.get('dayPillar', '미상')}
@@ -184,8 +197,14 @@ def build_total_review_prompt(
 - 오행 분포: 목(木) {five.get('목', 0)}개, 화(火) {five.get('화', 0)}개, 토(土) {five.get('토', 0)}개, 금(金) {five.get('금', 0)}개, 수(水) {five.get('수', 0)}개
 - 가장 많은 오행: {max_element}({elements.get(max_element, 0)}개)
 - 가장 적은 오행: {min_element}({elements.get(min_element, 0)}개)
+- 현재 연도: {current_year}년
 
-위 분석을 바탕으로 ###[조화], ###[종합], ###[조언], ###[전체적인 체질 특성] 네 섹션을 순서대로 모두 작성해주세요.
+## 중요 지침
+- ###[전체 관상 종합] 섹션: 관상 분석 데이터만 사용하여 작성. 사주 정보(오행, 일간 등)는 절대 언급하지 마시오.
+- ###[취업운] 섹션: 관상과 사주 모두 활용하여 {current_year}년 올해의 취업운을 상세히 분석.
+- ###[전체적인 체질 특성] 섹션: 사주 오행 분포를 사용하여 작성.
+
+위 지침을 바탕으로 ###[전체 관상 종합], ###[취업운], ###[전체적인 체질 특성] 세 섹션을 순서대로 모두 작성해주세요.
 각 섹션은 반드시 "###[섹션명]" 마커로 시작해야 합니다.
 """
     return system_prompt, user_prompt
@@ -193,27 +212,25 @@ def build_total_review_prompt(
 
 def parse_total_review(response: str) -> Dict[str, str]:
     """
-    LLM 응답에서 totalReview 파싱 (한 번의 호출로 4키 반환)
-    ###[조화], ###[종합], ###[조언], ###[전체적인 체질 특성] 섹션을 추출.
+    LLM 응답에서 totalReview 파싱 (한 번의 호출로 3키 반환)
+    ###[전체 관상 종합], ###[취업운], ###[전체적인 체질 특성] 섹션을 추출.
     
     Args:
         response: LLM 응답 텍스트
         
     Returns:
-        Dict: harmony, comprehensive, improvement, constitutionSummary
+        Dict: faceOverview, careerFortune, constitutionSummary
     """
     result = {
-        "harmony": "",
-        "comprehensive": "",
-        "improvement": "",
+        "faceOverview": "",
+        "careerFortune": "",
         "constitutionSummary": "",
     }
     
     # 마커 기반 파싱 (###[섹션명] 형식)
     sections = {
-        "harmony": r'###\[조화\]\s*([\s\S]*?)(?=###\[종합\]|###\[조언\]|###\[전체적인 체질 특성\]|$)',
-        "comprehensive": r'###\[종합\]\s*([\s\S]*?)(?=###\[조언\]|###\[전체적인 체질 특성\]|$)',
-        "improvement": r'###\[조언\]\s*([\s\S]*?)(?=###\[전체적인 체질 특성\]|$)',
+        "faceOverview": r'###\[전체 관상 종합\]\s*([\s\S]*?)(?=###\[취업운\]|###\[전체적인 체질 특성\]|$)',
+        "careerFortune": r'###\[취업운\]\s*([\s\S]*?)(?=###\[전체적인 체질 특성\]|$)',
         "constitutionSummary": r'###\[전체적인 체질 특성\]\s*([\s\S]*)$',
     }
     
@@ -225,9 +242,8 @@ def parse_total_review(response: str) -> Dict[str, str]:
     # 마커가 없는 경우 대괄호만 있는 패턴으로 폴백
     if not any(result.values()):
         fallback_sections = {
-            "harmony": r'\[조화\]\s*([\s\S]*?)(?=\[종합\]|\[조언\]|\[전체적인 체질 특성\]|$)',
-            "comprehensive": r'\[종합\]\s*([\s\S]*?)(?=\[조언\]|\[전체적인 체질 특성\]|$)',
-            "improvement": r'\[조언\]\s*([\s\S]*?)(?=\[전체적인 체질 특성\]|$)',
+            "faceOverview": r'\[전체 관상 종합\]\s*([\s\S]*?)(?=\[취업운\]|\[전체적인 체질 특성\]|$)',
+            "careerFortune": r'\[취업운\]\s*([\s\S]*?)(?=\[전체적인 체질 특성\]|$)',
             "constitutionSummary": r'\[전체적인 체질 특성\]\s*([\s\S]*)$',
         }
         
@@ -238,15 +254,14 @@ def parse_total_review(response: str) -> Dict[str, str]:
     
     # 그래도 없으면 줄 제목 기반 파싱
     if not any(result.values()):
-        # "조화" 등의 단어가 줄 시작에 있는 경우
         lines = response.split('\n')
         current_section = None
         current_content = []
         
         section_keywords = {
-            "조화": "harmony",
-            "종합": "comprehensive", 
-            "조언": "improvement",
+            "전체 관상 종합": "faceOverview",
+            "관상 종합": "faceOverview",
+            "취업운": "careerFortune",
             "전체적인 체질 특성": "constitutionSummary",
             "체질 특성": "constitutionSummary",
         }
@@ -271,11 +286,219 @@ def parse_total_review(response: str) -> Dict[str, str]:
         if current_section and current_content:
             result[current_section] = '\n'.join(current_content).strip()
     
-    # 섹션이 하나도 없으면 전체 응답을 comprehensive에 넣음
+    # 섹션이 하나도 없으면 전체 응답을 faceOverview에 넣음
     if not any(result.values()):
-        result["comprehensive"] = response.strip()
+        result["faceOverview"] = response.strip()
     
     return result
+
+
+# ============================================================
+# 병렬 처리용 개별 프롬프트 함수들
+# ============================================================
+
+def build_face_overview_prompt(
+    analysis: Dict[str, Any],
+    rag_context: str = ""
+) -> tuple:
+    """
+    전체 관상 종합 프롬프트 (관상 데이터만 사용)
+    병렬 처리를 위한 개별 프롬프트.
+    
+    Args:
+        analysis: analyze_face() 함수의 결과
+        rag_context: RAG 검색 결과
+        
+    Returns:
+        tuple: (system_prompt, user_prompt)
+    """
+    # 분석 결과 요약
+    analysis_summary = []
+    for part_name, part_data in analysis.items():
+        if isinstance(part_data, dict) and part_name != "_meta":
+            part_type = part_data.get('type', part_data.get('_type', ''))
+            core_meaning = part_data.get('coreMeaning', '')[:100]
+            if part_type or core_meaning:
+                analysis_summary.append(f"- {part_name}: {part_type} - {core_meaning}")
+    
+    system_prompt = f"""당신은 전통 동양 관상학 전문가 '거북 도사'입니다.
+관상 분석 결과를 바탕으로 종합 분석을 작성합니다.
+
+## 참고 지식
+{rag_context if rag_context else "[참고 자료 없음]"}
+
+## 응답 원칙
+1. 긍정적이고 건설적인 관점 유지
+2. 구체적이고 실용적인 분석 제공
+3. 자연스러운 문장으로 작성
+4. '~하오', '~리라', '~하시오' 등 도사 어투 사용
+5. 6-8문장으로 작성
+
+## 작성 지침
+관상 각 부위(얼굴형, 이마, 눈, 코, 입, 턱)를 종합한 전체적인 분석을 작성하세요.
+각 부위의 조화, 균형, 성격, 운세, 특성을 통합하여 작성하세요.
+사주 정보(오행, 일간 등)는 절대 언급하지 마시오. 오직 관상 데이터만 사용하세요."""
+
+    user_prompt = f"""다음 관상 분석 결과를 종합해주세요.
+
+## 관상 분석 결과
+{chr(10).join(analysis_summary) if analysis_summary else "관상 분석 데이터 없음"}
+
+위 관상 분석 결과를 종합하여 6-8문장으로 전체적인 관상 분석을 작성해주세요.
+사주 정보는 언급하지 마세요."""
+
+    return system_prompt, user_prompt
+
+
+def build_career_fortune_prompt(
+    analysis: Dict[str, Any],
+    saju_info: Dict[str, Any],
+    rag_context: str = ""
+) -> tuple:
+    """
+    취업운 프롬프트 (관상 + 사주 데이터 사용)
+    병렬 처리를 위한 개별 프롬프트.
+    
+    Args:
+        analysis: analyze_face() 함수의 결과
+        saju_info: 사주 정보
+        rag_context: RAG 검색 결과
+        
+    Returns:
+        tuple: (system_prompt, user_prompt)
+    """
+    from datetime import datetime
+    current_year = datetime.now().year
+    
+    five = saju_info.get("fiveElements") or {}
+    elements = {"목": five.get("목", 0), "화": five.get("화", 0), "토": five.get("토", 0), 
+                "금": five.get("금", 0), "수": five.get("수", 0)}
+    max_element = max(elements, key=elements.get) if elements else "목"
+    min_element = min(elements, key=elements.get) if elements else "금"
+    
+    # 분석 결과 요약
+    analysis_summary = []
+    for part_name, part_data in analysis.items():
+        if isinstance(part_data, dict) and part_name != "_meta":
+            part_type = part_data.get('type', part_data.get('_type', ''))
+            core_meaning = part_data.get('coreMeaning', '')[:80]
+            if part_type or core_meaning:
+                analysis_summary.append(f"- {part_name}: {part_type} - {core_meaning}")
+    
+    system_prompt = f"""당신은 전통 동양 관상학과 명리학 전문가 '거북 도사'입니다.
+관상과 사주를 종합하여 취업운을 분석합니다.
+
+## 참고 지식
+{rag_context if rag_context else "[참고 자료 없음]"}
+
+## 응답 원칙
+1. 긍정적이고 건설적인 관점 유지
+2. 구체적이고 실용적인 조언 제공
+3. 자연스러운 문장으로 작성
+4. '~하오', '~리라', '~하시오' 등 도사 어투 사용
+5. 6-8문장으로 작성
+
+## 취업운 작성 지침
+{current_year}년 올해의 취업운을 관상과 사주를 종합하여 구체적이고 실용적으로 분석하세요.
+
+반드시 아래 내용을 포함하여 작성:
+1. 올해 취업운의 본질/핵심 메시지 (운이 자동으로 오는 해인지, 준비한 사람이 가져가는 해인지 등)
+2. 합격을 결정하는 요소 (스펙 vs 실무경험/포트폴리오 등 구체적으로)
+3. 취업 흐름이 강하게 열리는 구체적 시기 (예: "**5~7월(특히 6월)**에 면접·합격 운이 집중")
+4. 상반기에 결과가 없어도 다시 기회가 오는 시기 (예: "9~10월에 현실적 기회")
+5. 잘 맞는 직무/분야 구체적 제시 (예: "기획·운영·콘텐츠·IT·분석처럼 생각하고 정리하고 실행하는 역할")
+6. 맞지 않는 직무 유형 (예: "단순 반복 업무는 오래 버티기 어려움")
+7. 가장 중요한 취업 전략 포인트 (예: "아무 데나 많이 넣기보다 직무 1~2개로 압축해 전략적으로")
+
+반드시 구체적인 월(月)을 언급하고, 직무명을 3~5개 제시하시오."""
+
+    user_prompt = f"""다음 관상과 사주 정보를 바탕으로 {current_year}년 취업운을 분석해주세요.
+
+## 관상 분석 요약
+{chr(10).join(analysis_summary) if analysis_summary else "관상 분석 데이터 없음"}
+
+## 사주 정보
+- 연주: {saju_info.get('yearPillar', '미상')}
+- 월주: {saju_info.get('monthPillar', '미상')}
+- 일주: {saju_info.get('dayPillar', '미상')}
+- 시주: {saju_info.get('hourPillar', '미상')}
+- 일간: {saju_info.get('dayStem', '미상')}
+- 오행 분포: 목(木) {five.get('목', 0)}개, 화(火) {five.get('화', 0)}개, 토(土) {five.get('토', 0)}개, 금(金) {five.get('금', 0)}개, 수(水) {five.get('수', 0)}개
+- 가장 많은 오행: {max_element}({elements.get(max_element, 0)}개)
+- 가장 적은 오행: {min_element}({elements.get(min_element, 0)}개)
+- 현재 연도: {current_year}년
+
+위 정보를 바탕으로 {current_year}년 취업운을 구체적인 시기와 직무를 포함하여 6-8문장으로 작성해주세요."""
+
+    return system_prompt, user_prompt
+
+
+def build_constitution_prompt(
+    saju_info: Dict[str, Any],
+    rag_context: str = ""
+) -> tuple:
+    """
+    전체적인 체질 특성 프롬프트 (사주 데이터만 사용)
+    병렬 처리를 위한 개별 프롬프트.
+    
+    Args:
+        saju_info: 사주 정보
+        rag_context: RAG 검색 결과
+        
+    Returns:
+        tuple: (system_prompt, user_prompt)
+    """
+    five = saju_info.get("fiveElements") or {}
+    elements = {"목": five.get("목", 0), "화": five.get("화", 0), "토": five.get("토", 0), 
+                "금": five.get("금", 0), "수": five.get("수", 0)}
+    max_element = max(elements, key=elements.get) if elements else "목"
+    min_element = min(elements, key=elements.get) if elements else "금"
+    
+    system_prompt = f"""당신은 전통 명리학과 체질 의학 전문가 '거북 도사'입니다.
+사주 오행 분포를 바탕으로 건강 관점의 체질 풀이를 작성합니다.
+
+## 참고 지식
+{rag_context if rag_context else "[참고 자료 없음]"}
+
+## 응답 원칙
+1. 긍정적이고 건설적인 관점 유지
+2. 구체적이고 실용적인 건강 조언 제공
+3. 자연스러운 문장으로 작성
+4. '~하오', '~리라', '~하시오' 등 도사 어투 사용
+
+## 작성 지침
+반드시 아래 5개 소제목을 순서대로 포함하여 작성하세요:
+
+**전체적인 체질 특성**
+이 사용자의 오행 분포에서 가장 많은 오행({max_element})과 가장 적은 오행({min_element})을 반영한 기본 체질 특성 2~3문장.
+
+**이 체질이 나타내는 건강상 주의점**
+일간({saju_info.get('dayStem', '미상')})이 몸과 심리에 미치는 영향 3~4문장.
+
+**{max_element}(이/가) 많은 사주와 건강**
+가장 많은 오행이 담당하는 신체 부위와 건강 주의점 4~5문장.
+
+**{min_element}(이/가) 약한 구조와 회복력**
+가장 적은 오행이 담당하는 신체 부위와 회복력 3~4문장.
+
+**건강 관리를 위해 꼭 챙기면 좋은 것들**
+물, 음식, 수면, 운동 등 구체적 실천 방안 3~4문장."""
+
+    user_prompt = f"""다음 사주 정보를 바탕으로 체질 특성을 분석해주세요.
+
+## 사주 정보
+- 연주: {saju_info.get('yearPillar', '미상')}
+- 월주: {saju_info.get('monthPillar', '미상')}
+- 일주: {saju_info.get('dayPillar', '미상')}
+- 시주: {saju_info.get('hourPillar', '미상')}
+- 일간: {saju_info.get('dayStem', '미상')}
+- 오행 분포: 목(木) {five.get('목', 0)}개, 화(火) {five.get('화', 0)}개, 토(土) {five.get('토', 0)}개, 금(金) {five.get('금', 0)}개, 수(水) {five.get('수', 0)}개
+- 가장 많은 오행: {max_element}({elements.get(max_element, 0)}개)
+- 가장 적은 오행: {min_element}({elements.get(min_element, 0)}개)
+
+위 5개 소제목을 순서대로 포함하여 체질 특성을 작성해주세요."""
+
+    return system_prompt, user_prompt
 
 
 def build_face_analysis_system_prompt(rag_context: str, saju_info: Optional[Dict] = None) -> str:
@@ -346,7 +569,10 @@ def build_face_analysis_user_prompt(
         face_type = face_shape.get("_type", face_shape.get("type", "미상"))
         parts_info.append(f"""
 ### 얼굴형 (그릇) - {face_type}
-- W/H 비율: {measures.get('wh', 'N/A')}
+- L(세로): {measures.get('L', 'N/A')}, W(가로): {measures.get('W', 'N/A')}, J(턱폭): {measures.get('J', 'N/A')}
+- R_LW(세로/가로): {measures.get('R_LW', measures.get('wh', 'N/A'))}
+- R_UM(상안/중안): {measures.get('R_UM', 'N/A')}, R_WJ(가로/턱): {measures.get('R_WJ', 'N/A')}
+- pitch 각도: {measures.get('pitch_deg', 'N/A')}°
 - 기본 해석: {face_shape.get('coreMeaning', '')}
 - 조언: {face_shape.get('advice', '')}
 """)
@@ -357,7 +583,10 @@ def build_face_analysis_user_prompt(
         measures = forehead.get("measures", {})
         parts_info.append(f"""
 ### 이마 (초년운/판단력)
-- 높이 비율: {measures.get('heightRatio', measures.get('R_F1', 'N/A'))}, 폭 비율: {measures.get('widthRatio', measures.get('R_FW', 'N/A'))}
+- 세로 비중: 상부(R_F1) {measures.get('R_F1', 'N/A')}, 중앙(R_F2) {measures.get('R_F2', 'N/A')}, 하부(R_F3) {measures.get('R_F3', 'N/A')}
+- 사고 초점: {measures.get('dominant', 'N/A')}우세
+- 이마 폭 비율(R_FW): {measures.get('R_FW', 'N/A')}
+- 좌우 비대칭(Asym): {measures.get('Asym', 'N/A')}
 - 기본 해석: {forehead.get('coreMeaning', '')}
 - 조언: {forehead.get('advice', '')}
 """)
@@ -368,9 +597,10 @@ def build_face_analysis_user_prompt(
         measures = eyes.get("measures", {})
         parts_info.append(f"""
 ### 눈 (성격/대인관계)
-- 좌우 비대칭도: {measures.get('asymmetry', 'N/A')}, 대칭 판정: {measures.get('asymmetryCriteria', '')}
-- 눈 개방도(좌): {measures.get('openL', 'N/A')}, (우): {measures.get('openR', 'N/A')}
-- 미간 거리: {measures.get('interDist', 'N/A')}
+- 눈 개방도: 좌 {measures.get('openL', 'N/A')}, 우 {measures.get('openR', 'N/A')}
+- 좌우 비대칭도: {measures.get('asymmetry', 'N/A')}, 판정: {measures.get('asymmetryCriteria', '')}
+- 미간 거리: {measures.get('interDist', 'N/A')}, 폭 비율: {measures.get('widthRatio', 'N/A')}
+- 전체 대칭도: {measures.get('symmetry', 'N/A')}
 - 기본 해석: {eyes.get('coreMeaning', '')}
 - 조언: {eyes.get('advice', '')}
 """)
@@ -381,8 +611,10 @@ def build_face_analysis_user_prompt(
         measures = nose.get("measures", {})
         parts_info.append(f"""
 ### 코 (재물운/현실감)
-- 길이 비율: {measures.get('lengthRatio', measures.get('length_ratio', 'N/A'))}, 판정: {measures.get('lengthCriteria', '')}
-- 폭: {measures.get('width', measures.get('nose_width', 'N/A'))}
+- 코 길이: {measures.get('nose_length', 'N/A')}, 길이 비율: {measures.get('length_ratio', 'N/A')}, 판정: {measures.get('lengthCriteria', '')}
+- 코 폭: {measures.get('nose_width', 'N/A')}, 폭 비율: {measures.get('nose_width_ratio', 'N/A')}, 판정: {measures.get('widthCriteria', '')}
+- 폭/길이 비율: {measures.get('nose_shape_ratio', 'N/A')}, 판정: {measures.get('shapeCriteria', '')}
+- 중심선 기울기: {measures.get('nose_shift_ratio', 'N/A')}
 - 기본 해석: {nose.get('coreMeaning', '')}
 - 조언: {nose.get('advice', '')}
 """)
@@ -392,8 +624,9 @@ def build_face_analysis_user_prompt(
     if mouth:
         measures = mouth.get("measures", {})
         parts_info.append(f"""
-### 입 (언어/복)
-- 폭: {measures.get('width', 'N/A')}, 입술 두께: {measures.get('lipThickness', 'N/A')}
+### 입 (말·신뢰·애정운)
+- 입 폭: {measures.get('width', 'N/A')}, 폭 비율: {measures.get('mouth_width_ratio', 'N/A')}, 판정: {measures.get('widthCriteria', '')}
+- 입술 두께: {measures.get('lipThickness', 'N/A')}, 판정: {measures.get('lipCriteria', '')}
 - 입꼬리 각도: {measures.get('cornerSlope', 'N/A')}°, 판정: {measures.get('cornerCriteria', '')}
 - 기본 해석: {mouth.get('coreMeaning', '')}
 - 조언: {mouth.get('advice', '')}
@@ -403,10 +636,15 @@ def build_face_analysis_user_prompt(
     chin = analysis.get("chin", {})
     if chin:
         measures = chin.get("measures", {})
+        structure = chin.get("structure", {})
+        endurance = chin.get("endurance", {})
         parts_info.append(f"""
-### 턱 (말년운/리더십)
-- 턱 각도: {measures.get('angle', 'N/A')}°, 판정: {measures.get('angleCriteria', '')}
-- 길이: {measures.get('length', measures.get('chin_length', 'N/A'))}, 폭: {measures.get('width', measures.get('jaw_width', 'N/A'))}
+### 턱 (지구력·노년운)
+- 턱 각도: {measures.get('angle', structure.get('angle', 'N/A'))}°, 판정: {measures.get('angleCriteria', structure.get('angleType', ''))}
+- 턱 길이: {measures.get('chin_length', 'N/A')}, 길이 비율: {measures.get('chin_ratio', endurance.get('lengthRatio', 'N/A'))}, 판정: {endurance.get('lengthType', '')}
+- 턱 깊이 비율: {measures.get('chin_depth_ratio', endurance.get('depthRatio', 'N/A'))}, 판정: {endurance.get('depthType', '')}
+- 좌우 지지 비대칭: {measures.get('support_asym', endurance.get('supportAsym', 'N/A'))}, 판정: {endurance.get('supportType', '')}
+- 턱 폭: {measures.get('jaw_width', structure.get('width', 'N/A'))}
 - 기본 해석: {chin.get('coreMeaning', '')}
 - 조언: {chin.get('advice', '')}
 """)
@@ -417,8 +655,9 @@ def build_face_analysis_user_prompt(
     if meta:
         meta_info = f"""
 ## 측정 품질
-- 얼굴 기울기: {safe_float(meta.get('headRoll', 0)):.1f}°
-- 전체 대칭도: {safe_float(meta.get('overallSymmetry', meta.get('symmetry', 0))):.1f}%
+- 얼굴 기울기(head_roll): {safe_float(meta.get('headRoll', 0)):.1f}°
+- 고개 숙임(pitch): {safe_float(meta.get('pitchDeg', 0)):.1f}°
+- 전체 대칭도: {safe_float(meta.get('symmetry', meta.get('overallSymmetry', 0))):.1f}%
 - 품질 상태: {meta.get('qualityNote', '정상')}
 """
     
@@ -535,72 +774,89 @@ def build_menu_recommendation_prompt(
     constitution_summary: str = ""
 ) -> tuple:
     """
-    체질에 맞는 메뉴 추천 프롬프트 생성
+    체질 분석 결과를 기반으로 메뉴 추천 프롬프트 생성.
     
     Args:
         saju_info: 사주 정보 (fiveElements 포함)
-        menus: welstory 메뉴 리스트 (name, desc, image 등)
-        constitution_summary: 체질 분석 요약 (선택)
+        menus: 웰스토리 메뉴 목록
+        constitution_summary: 체질 분석 요약 텍스트
         
     Returns:
         tuple: (system_prompt, user_prompt)
     """
     five = saju_info.get("fiveElements") or {}
+    
+    # 가장 많은/적은 오행
     elements = {"목": five.get("목", 0), "화": five.get("화", 0), "토": five.get("토", 0), 
                 "금": five.get("금", 0), "수": five.get("수", 0)}
     max_element = max(elements, key=elements.get) if elements else "목"
     min_element = min(elements, key=elements.get) if elements else "금"
     
-    # 메뉴 목록 문자열 생성
-    menu_list_str = ""
-    for i, menu in enumerate(menus):
-        menu_name = menu.get("name") or menu.get("메뉴명", f"메뉴{i+1}")
-        menu_desc = menu.get("desc") or ", ".join(menu.get("구성", []))[:50]
-        menu_list_str += f"{i}. {menu_name}: {menu_desc}\n"
+    # 오행별 추천 식재료 매핑
+    element_foods = {
+        "목": "신맛 음식(식초, 매실, 귤, 레몬), 푸른 채소, 간을 돕는 음식",
+        "화": "쓴맛 음식(고들빼기, 쑥, 커피, 다크초콜릿), 붉은색 식재료, 볶음 요리",
+        "토": "단맛 음식(고구마, 단호박, 대추, 꿀), 노란색 식재료, 국물 요리",
+        "금": "매운맛 음식(고추, 생강, 마늘, 양파), 흰색 식재료",
+        "수": "짠맛 음식(미역, 다시마, 조개류), 검은색 식재료(검은콩, 흑미), 해산물"
+    }
     
-    system_prompt = """당신은 전통 동양 명리학과 음식 건강학을 통합한 전문가 '거북 도사'입니다.
-사주 오행 분석을 바탕으로 오늘 점심 메뉴를 추천합니다.
+    # 부족한 오행 보충 음식
+    supplement_foods = element_foods.get(min_element, "")
+    
+    # 메뉴 목록 포맷팅 (인덱스 포함)
+    menu_list = []
+    for i, m in enumerate(menus):
+        name = m.get('name', m.get('메뉴명', f'메뉴{i}'))
+        corner = m.get('corner', m.get('코너', ''))
+        if corner:
+            menu_list.append(f"{i}. {name} ({corner})")
+        else:
+            menu_list.append(f"{i}. {name}")
+    menu_text = "\n".join(menu_list)
+    
+    system_prompt = f"""당신은 동양 전통 체질 의학과 음식 궁합 전문가 '거북 도사'입니다.
+사용자의 사주 오행 분석 결과를 바탕으로 오늘의 점심 메뉴를 추천합니다.
 
-## 오행과 음식의 관계
-- 목(木): 신맛, 간/담낭 건강. 녹색 채소, 신선한 샐러드, 레몬/식초 드레싱
-- 화(火): 쓴맛, 심장/소장 건강. 쓴 채소, 볶음 요리, 양념이 강한 음식
-- 토(土): 단맛, 비장/위장 건강. 곡류, 뿌리채소, 구수한 국물, 된장
-- 금(金): 매운맛, 폐/대장 건강. 파, 마늘, 생강, 양파, 무, 매운탕
-- 수(水): 짠맛, 신장/방광 건강. 해조류, 생선, 콩류, 검은깨, 미역국
+## 체질 분석 요약
+{constitution_summary if constitution_summary else "체질 정보가 제공되지 않았습니다."}
 
-## 추천 원칙
-1. 부족한 오행을 보충하는 음식 우선 추천
-2. 과다한 오행을 완화하는 음식 고려
-3. 메뉴의 주재료와 조리법 분석
-4. 반드시 주어진 메뉴 목록에서만 선택
+## 오행 분포
+- 가장 많은 오행: {max_element} ({elements.get(max_element, 0)}개) - 과잉될 수 있어 조절 필요
+- 가장 적은 오행: {min_element} ({elements.get(min_element, 0)}개) - 보충이 필요함
+
+## 오행별 추천 식재료
+- 목(木): 신맛, 푸른 채소, 간에 좋은 음식
+- 화(火): 쓴맛, 붉은색, 볶음 요리
+- 토(土): 단맛, 노란색, 국물 요리
+- 금(金): 매운맛, 흰색 식재료
+- 수(水): 짠맛, 검은색, 해산물
+
+## 부족한 {min_element} 오행 보충 식재료
+{supplement_foods}
+
+## 응답 원칙
+1. 부족한 오행({min_element})을 보충할 수 있는 메뉴를 우선 추천
+2. '~하오', '~리라' 등 도사 어투 사용
+3. 반드시 JSON 형식으로만 응답
 
 ## 응답 형식 (JSON)
-반드시 아래 형식의 JSON만 출력하세요. 다른 텍스트는 출력하지 마세요.
-```json
-{
-    "recommendedIndex": 0,
-    "reason": "추천 이유를 2-3문장으로 작성. 체질과 메뉴의 연관성 설명."
-}
-```
+{{"recommendedIndex": <메뉴 인덱스 번호>, "reason": "<추천 이유 2-3문장, 도사 어투>"}}
 """
 
-    user_prompt = f"""오늘 점심 메뉴 중에서 이 사람의 체질에 가장 맞는 메뉴를 추천해주세요.
+    user_prompt = f"""오늘 점심 메뉴 목록입니다. 이 사용자의 체질에 맞는 메뉴를 추천해주세요.
 
-## 이 사용자의 사주 오행 분포
-- 목(木) {five.get('목', 0)}개, 화(火) {five.get('화', 0)}개, 토(土) {five.get('토', 0)}개, 금(金) {five.get('금', 0)}개, 수(水) {five.get('수', 0)}개
-- 가장 많은 오행: {max_element}({elements.get(max_element, 0)}개)
-- 가장 적은 오행: {min_element}({elements.get(min_element, 0)}개)
-- 일간: {saju_info.get('dayStem', '미상')}
+## 오늘의 메뉴
+{menu_text}
 
-## 체질 요약
-{constitution_summary if constitution_summary else f'{max_element}이 강하고 {min_element}이 약한 체질'}
+## 사용자 오행 정보
+- 오행 분포: 목 {five.get('목', 0)}개, 화 {five.get('화', 0)}개, 토 {five.get('토', 0)}개, 금 {five.get('금', 0)}개, 수 {five.get('수', 0)}개
+- 과잉: {max_element} ({elements.get(max_element, 0)}개)
+- 부족: {min_element} ({elements.get(min_element, 0)}개)
 
-## 오늘의 점심 메뉴 (인덱스 번호로 추천)
-{menu_list_str}
+위 메뉴 중에서 이 사용자의 체질에 가장 잘 맞는 메뉴 1개를 선택하고,
+JSON 형식으로 응답해주세요: {{"recommendedIndex": <번호>, "reason": "<이유>"}}"""
 
-위 메뉴 중 이 체질에 가장 적합한 메뉴의 인덱스(0부터 시작)와 추천 이유를 JSON 형식으로 답해주세요.
-'~하오', '~리라' 등 도사 어투로 reason을 작성하세요.
-"""
     return system_prompt, user_prompt
 
 

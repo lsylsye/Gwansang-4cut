@@ -11,21 +11,18 @@ interface FaceAnalysisProps {
     totalReview?: TotalReview; // 거북 도사의 총평 데이터 (백엔드에서 받아옴)
 }
 
-// 거북 도사의 총평: 3가지 구성
-// 1. 부위 간의 조화 및 균형 해석
-// 2. 종합 운세 해석
-// 3. 운을 좋게 만드는 방법 제안
+// 거북 도사의 총평: 2가지 구성
+// 1. 전체 관상 분석 종합 의견
+// 2. 취업운
 interface TotalReview {
-    harmony?: string; // 부위 간의 조화 및 균형 해석
-    comprehensive?: string; // 종합 운세 해석
-    improvement?: string; // 운을 좋게 만드는 방법 제안
+    faceOverview?: string; // 전체 관상 분석 종합 의견
+    careerFortune?: string; // 취업운 (사주 포함)
 }
 
 // 백엔드 응답이 없을 때 표시할 기본 예시 데이터
 const DEFAULT_TOTAL_REVIEW: TotalReview = {
-    harmony: "이마가 넓고 눈이 균형 잡혀 있으며, 코와 입의 비율이 조화롭습니다. 전체적으로 상중하 삼정(三停)이 고르게 발달해 있어, 초년·중년·말년 운이 안정적으로 흘러갈 가능성이 높습니다. 특히 이마와 턱이 서로 받쳐주는 구조로, 생각한 것을 끝까지 실행하는 힘이 돋보입니다.",
-    comprehensive: "당신은 '부드러운 카리스마'를 가진 얼굴입니다. 첫인상은 다소 차분해 보일 수 있으나, 시간이 지날수록 신뢰를 얻는 타입입니다. 재물운은 급격한 상승보다는 꾸준한 축적형이며, 대인관계에서는 넓은 포용력으로 다양한 사람들과 조화를 이룹니다. 직업운은 기획·분석·관리 분야에서 두각을 나타낼 수 있으며, 30대 중반 이후 운이 본격적으로 상승하는 구조입니다.",
-    improvement: "✔ 녹색 계열의 소품이나 식물을 가까이 두면 기운이 풀리고 유연해집니다.\n✔ 중요한 결정 전에는 충분한 휴식을 취해 판단력을 높이세요.\n✔ 감정 표현을 조금 더 적극적으로 하면 대인관계가 더욱 원활해집니다.\n✔ 꾸준한 운동으로 하체를 강화하면 지구력과 끈기가 더해집니다."
+    faceOverview: "이마가 넓고 눈이 균형 잡혀 있으며, 코와 입의 비율이 조화롭습니다. 전체적으로 상중하 삼정(三停)이 고르게 발달해 있어, 초년·중년·말년 운이 안정적으로 흘러갈 가능성이 높습니다. 특히 이마와 턱이 서로 받쳐주는 구조로, 생각한 것을 끝까지 실행하는 힘이 돋보입니다. 당신은 '부드러운 카리스마'를 가진 얼굴입니다. 첫인상은 다소 차분해 보일 수 있으나, 시간이 지날수록 신뢰를 얻는 타입입니다.",
+    careerFortune: "올해는 취업운이 상승하는 시기입니다. 관상에서 보이는 안정적인 이마와 균형 잡힌 눈은 면접에서 신뢰감을 주는 인상입니다. 사주의 오행 분포를 보면, 기획·분석·관리 분야에서 두각을 나타낼 수 있으며, 상반기보다 하반기에 더 좋은 기회가 올 가능성이 높습니다. 면접 시에는 차분하고 논리적인 답변을 강조하면 좋겠습니다."
 };
 
 // highlightIndex: 0=얼굴형(공통·얼굴형), 1=이마, 2=눈, 3=코, 4=입, 5=턱
@@ -442,27 +439,19 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                     </div>
 
                     <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 space-y-5 max-h-[50vh]">
-                        {/* 1. 부위 간의 조화 및 균형 해석 */}
-                        {(totalReview?.harmony || DEFAULT_TOTAL_REVIEW.harmony) && (
+                        {/* 1. 전체 관상 분석 종합 의견 */}
+                        {(totalReview?.faceOverview || DEFAULT_TOTAL_REVIEW.faceOverview) && (
                             <section>
-                                <h4 className="text-gray-800 font-bold text-base mb-2">1. 부위 간의 조화 및 균형 해석</h4>
-                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview?.harmony || DEFAULT_TOTAL_REVIEW.harmony}</p>
+                                <h4 className="text-gray-800 font-bold text-base mb-2">1. 전체 관상 분석 종합 의견</h4>
+                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview?.faceOverview || DEFAULT_TOTAL_REVIEW.faceOverview}</p>
                             </section>
                         )}
 
-                        {/* 2. 종합 운세 해석 */}
-                        {(totalReview?.comprehensive || DEFAULT_TOTAL_REVIEW.comprehensive) && (
+                        {/* 2. 취업운 */}
+                        {(totalReview?.careerFortune || DEFAULT_TOTAL_REVIEW.careerFortune) && (
                             <section>
-                                <h4 className="text-gray-800 font-bold text-base mb-2">2. 종합 운세 해석</h4>
-                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview?.comprehensive || DEFAULT_TOTAL_REVIEW.comprehensive}</p>
-                            </section>
-                        )}
-
-                        {/* 3. 운을 좋게 만드는 방법 제안 */}
-                        {(totalReview?.improvement || DEFAULT_TOTAL_REVIEW.improvement) && (
-                            <section>
-                                <h4 className="text-gray-800 font-bold text-base mb-2">3. 운을 좋게 만드는 방법 제안</h4>
-                                <p className="text-gray-700 text-base leading-[1.75] whitespace-pre-line">{totalReview?.improvement || DEFAULT_TOTAL_REVIEW.improvement}</p>
+                                <h4 className="text-gray-800 font-bold text-base mb-2">2. 올해의 취업운 💼</h4>
+                                <p className="text-gray-700 text-base leading-[1.75] whitespace-pre-line">{totalReview?.careerFortune || DEFAULT_TOTAL_REVIEW.careerFortune}</p>
                             </section>
                         )}
                     </div>
