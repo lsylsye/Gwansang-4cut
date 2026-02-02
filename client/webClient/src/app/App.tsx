@@ -62,6 +62,11 @@ export default function App() {
   const [faceMeshMetadata, setFaceMeshMetadata] = useState<any>(null);
   const pathnameRef = useRef(location.pathname);
 
+  // URL 변경 시 스크롤 맨 위로
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   // location.state 변경 감지
   useEffect(() => {
     if (location.state?.frameImage) {
