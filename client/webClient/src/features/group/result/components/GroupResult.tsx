@@ -12,6 +12,7 @@ import {
     type GroupOhengCombinationResponse,
 } from "@/shared/api/groupOhengApi";
 import { OhengMatchingSection } from "./OhengMatchingSection";
+import { RagAnalysisSection } from "./RagAnalysisSection";
 import {
     DestinyStickRelations,
     type Member,
@@ -395,6 +396,11 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                     ohengLoading={ohengLoading}
                     ohengError={ohengError}
                 />
+            )}
+
+            {/* 관상 분석 RAG — 개인/두 명/팀 전체 (더미 UI, RAG 연결 시 데이터만 교체) */}
+            {groupMembers.length >= 1 && (
+                <RagAnalysisSection groupMembers={groupMembers} />
             )}
 
             {/* 운명의 작대기 — 선택한 1명 기준 나머지와의 관계선 시각화 */}
