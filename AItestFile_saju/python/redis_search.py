@@ -11,8 +11,16 @@ from redis_client import (
     index_exists,
     get_indexed_doc_count
 )
-from embedding import embed_text, vector_to_buffer, EMBEDDING_DIMENSION
 from rag_search import Chunk
+
+# 임베딩 모듈은 선택적 (sentence-transformers 없으면 텍스트 검색 사용)
+try:
+    from embedding import embed_text, vector_to_buffer, EMBEDDING_DIMENSION
+    EMBEDDING_AVAILABLE = True
+except ImportError:
+    print("⚠️ embedding 모듈 로드 실패 - 텍스트 검색 모드로 동작")
+    EMBEDDING_AVAILABLE = False
+    EMBEDDING_DIMENSION = 384  # 기본값
 
 
 def create_saju_index():
@@ -170,6 +178,7 @@ def search_by_vector(
 ) -> List[Chunk]:
     """
     벡터 유사도 검색 (KNN)
+    임베딩을 사용할 수 없으면 텍스트 검색으로 fallback
     
     Args:
         query_text: 검색 쿼리 텍스트
@@ -178,6 +187,11 @@ def search_by_vector(
     Returns:
         List[Chunk]: 관련 청크 리스트
     """
+    # 임베딩을 사용할 수 없으면 텍스트 검색 사용
+    if not EMBEDDING_AVAILABLE:
+        print("   임베딩 불가 - 텍스트 검색으로 전환")
+        return search_by_text(query_text, topK)
+    
     client = get_redis_client()
     
     # 쿼리 텍스트 임베딩
@@ -199,8 +213,8 @@ def search_by_vector(
         
         return parse_search_result(result)
     except Exception as e:
-        print(f"⚠️ 벡터 검색 실패: {e}")
-        return []
+        print(f"⚠️ 벡터 검색 실패, 텍스트 검색으로 전환: {e}")
+        return search_by_text(query_text, topK)
 
 
 def search_by_text(

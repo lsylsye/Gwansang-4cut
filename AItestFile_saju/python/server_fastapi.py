@@ -13,6 +13,7 @@ from typing import Optional, List, Dict, Any
 import os
 import json
 import sys
+import asyncio
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -20,8 +21,7 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
-from gms_api import call_gms_api
-from gms_api import call_gms_api
+from gms_api import call_gms_api, call_gms_api_async
 from saju_prompt_builder import build_saju_system_prompt, build_saju_user_prompt
 from rag_search import (
     load_knowledge_base,
@@ -52,6 +52,9 @@ from face_prompt_builder import (
     parse_total_review,
     build_menu_recommendation_prompt,
     parse_menu_recommendation,
+    build_face_overview_prompt,
+    build_career_fortune_prompt,
+    build_constitution_prompt,
 )
 import httpx
 
@@ -705,7 +708,7 @@ async def analyze_face_api(request: FaceAnalysisRequest):
             traceback.print_exc()
             raise HTTPException(status_code=400, detail=f"사주 계산 오류: {str(e)}")
         
-        # 3. RAG 검색 + LLM 1회 호출 (관상 3키 + 전체적인 체질 특성 = 4키)
+        # 3. RAG 검색 + LLM 3회 병렬 호출 (전체 관상 종합, 취업운, 체질 특성)
         total_review = None
         try:
             print("🔍 RAG 검색 시작...")
@@ -727,27 +730,67 @@ async def analyze_face_api(request: FaceAnalysisRequest):
                     relevant_chunks = search_chunks(chunks, search_query, topK=8)
                     rag_context = format_context(relevant_chunks)
             
-            # LLM 1회 호출: [조화][종합][조언][전체적인 체질 특성] 한 번에 생성
-            print("📝 LLM 프롬프트 생성 중 (관상+사주 4키)...")
-            system_prompt, user_prompt = build_total_review_prompt(analysis_result, saju_info, rag_context)
-            print("🤖 LLM 호출 중 (1회)...")
-            llm_result = call_gms_api(
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                model=request.model,
-                timeout=request.timeout
-            )
-            total_review = parse_total_review(llm_result)
+            # LLM 3회 병렬 호출: 각 섹션별 개별 프롬프트로 동시 호출
+            print("📝 LLM 병렬 프롬프트 생성 중 (3개 섹션)...")
             
-            print("✅ LLM 기반 관상+체질 해석 생성 완료 (4키)")
+            # 각 섹션별 프롬프트 생성
+            face_sys, face_user = build_face_overview_prompt(analysis_result, rag_context)
+            career_sys, career_user = build_career_fortune_prompt(analysis_result, saju_info, rag_context)
+            const_sys, const_user = build_constitution_prompt(saju_info, rag_context)
+            
+            print("🤖 LLM 병렬 호출 중 (3회 동시)...")
+            import time
+            start_time = time.time()
+            
+            # asyncio.gather로 3개의 LLM 호출을 동시에 실행
+            face_result, career_result, const_result = await asyncio.gather(
+                call_gms_api_async(
+                    system_prompt=face_sys,
+                    user_prompt=face_user,
+                    model=request.model,
+                    timeout=request.timeout
+                ),
+                call_gms_api_async(
+                    system_prompt=career_sys,
+                    user_prompt=career_user,
+                    model=request.model,
+                    timeout=request.timeout
+                ),
+                call_gms_api_async(
+                    system_prompt=const_sys,
+                    user_prompt=const_user,
+                    model=request.model,
+                    timeout=request.timeout
+                ),
+                return_exceptions=True  # 개별 호출 실패 시에도 다른 호출 결과 받기
+            )
+            
+            elapsed_time = time.time() - start_time
+            print(f"⏱️ LLM 병렬 호출 완료: {elapsed_time:.2f}초")
+            
+            # 결과 처리 (예외 발생 시 기본값 사용)
+            total_review = {
+                "faceOverview": face_result.strip() if isinstance(face_result, str) else "관상 분석 결과를 바탕으로 전체적인 종합 분석을 제공합니다.",
+                "careerFortune": career_result.strip() if isinstance(career_result, str) else "올해의 취업운을 분석합니다.",
+                "constitutionSummary": const_result.strip() if isinstance(const_result, str) else "",
+            }
+            
+            # 개별 에러 로깅
+            if isinstance(face_result, Exception):
+                print(f"⚠️ 관상 종합 LLM 오류: {face_result}")
+            if isinstance(career_result, Exception):
+                print(f"⚠️ 취업운 LLM 오류: {career_result}")
+            if isinstance(const_result, Exception):
+                print(f"⚠️ 체질 특성 LLM 오류: {const_result}")
+            
+            print("✅ LLM 병렬 호출 완료 (3키)")
         except Exception as e:
             print(f"⚠️ RAG+LLM 처리 중 오류: {e}")
             import traceback
             traceback.print_exc()
             total_review = {
-                "harmony": "관상 분석 결과를 바탕으로 전체적인 조화를 분석합니다.",
-                "comprehensive": "종합적인 성격과 운세를 분석합니다.",
-                "improvement": "더 나은 삶을 위한 조언을 제공합니다.",
+                "faceOverview": "관상 분석 결과를 바탕으로 전체적인 종합 분석을 제공합니다.",
+                "careerFortune": "올해의 취업운을 분석합니다.",
                 "constitutionSummary": "",
             }
         
