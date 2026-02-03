@@ -293,7 +293,7 @@ async def generate_text(request: GenerateRequest):
         raise HTTPException(status_code=500, detail=f"서버 오류: {str(e)}")
 
 
-@app.post("/api/saju/analyze")
+@app.post("/api/face/saju/analyze")
 async def analyze_saju(request: SajuAnalyzeRequest):
     """사주 분석 API"""
     try:
@@ -652,7 +652,7 @@ async def generate_saju_summary(request: SajuSummaryRequest):
         raise HTTPException(status_code=500, detail=f"서버 오류: {str(e)}")
 
 
-@app.post("/test-api/facemesh/personal")
+@app.post("/api/face/facemesh/personal")
 async def analyze_face_api(request: FaceAnalysisRequest):
     """관상 분석 + 사주 총평 통합 API"""
     try:
@@ -862,7 +862,7 @@ async def analyze_face_api(request: FaceAnalysisRequest):
         raise HTTPException(status_code=500, detail=f"관상 분석 오류: {str(e)}")
 
 
-@app.post("/api/group-oheng-combination")
+@app.post("/api/face/group-oheng-combination")
 async def group_oheng_combination(request: GroupOhengRequest):
     """모임 관상 결과용 오행 조합 (RAG)"""
     try:

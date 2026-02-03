@@ -3,8 +3,7 @@
  * 비스트리밍 API: 한 번의 호출로 faceAnalysis, sajuInfo, totalReview(관상 3키 + 전체적인 체질 특성 4키) 수신
  */
 
-// AI 서버 URL (환경 변수 또는 기본값) - Flask 서버 (port 8000)
-const AI_SERVER_URL = import.meta.env.VITE_AI_SERVER_URL || 'http://localhost:8000';
+import { API_ENDPOINTS } from './config';
 
 // ============================================================
 // Types
@@ -215,7 +214,7 @@ export async function analyzeFace(
   }
 ): Promise<FaceAnalysisApiResponse> {
   try {
-    const response = await fetch(`${AI_SERVER_URL}/test-api/facemesh/personal`, {
+    const response = await fetch(API_ENDPOINTS.FACEMESH_PERSONAL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
