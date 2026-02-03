@@ -5,6 +5,7 @@ import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
 import { Utensils, Sparkles, TrendingUp, Download, Upload, X, CheckCircle2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { SajuAnalysisResponse } from "@/shared/api/sajuApi";
+import { API_ENDPOINTS } from "@/shared/api/config";
 import profileImage from "@/assets/profile.png";
 import selfieImage from "@/assets/selfie.png";
 import turtleImage from "@/assets/turtle.png";
@@ -345,8 +346,7 @@ interface StatsAnalysisProps {
     totalReview?: TotalReview | null;
 }
 
-// FastAPI 서버 URL (환경변수 또는 기본값)
-const API_BASE_URL = import.meta.env.VITE_AI_SERVER_URL || "http://localhost:8000";
+// Image 서버 URL은 config.ts에서 import
 
 /** 한글 오행 라벨 */
 const OHENG_LABELS: Record<keyof OhengCounts, string> = { wood: "목(木)", fire: "화(火)", earth: "토(土)", metal: "금(金)", water: "수(水)" };
@@ -529,7 +529,7 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
             formData.append("image", file);
             formData.append("model", "gemini-2.5-flash-image");
 
-            const response = await fetch(`${API_BASE_URL}/api/future-image/upload`, {
+            const response = await fetch(API_ENDPOINTS.IMAGE_UPLOAD, {
                 method: "POST",
                 body: formData,
             });

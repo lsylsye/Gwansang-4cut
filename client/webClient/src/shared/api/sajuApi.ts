@@ -1,7 +1,5 @@
 import { SajuData } from '@/shared/types';
-
-// AI 서버 URL (환경 변수 또는 기본값) - Flask 서버 (port 8000)
-const AI_SERVER_URL = import.meta.env.VITE_AI_SERVER_URL || 'http://localhost:8000';
+import { API_ENDPOINTS } from './config';
 
 export interface SajuAnalysisResponse {
   success: boolean;
@@ -202,7 +200,7 @@ export async function analyzeSaju(sajuData: SajuData): Promise<SajuAnalysisRespo
       useRedis: import.meta.env.VITE_USE_REDIS_RAG === 'true', // 환경변수로 Redis 사용 여부 설정
     };
 
-    const response = await fetch(`${AI_SERVER_URL}/api/saju/analyze`, {
+    const response = await fetch(API_ENDPOINTS.SAJU_ANALYZE, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

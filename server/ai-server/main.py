@@ -1245,7 +1245,7 @@ async def generate_future_images(request: FutureImageRequest):
         raise HTTPException(status_code=500, detail=f"미래 이미지 생성 실패: {str(e)}")
 
 
-@app.post("/api/future-image/upload", response_model=FutureImageResponse)
+@app.post("/api/image/upload", response_model=FutureImageResponse)
 async def generate_future_images_upload(
     image: UploadFile = File(..., description="원본 이미지 파일"),
     model: str = Form(default="gemini-2.5-flash-image", description="사용할 모델")
