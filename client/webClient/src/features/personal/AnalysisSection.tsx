@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images } from "lucide-react";
+import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images, Share2 } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { FaceAnalysis } from "./face/components/FaceAnalysis";
 import { StatsAnalysis, type ConstitutionPhase } from "./stats/components/StatsAnalysis";
@@ -14,6 +14,7 @@ import {
 } from "@/shared/api/faceAnalysisApi";
 import html2canvas from "html2canvas";
 import { useHideTurtleGuide } from "@/shared/contexts/HideTurtleGuideContext";
+import { TabNavigation } from "@/shared/components/TabNavigation";
 
 // --- Types ---
 interface AnalysisSectionProps {
@@ -460,37 +461,19 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
     return (
         <div className="w-full max-w-7xl mx-auto pb-20" id="analysis-result-container">
             {/* Tab Navigation */}
-            <div className="flex justify-center mb-10 no-capture">
-                <div className="bg-white/80 backdrop-blur-md p-2 rounded-3xl flex gap-1.5 shadow-clay-sm border-4 border-white">
-                    {[
-                        { id: "physiognomy", label: "관상 분석", icon: Brain },
-                        { id: "constitution", label: "체질 분석", icon: Heart },
-                        { id: "future", label: "미래의 나", icon: Camera },
-                        { id: "ssafy-cut", label: "싸피네컷", icon: Images },
-                    ].map((tab) => {
-                        const Icon = tab.icon;
-                        const isActive = currentTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                data-tab={tab.id}
-                                onClick={() => {
-                                    setCurrentTab(tab.id as any);
-                                }}
-                                className={`
-                            flex items-center gap-2 px-8 py-3.5 rounded-2xl transition-all duration-300 font-bold font-display
-                            ${isActive
-                                        ? "bg-brand-green text-white shadow-clay-xs scale-105"
-                                        : "hover:bg-gray-100 text-gray-400 hover:text-gray-700"}
-                        `}
-                            >
-                                <Icon size={20} />
-                                {tab.label}
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
+            <TabNavigation
+                tabs={[
+                    { id: "physiognomy", label: "관상 분석", icon: Brain },
+                    { id: "constitution", label: "체질 분석", icon: Heart },
+                    { id: "future", label: "미래의 나", icon: Camera },
+                    { id: "ssafy-cut", label: "싸피네컷", icon: Images },
+                ]}
+                activeTab={currentTab}
+                onTabChange={(tabId) => {
+                    setCurrentTab(tabId as any);
+                }}
+                activeColor="green"
+            />
 
             <AnimatePresence mode="wait">
                 <motion.div
@@ -604,7 +587,7 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                     <Download size={20} /> {isDownloading ? "저장 중..." : "결과 다운로드"}
                 </ActionButton>
                 <ActionButton variant="primary" onClick={handleShare} className="flex items-center gap-2">
-                    <QrCode size={20} /> QR로 공유하기
+                    <Share2 size={20} /> 링크 공유하기
                 </ActionButton>
             </div>
 

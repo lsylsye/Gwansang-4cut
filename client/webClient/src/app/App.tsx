@@ -328,8 +328,6 @@ export default function App() {
                 {pathname === ROUTES.GROUP_RESULT ? (
                   <GroupAnalysisSection
                     groupMembers={groupMembers}
-                    groupImage={images[0]}
-                    onRestart={handleRestart}
                     onViewRanking={handleViewRanking}
                   />
                 ) : (
