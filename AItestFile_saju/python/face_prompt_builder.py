@@ -906,3 +906,252 @@ def parse_menu_recommendation(response: str, menu_count: int) -> Dict[str, Any]:
     
     return result
 
+
+def build_group_combination_prompt(members_data: List[Dict[str, Any]]) -> tuple:
+    """
+    모임(그룹) 사주 조합용 프롬프트. 관상은 사용하지 않고, 멤버별 사주 정보와 RAG 컨텍스트만으로
+    한 번의 LLM 호출로 '모임 조합' 텍스트를 생성한다.
+
+    Args:
+        members_data: 각 멤버별 dict. 필드: name, sajuInfo (yearPillar, dayStem, fiveElements 등), rag_context
+
+    Returns:
+        tuple: (system_prompt, user_prompt)
+    """
+    if not members_data:
+        raise ValueError("members_data는 1명 이상 필요합니다.")
+
+    members_block = []
+    for i, m in enumerate(members_data, 1):
+        name = m.get("name", f"멤버{i}")
+        saju = m.get("sajuInfo") or {}
+        five = saju.get("fiveElements") or {}
+        members_block.append(f"""
+### 멤버 {i}: {name}
+- 사주: 연주 {saju.get('yearPillar', '미상')}, 월주 {saju.get('monthPillar', '미상')}, 일주 {saju.get('dayPillar', '미상')}, 시주 {saju.get('hourPillar', '미상')}
+- 일간: {saju.get('dayStem', '미상')}
+- 오행: 목 {five.get('목', 0)}, 화 {five.get('화', 0)}, 토 {five.get('토', 0)}, 금 {five.get('금', 0)}, 수 {five.get('수', 0)}
+- 참고 자료(이 멤버): {m.get("rag_context", "[없음]")[:800]}
+""")
+
+    system_prompt = """당신은 한국 전통 사주명리학에 정통한 명리학자입니다.
+여러 명의 사주 정보만을 바탕으로, **이 모임 전체의 궁합·조합**을 한 편의 글로 풀어내시오.
+관상·얼굴은 전혀 사용하지 않고, 오직 사주(연월일시주, 일간, 오행)만으로 판단하시오.
+
+## 원칙
+1. 각 멤버의 일간·오행 균형을 참고하여, 서로의 오행이 상생/상극하는지 흐름을 짚으시오.
+2. 모임 전체로 보았을 때 '어떤 기운이 강한지', '누가 누구를 보완하는지'를 자연스럽게 서술하시오.
+3. 도사 어투를 사용하시오 ("~이오", "~하시오", "~구먼").
+4. 6~12문장 정도로, 한 편의 연속된 글로만 응답하시오. JSON이나 소제목 없이 본문만 출력하시오.
+
+## 참고
+- 각 멤버별 '참고 자료'는 명리 해석 시 참고만 하고, 그대로 인용하지 마시오.
+- 과장이나 단정을 피하고, 긍정적이면서 현실적인 톤을 유지하시오."""
+
+    user_prompt = f"""아래 {len(members_data)}명의 사주 정보를 바탕으로, 이 모임의 사주 조합(궁합)을 한 편의 글로 작성하시오.
+관상은 보지 말고, 사주만으로 판단하시오.
+
+{"".join(members_block)}
+
+위 내용만 참고하여, 이 모임 전체의 기운이 어떻게 어우러지는지 한 편의 글로만 답하시오. JSON·소제목 없이 본문만 출력하시오."""
+
+    return system_prompt, user_prompt
+
+
+# ========== 모임 전체 궁합(overall) + 1대1 궁합(pairs) 구조화 출력 ==========
+
+def _members_block_for_json(members_data: List[Dict[str, Any]]) -> str:
+    """LLM 프롬프트용 멤버 정보 블록 (사주·RAG 요약)."""
+    lines = []
+    for i, m in enumerate(members_data, 1):
+        name = m.get("name", f"멤버{i}")
+        saju = m.get("sajuInfo") or {}
+        five = saju.get("fiveElements") or {}
+        lines.append(f"""
+### 멤버 {i}: {name}
+- 사주: 연주 {saju.get('yearPillar', '미상')}, 월주 {saju.get('monthPillar', '미상')}, 일주 {saju.get('dayPillar', '미상')}, 시주 {saju.get('hourPillar', '미상')}
+- 일간: {saju.get('dayStem', '미상')}
+- 오행: 목 {five.get('목', 0)}, 화 {five.get('화', 0)}, 토 {five.get('토', 0)}, 금 {five.get('금', 0)}, 수 {five.get('수', 0)}
+- 참고 자료(요약): {(m.get("rag_context") or "[없음]")[:600]}
+""")
+    return "\n".join(lines)
+
+
+def build_group_overall_prompt(members_data: List[Dict[str, Any]]) -> tuple:
+    """
+    모임 **전체 궁합**용 프롬프트. 한 번의 LLM 호출로 personality, compatibility, teamwork, maintenance, members(역할·키워드 등)를
+    JSON 하나로 생성한다. 관상 미사용, 사주만 사용.
+    """
+    if not members_data:
+        raise ValueError("members_data는 1명 이상 필요합니다.")
+    member_names = [m.get("name", f"멤버{i}") for i, m in enumerate(members_data, 1)]
+    names_ordered = ", ".join(member_names)
+
+    system_prompt = """당신은 한국 전통 사주명리학에 정통한 명리학자 '거북 도사'입니다.
+여러 명의 사주(연월일시주, 일간, 오행)만을 바탕으로, **모임 전체 궁합**을 분석하여 아래 JSON 형식으로만 출력하시오.
+관상·얼굴은 사용하지 마시오. 도사 어투("~이오", "~하시오", "~구먼")를 사용하시오.
+
+## 반드시 지킬 것
+1. 응답은 반드시 아래 JSON만 출력하시오. 다른 설명이나 마크다운 없이 JSON만.
+2. "personality", "compatibility", "teamwork", "maintenance", "members" 키를 모두 포함하시오.
+3. members 배열은 반드시 입력된 멤버 **순서와 이름** 그대로, 같은 인원수로 작성하시오.
+4. compatibility.score는 0~100 정수. teamwork의 communication, speed, stability도 각 0~100 정수.
+5. maintenance.maintenanceCards는 반드시 3개: label은 순서대로 "소통", "리더십", "빈도". 각각 title(짧은 제목), description(1~2문장) 포함.
+6. roleBadge는 이모지 하나(예: 🌿 🔥 🪨 🌊 ⚡ 등)로 각 멤버 역할을 상징하시오."""
+
+    user_prompt = f"""아래 {len(members_data)}명의 사주 정보를 바탕으로, 모임 전체 궁합을 분석하여 아래 JSON 형식으로만 응답하시오.
+멤버 이름(순서 유지): {names_ordered}
+
+{_members_block_for_json(members_data)}
+
+## 출력할 JSON 형식 (따옴표·쉼표·괄호 정확히 지킬 것)
+{{
+  "personality": {{
+    "title": "이 모임을 한마디로 정리한 제목 (20자 내외)",
+    "harmony": "모임의 조화 및 균형 해석 (3~5문장, 도사 어투)",
+    "comprehensive": "종합 궁합 해석. 각 멤버 역할과 구조 설명 (4~6문장)",
+    "improvement": "모임이 오래 가기 위한 조언 3가지 이상 (4~6문장)"
+  }},
+  "compatibility": {{ "score": 75 }},
+  "teamwork": {{
+    "communication": 75,
+    "speed": 80,
+    "stability": 85,
+    "communicationDetail": "커뮤니케이션 특성 설명 2~4문장",
+    "speedDetail": "갈등/대응력 설명 2~4문장",
+    "stabilityDetail": "의사결정·안정도 설명 2~4문장"
+  }},
+  "maintenance": {{
+    "do": ["할 것 1", "할 것 2", "할 것 3"],
+    "dont": ["하지 말 것 1", "하지 말 것 2", "하지 말 것 3"],
+    "maintenanceCards": [
+      {{ "label": "소통", "title": "짧은 제목", "description": "1~2문장 설명" }},
+      {{ "label": "리더십", "title": "짧은 제목", "description": "1~2문장 설명" }},
+      {{ "label": "빈도", "title": "짧은 제목", "description": "1~2문장 설명" }}
+    ]
+  }},
+  "members": [
+    {{
+      "name": "멤버이름(입력과 동일)",
+      "role": "역할 한 줄",
+      "keywords": ["키워드1", "키워드2", "키워드3"],
+      "roleBadge": "🌿",
+      "description": "이 멤버의 모임 내 포지션 1~2문장",
+      "strengths": ["장점1"],
+      "warnings": ["주의점1"]
+    }}
+  ]
+}}
+
+members 배열은 반드시 {len(members_data)}명, 위 이름 순서대로 작성하시오. JSON만 출력하시오."""
+
+    return system_prompt, user_prompt
+
+
+def parse_group_overall_response(response: str) -> Optional[Dict[str, Any]]:
+    """전체 궁합 LLM 응답에서 JSON 추출."""
+    if not response or not response.strip():
+        return None
+    text = response.strip()
+    json_match = re.search(r"\{[\s\S]*\}", text)
+    if json_match:
+        try:
+            data = json.loads(json_match.group(0))
+            if "personality" in data and "members" in data:
+                return data
+        except json.JSONDecodeError:
+            pass
+    return None
+
+
+def build_group_pairs_prompt(member_names: List[str], members_data: List[Dict[str, Any]]) -> tuple:
+    """
+    모임 **1대1 궁합**용 프롬프트. 모든 쌍(n*(n-1)/2)에 대해 rank, score, type, reason, summary를
+    JSON 하나로 생성한다. member1, member2는 반드시 member_names에 있는 이름 그대로.
+    """
+    if len(member_names) < 2:
+        raise ValueError("멤버는 2명 이상 필요합니다.")
+    n = len(member_names)
+    pair_count = n * (n - 1) // 2
+    names_ordered = ", ".join(member_names)
+
+    system_prompt = """당신은 한국 전통 사주명리학에 정통한 명리학자입니다.
+주어진 멤버들 간의 **1대1 사주 궁합**을 분석하여, 모든 쌍에 대해 순위(rank), 점수(score), 유형(type), 이유(reason), 요약(summary)을 JSON으로 출력하시오.
+관상은 사용하지 마시오. 사주(일간·오행 등)만으로 판단하시오.
+
+## 규칙
+1. 응답은 반드시 아래 형식의 JSON만 출력하시오. 다른 텍스트 없이.
+2. member1, member2는 반드시 입력된 **멤버 이름 그대로** 사용하시오. 오타 금지.
+3. pairs 배열 길이는 반드시 n*(n-1)/2 (모든 쌍). 각 쌍은 한 번만 (A-B와 B-A 중 하나만).
+4. rank는 1부터 순서대로. 1위가 가장 궁합 좋은 쌍.
+5. score는 0~100 정수. 90 이상 best, 75~89 good, 60~74 normal, 50~59 unstable, 50 미만 worst 권장.
+6. type은 반드시 "best" | "normal" | "unstable" | "worst" 중 하나.
+7. reason, summary는 각 1~3문장."""
+
+    members_block = _members_block_for_json(members_data)
+    user_prompt = f"""멤버(이름 그대로 사용): {names_ordered}
+쌍 개수: {pair_count}개 (모든 1대1 조합)
+
+{members_block}
+
+## 출력 JSON 형식
+{{
+  "pairs": [
+    {{
+      "member1": "이름1",
+      "member2": "이름2",
+      "rank": 1,
+      "score": 95,
+      "type": "best",
+      "reason": "궁합 이유 1~3문장",
+      "summary": "한 줄 요약"
+    }}
+  ]
+}}
+
+pairs 배열은 반드시 {pair_count}개, rank 1~{pair_count}까지 모두 포함하시오. member1/member2는 위 목록의 이름을 정확히 쓰시오. JSON만 출력하시오."""
+
+    return system_prompt, user_prompt
+
+
+def parse_group_pairs_response(response: str, member_names: List[str]) -> List[Dict[str, Any]]:
+    """1대1 궁합 LLM 응답에서 pairs 배열 추출. 멤버 이름 정규화(공백 제거) 후 반환."""
+    if not response or not response.strip():
+        return []
+    text = response.strip()
+    json_match = re.search(r"\{[\s\S]*\}", text)
+    if not json_match:
+        return []
+    try:
+        data = json.loads(json_match.group(0))
+        pairs = data.get("pairs") or []
+    except json.JSONDecodeError:
+        return []
+    name_set = {n.strip() for n in member_names}
+    result = []
+    for p in pairs:
+        m1 = (p.get("member1") or "").strip()
+        m2 = (p.get("member2") or "").strip()
+        if not m1 or not m2:
+            continue
+        # 이름이 목록에 없으면 가장 비슷한 목록 이름으로 매핑 (선택)
+        if m1 not in name_set:
+            for n in member_names:
+                if n.strip() == m1 or n in m1 or m1 in n:
+                    m1 = n.strip()
+                    break
+        if m2 not in name_set:
+            for n in member_names:
+                if n.strip() == m2 or n in m2 or m2 in n:
+                    m2 = n.strip()
+                    break
+        result.append({
+            "member1": m1,
+            "member2": m2,
+            "rank": int(p.get("rank") or 0),
+            "score": int(p.get("score") or 65),
+            "type": p.get("type") or "normal",
+            "reason": p.get("reason") or "",
+            "summary": p.get("summary") or "",
+        })
+    return result

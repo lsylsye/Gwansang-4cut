@@ -471,14 +471,23 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       }
     }
 
+    let groupApiResponse: { success: boolean; members?: unknown[]; groupCombination?: string } | null = null;
     if (finalPayload) {
-      fetch(API_ENDPOINTS.FACEMESH_GROUP, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(finalPayload),
-      }).catch((err) => {
+      try {
+        const res = await fetch(API_ENDPOINTS.FACEMESH_GROUP, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(finalPayload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data?.success) {
+          groupApiResponse = data;
+        } else {
+          console.error("모임 API 응답 오류:", data?.detail ?? data);
+        }
+      } catch (err) {
         console.error("모임 데이터 전송 실패:", err);
-      });
+      }
     }
 
     const validImages = capturedImages.filter((img): img is string => img !== null);
@@ -493,6 +502,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         birthTimeUnknown: false,
       },
       groupMembers,
+      groupApiResponse ?? undefined,
     );
   };
 

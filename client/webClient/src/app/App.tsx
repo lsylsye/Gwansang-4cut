@@ -60,6 +60,12 @@ export default function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   // faceMeshMetadata를 App에서 관리
   const [faceMeshMetadata, setFaceMeshMetadata] = useState<any>(null);
+  /** 모임 궁합 API 응답 (members + groupCombination). API 연결 후 결과 화면에서 렌더링용 */
+  const [groupAnalysisResult, setGroupAnalysisResult] = useState<{
+    success: boolean;
+    members: Array<{ id?: number; name: string; sajuInfo?: unknown }>;
+    groupCombination?: string;
+  } | null>(null);
   const pathnameRef = useRef(location.pathname);
 
   // URL 변경 시 스크롤 맨 위로
@@ -110,8 +116,12 @@ export default function App() {
     setSaju(sajuData);
     // members 있으면 그룹 플로우 (직접 /group/upload 접근 시 mode 지연 대비)
     const isGroupFlow = Boolean(members && members.length > 0);
-    if (metadata) {
+    if (isGroupFlow && metadata?.success && Array.isArray(metadata?.members)) {
+      setGroupAnalysisResult(metadata);
+    } else if (!isGroupFlow && metadata) {
       setFaceMeshMetadata(metadata);
+    } else if (isGroupFlow) {
+      setGroupAnalysisResult(null);
     }
     if (members) {
       setGroupMembers(members);
@@ -187,6 +197,7 @@ export default function App() {
     setFeatures([]);
     setSaju(null);
     setGroupMembers([]);
+    setGroupAnalysisResult(null);
     setAnalysisDone(false);
     navigate(ROUTES.HOME);
   };
@@ -328,6 +339,7 @@ export default function App() {
                 {pathname === ROUTES.GROUP_RESULT ? (
                   <GroupAnalysisSection
                     groupMembers={groupMembers}
+                    groupAnalysisResult={groupAnalysisResult}
                     onViewRanking={handleViewRanking}
                   />
                 ) : (
