@@ -11,8 +11,6 @@ import {
     LucideIcon,
 } from "lucide-react";
 import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
-import { Badge } from "@/shared/ui/core/badge";
-import { Button } from "@/shared/ui/core/button";
 import { useIsMobile } from "@/shared/lib/hooks/use-mobile";
 
 export interface RelationPairForDetail {
@@ -31,16 +29,17 @@ export function getRelationLevel(score: number): {
     color: string;
     Icon: LucideIcon;
     label: string;
+    FloatingEmoji: string;
 } {
     if (score >= 90)
-        return { level: "best", color: "#EC4899", Icon: Heart, label: "최고" };
+        return { level: "best", color: "#EC4899", Icon: Heart, label: "최고", FloatingEmoji: "❤️" };
     if (score >= 75)
-        return { level: "good", color: "#10B981", Icon: CheckCircle2, label: "좋음" };
+        return { level: "good", color: "#10B981", Icon: CheckCircle2, label: "좋음", FloatingEmoji: "🍀" };
     if (score >= 60)
-        return { level: "normal", color: "#94A3B8", Icon: Minus, label: "보통" };
+        return { level: "normal", color: "#94A3B8", Icon: Minus, label: "보통", FloatingEmoji: "😊" };
     if (score >= 50)
-        return { level: "caution", color: "#F59E0B", Icon: ShieldAlert, label: "주의" };
-    return { level: "worst", color: "#EF4444", Icon: XCircle, label: "최악" };
+        return { level: "caution", color: "#F59E0B", Icon: ShieldAlert, label: "주의", FloatingEmoji: "⚠️" };
+    return { level: "worst", color: "#EF4444", Icon: XCircle, label: "최악", FloatingEmoji: "💀" };
 }
 
 /** 연애 궁합 점수별 목업 — 타이틀·소제목·장점·주의 (상세) */
@@ -113,23 +112,19 @@ function getRomanceAnalysis(pair: RelationPairForDetail) {
 interface RelationDetailCardProps {
     pair: RelationPairForDetail | null;
     /** 클릭된 멤버(오른쪽 노드)의 팔레트 색상 */
-    accentColor?: string;
-    /** 왼쪽(선택된) 멤버의 팔레트 색상 — 그라데이션 등에 사용 */
-    secondAccentColor?: string;
     /** 멤버1 프로필 이미지 URL */
     avatar1?: string;
     /** 멤버2 프로필 이미지 URL */
     avatar2?: string;
 }
 
-export function RelationDetailCard({ pair, accentColor, secondAccentColor, avatar1, avatar2 }: RelationDetailCardProps) {
+export function RelationDetailCard({ pair, avatar1, avatar2 }: RelationDetailCardProps) {
     const [isRomanceModalOpen, setIsRomanceModalOpen] = useState(false);
     const isMobile = useIsMobile();
 
     if (!pair) return null;
 
-    const { color, label } = getRelationLevel(pair.score);
-    const highlightColor = accentColor ?? color;
+    const { color, label, FloatingEmoji } = getRelationLevel(pair.score);
     const romance = useMemo(() => getRomanceAnalysis(pair), [pair]);
 
     return (
@@ -138,10 +133,32 @@ export function RelationDetailCard({ pair, accentColor, secondAccentColor, avata
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, ease: "easeOut" }}
-                className={`${isMobile ? 'min-h-[180px] flex-col' : 'min-h-[120px] flex-row items-center'} flex gap-4 ${isMobile ? 'p-3' : 'p-4'} rounded-2xl transition-all bg-white/60 backdrop-blur-xl border border-white/80 shadow-lg shadow-black/5`}
+                className={`${isMobile ? 'min-h-[180px] flex-col' : 'min-h-[120px] flex-row items-center'} flex gap-4 ${isMobile ? 'p-3' : 'p-4'} rounded-2xl transition-all bg-white/60 backdrop-blur-xl border border-white/80 shadow-lg shadow-black/5 relative overflow-hidden`}
                 role="region"
                 aria-label="상세 관계 분석"
             >
+                {/* 우측 상단 떠다니는 아이콘 */}
+                <motion.div
+                    className="absolute top-3 right-3 z-10"
+                    animate={{
+                        y: [0, -8, 0],
+                        rotate: [0, 5, -5, 0],
+                    }}
+                    transition={{
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                    }}
+                >
+                    <span 
+                        className={`${isMobile ? 'text-2xl' : 'text-3xl'} inline-block`}
+                        style={{ 
+                            filter: `drop-shadow(0 2px 4px ${color}40)`,
+                        }}
+                    >
+                        {FloatingEmoji}
+                    </span>
+                </motion.div>
                 <div className={`${isMobile ? 'w-full justify-start mb-2' : 'relative h-12 w-20 shrink-0'} flex items-center`} aria-hidden>
                     <div className={`${isMobile ? 'relative h-10 w-10' : 'absolute left-0 top-0 h-12 w-12'} rounded-full border-2 border-white bg-slate-100 overflow-hidden shadow-sm z-0`}>
                         {avatar1 && avatar1.trim() !== "" ? (
@@ -170,9 +187,9 @@ export function RelationDetailCard({ pair, accentColor, secondAccentColor, avata
                         <span
                             className={`${isMobile ? 'text-[10px] px-2 py-0.5' : 'text-xs px-2.5 py-0.5'} font-semibold rounded-md border shrink-0 whitespace-nowrap`}
                             style={{
-                                color: highlightColor,
-                                borderColor: `${highlightColor}40`,
-                                backgroundColor: `${highlightColor}12`,
+                                color: color,
+                                borderColor: `${color}40`,
+                                backgroundColor: `${color}12`,
                             }}
                         >
                             {label} · {pair.score}점
