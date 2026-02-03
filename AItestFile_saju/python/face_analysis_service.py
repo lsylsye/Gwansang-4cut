@@ -28,6 +28,17 @@ def dist3(p1: Dict[str, float], p2: Dict[str, float]) -> float:
 # pitch 보정 시 사용할 각도 상한 (이 이상은 같은 보정량 유지 — 수치 안정성)
 PITCH_CAP_DEG = 65.0
 
+# 글머리기호 (각 부위별 core_meaning / advice 파트를 구분해 표시)
+BULLET = "• "
+
+
+def _bullet_join(parts: List[str]) -> str:
+    """여러 문단을 글머리기호(•)로 구분한 단일 문자열로 합칩니다."""
+    stripped = [p.strip() for p in parts if p and p.strip()]
+    if not stripped:
+        return ""
+    return BULLET + ("\n" + BULLET).join(stripped)
+
 
 def estimate_pitch_degrees(landmarks: List[Dict]) -> float:
     """
@@ -515,8 +526,8 @@ def calculate_forehead(landmarks: List[Dict], h_face: float, w_face: float) -> D
             "다만 결정이 늦어질 수 있으니, 마감과 기준을 스스로 정해주는 것이 도움이 되오."
         )
 
-    core_meaning = f"{focus_desc} {width_desc} {asym_desc}"
-    advice = f"{advice_focus} {advice_width} {advice_asym}"
+    core_meaning = _bullet_join([focus_desc, width_desc, asym_desc])
+    advice = _bullet_join([advice_focus, advice_width, advice_asym])
 
     # gauge: 세로 비중에서 가장 두드러진 구간 대표값 (R_F2 중앙 비중을 주 지표로)
     gauge_min, gauge_max = 0.20, 0.55
@@ -549,11 +560,15 @@ def calculate_forehead(landmarks: List[Dict], h_face: float, w_face: float) -> D
         },
         "coreMeaning": core_meaning,
         "advice": advice,
+        "coreMeaningParts": [focus_desc.strip(), width_desc.strip(), asym_desc.strip()],
+        "adviceParts": [advice_focus.strip(), advice_width.strip(), advice_asym.strip()],
     }
 
 
 def _default_forehead() -> Dict[str, Any]:
     """기본 이마 데이터"""
+    core_meaning = "랜드마크 데이터가 부족하여 분석할 수 없습니다."
+    advice = "이마가 잘 보이도록 머리카락을 정리하고 다시 촬영해 주시오."
     return {
         "measures": {
             "U1": "N/A", "U2": "N/A", "U3": "N/A", "U_total": "N/A",
@@ -571,8 +586,10 @@ def _default_forehead() -> Dict[str, Any]:
                 {"label": "하부우세", "min": 0.42, "max": 0.55},
             ],
         },
-        "coreMeaning": "랜드마크 데이터가 부족하여 분석할 수 없습니다.",
-        "advice": "이마가 잘 보이도록 머리카락을 정리하고 다시 촬영해 주시오.",
+        "coreMeaning": core_meaning,
+        "advice": advice,
+        "coreMeaningParts": [core_meaning],
+        "adviceParts": [advice],
     }
 
 
@@ -731,8 +748,8 @@ def calculate_eyes(landmarks: List[Dict], w_face: float) -> Dict[str, Any]:
             "스스로 에너지를 쏟을 대상을 가려내면 운의 소모를 줄일 수 있소."
         )
 
-    core_meaning = f"{open_desc} {asym_desc} {inter_desc}"
-    advice = f"{advice_open} {advice_asym} {advice_inter}"
+    core_meaning = _bullet_join([open_desc, asym_desc, inter_desc])
+    advice = _bullet_join([advice_open, advice_asym, advice_inter])
     
     # gauge 범위 정의 (rules.md 기준: <0.01 균형, 0.01~0.02 약간 차이, >0.02 비대칭)
     gauge_min, gauge_max = 0, 0.03
@@ -760,7 +777,9 @@ def calculate_eyes(landmarks: List[Dict], w_face: float) -> Dict[str, Any]:
             ]
         },
         "coreMeaning": core_meaning,
-        "advice": advice
+        "advice": advice,
+        "coreMeaningParts": [open_desc.strip(), asym_desc.strip(), inter_desc.strip()],
+        "adviceParts": [advice_open.strip(), advice_asym.strip(), advice_inter.strip()],
     }
 
 
@@ -788,7 +807,9 @@ def _default_eyes() -> Dict[str, Any]:
             ]
         },
         "coreMeaning": "랜드마크 데이터가 부족하여 분석할 수 없습니다.",
-        "advice": "눈이 잘 보이도록 정면을 바라보고 다시 촬영해 주시오."
+        "advice": "눈이 잘 보이도록 정면을 바라보고 다시 촬영해 주시오.",
+        "coreMeaningParts": ["랜드마크 데이터가 부족하여 분석할 수 없습니다."],
+        "adviceParts": ["눈이 잘 보이도록 정면을 바라보고 다시 촬영해 주시오."],
     }
 
 
@@ -954,8 +975,8 @@ def calculate_nose(landmarks: List[Dict], h_face: float) -> Dict[str, Any]:
             "판단의 일관성이 곧 재물을 지키는 방패가 될 것이오."
         )
 
-    core_meaning = f"{length_desc} {width_desc} {shape_desc} {asym_desc}"
-    advice = f"{advice_length} {advice_width} {advice_shape} {advice_asym}"
+    core_meaning = _bullet_join([length_desc, width_desc, shape_desc, asym_desc])
+    advice = _bullet_join([advice_length, advice_width, advice_shape, advice_asym])
 
     # gauge: nose_width_ratio 기준 (0.20~0.30)
     gauge_min, gauge_max = 0.20, 0.30
@@ -987,6 +1008,8 @@ def calculate_nose(landmarks: List[Dict], h_face: float) -> Dict[str, Any]:
         },
         "coreMeaning": core_meaning,
         "advice": advice,
+        "coreMeaningParts": [length_desc.strip(), width_desc.strip(), shape_desc.strip(), asym_desc.strip()],
+        "adviceParts": [advice_length.strip(), advice_width.strip(), advice_shape.strip(), advice_asym.strip()],
     }
 
 
@@ -1018,6 +1041,8 @@ def _default_nose() -> Dict[str, Any]:
         },
         "coreMeaning": "랜드마크 데이터가 부족하여 분석할 수 없습니다.",
         "advice": "코가 잘 보이도록 정면을 바라보고 다시 촬영해 주시오.",
+        "coreMeaningParts": ["랜드마크 데이터가 부족하여 분석할 수 없습니다."],
+        "adviceParts": ["코가 잘 보이도록 정면을 바라보고 다시 촬영해 주시오."],
     }
 
 
@@ -1150,8 +1175,8 @@ def calculate_mouth(landmarks: List[Dict]) -> Dict[str, Any]:
             "약속과 발언의 무게를 스스로 관리하면 큰 인덕으로 돌아올 것이오."
         )
 
-    core_meaning = f"{corner_desc} {lip_desc} {width_desc}"
-    advice = f"{advice_corner} {advice_lip} {advice_width}"
+    core_meaning = _bullet_join([corner_desc, lip_desc, width_desc])
+    advice = _bullet_join([advice_corner, advice_lip, advice_width])
 
     gauge_min, gauge_max = -10, 10
     gauge_value = clamp_gauge_value(display_slope, gauge_min, gauge_max)
@@ -1179,6 +1204,8 @@ def calculate_mouth(landmarks: List[Dict]) -> Dict[str, Any]:
         },
         "coreMeaning": core_meaning,
         "advice": advice,
+        "coreMeaningParts": [corner_desc.strip(), lip_desc.strip(), width_desc.strip()],
+        "adviceParts": [advice_corner.strip(), advice_lip.strip(), advice_width.strip()],
     }
 
 
@@ -1206,7 +1233,9 @@ def _default_mouth() -> Dict[str, Any]:
             ]
         },
         "coreMeaning": "랜드마크 데이터가 부족하여 분석할 수 없습니다.",
-        "advice": "입이 잘 보이도록 정면을 바라보고 다시 촬영해 주시오."
+        "advice": "입이 잘 보이도록 정면을 바라보고 다시 촬영해 주시오.",
+        "coreMeaningParts": ["랜드마크 데이터가 부족하여 분석할 수 없습니다."],
+        "adviceParts": ["입이 잘 보이도록 정면을 바라보고 다시 촬영해 주시오."],
     }
 
 
@@ -1338,9 +1367,8 @@ def calculate_chin(landmarks: List[Dict], h_face: float = 0.5) -> Dict[str, Any]
         )
 
     # coreMeaning: 각도(성향) + 길이 + 깊이 + 안정성
-    endurance_desc = f"{length_desc} {depth_desc} {support_desc}"
-    core_meaning = f"{angle_desc} {endurance_desc}"
-    advice = f"{advice_angle} {advice_length} {advice_depth} {advice_stability}"
+    core_meaning = _bullet_join([angle_desc, length_desc, depth_desc, support_desc])
+    advice = _bullet_join([advice_angle, advice_length, advice_depth, advice_stability])
 
     gauge_min, gauge_max = 55, 85
     gauge_value = clamp_gauge_value(jaw_angle, gauge_min, gauge_max)
@@ -1382,6 +1410,8 @@ def calculate_chin(landmarks: List[Dict], h_face: float = 0.5) -> Dict[str, Any]
         },
         "coreMeaning": core_meaning,
         "advice": advice,
+        "coreMeaningParts": [angle_desc.strip(), length_desc.strip(), depth_desc.strip(), support_desc.strip()],
+        "adviceParts": [advice_angle.strip(), advice_length.strip(), advice_depth.strip(), advice_stability.strip()],
     }
 
 
@@ -1420,6 +1450,8 @@ def _default_chin() -> Dict[str, Any]:
         },
         "coreMeaning": "랜드마크 데이터가 부족하여 분석할 수 없습니다.",
         "advice": "턱이 잘 보이도록 정면을 바라보고 다시 촬영해 주시오.",
+        "coreMeaningParts": ["랜드마크 데이터가 부족하여 분석할 수 없습니다."],
+        "adviceParts": ["턱이 잘 보이도록 정면을 바라보고 다시 촬영해 주시오."],
     }
 
 

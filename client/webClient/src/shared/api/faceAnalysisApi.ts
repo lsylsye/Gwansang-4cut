@@ -35,6 +35,8 @@ export interface FaceShapeAnalysis {
   gauge: Gauge;
   coreMeaning: string;
   advice: string;
+  coreMeaningParts?: string[];
+  adviceParts?: string[];
 }
 
 /** 이마 분석 결과 */
@@ -48,6 +50,8 @@ export interface ForeheadAnalysis {
   gauge: Gauge;
   coreMeaning: string;
   advice: string;
+  coreMeaningParts?: string[];
+  adviceParts?: string[];
 }
 
 /** 눈 분석 결과 */
@@ -64,6 +68,8 @@ export interface EyesAnalysis {
   gauge: Gauge;
   coreMeaning: string;
   advice: string;
+  coreMeaningParts?: string[];
+  adviceParts?: string[];
 }
 
 /** 코 분석 결과 */
@@ -77,6 +83,8 @@ export interface NoseAnalysis {
   gauge: Gauge;
   coreMeaning: string;
   advice: string;
+  coreMeaningParts?: string[];
+  adviceParts?: string[];
 }
 
 /** 입 분석 결과 */
@@ -90,6 +98,8 @@ export interface MouthAnalysis {
   gauge: Gauge;
   coreMeaning: string;
   advice: string;
+  coreMeaningParts?: string[];
+  adviceParts?: string[];
 }
 
 /** 턱 분석 결과 */
@@ -103,6 +113,8 @@ export interface ChinAnalysis {
   gauge: Gauge;
   coreMeaning: string;
   advice: string;
+  coreMeaningParts?: string[];
+  adviceParts?: string[];
 }
 
 /** 관상 분석 결과 (모든 부위) */
@@ -292,6 +304,8 @@ export function transformToFaceAnalysisFeatures(
       oneLineSummary: faceAnalysis.faceShape.advice,
       coreMeaning: faceAnalysis.faceShape.coreMeaning,
       advice: faceAnalysis.faceShape.advice,
+      coreMeaningParts: faceAnalysis.faceShape.coreMeaningParts,
+      adviceParts: faceAnalysis.faceShape.adviceParts,
       strengths: [],
       cautions: [],
       patterns: { behavior: [], life: [] },
@@ -305,6 +319,8 @@ export function transformToFaceAnalysisFeatures(
       gauge: faceAnalysis.forehead.gauge,
       coreMeaning: faceAnalysis.forehead.coreMeaning,
       advice: faceAnalysis.forehead.advice,
+      coreMeaningParts: faceAnalysis.forehead.coreMeaningParts,
+      adviceParts: faceAnalysis.forehead.adviceParts,
     },
     
     // 눈
@@ -314,6 +330,8 @@ export function transformToFaceAnalysisFeatures(
       gauge: faceAnalysis.eyes.gauge,
       coreMeaning: faceAnalysis.eyes.coreMeaning,
       advice: faceAnalysis.eyes.advice,
+      coreMeaningParts: faceAnalysis.eyes.coreMeaningParts,
+      adviceParts: faceAnalysis.eyes.adviceParts,
     },
     
     // 코
@@ -323,6 +341,8 @@ export function transformToFaceAnalysisFeatures(
       gauge: faceAnalysis.nose.gauge,
       coreMeaning: faceAnalysis.nose.coreMeaning,
       advice: faceAnalysis.nose.advice,
+      coreMeaningParts: faceAnalysis.nose.coreMeaningParts,
+      adviceParts: faceAnalysis.nose.adviceParts,
     },
     
     // 입
@@ -332,6 +352,8 @@ export function transformToFaceAnalysisFeatures(
       gauge: faceAnalysis.mouth.gauge,
       coreMeaning: faceAnalysis.mouth.coreMeaning,
       advice: faceAnalysis.mouth.advice,
+      coreMeaningParts: faceAnalysis.mouth.coreMeaningParts,
+      adviceParts: faceAnalysis.mouth.adviceParts,
     },
     
     // 턱
@@ -341,6 +363,8 @@ export function transformToFaceAnalysisFeatures(
       gauge: faceAnalysis.chin.gauge,
       coreMeaning: faceAnalysis.chin.coreMeaning,
       advice: faceAnalysis.chin.advice,
+      coreMeaningParts: faceAnalysis.chin.coreMeaningParts,
+      adviceParts: faceAnalysis.chin.adviceParts,
     },
   };
 }
