@@ -89,7 +89,7 @@ export function RelationMapView({
                             ease: "easeInOut",
                         }}
                     >
-                        좌측에서 멤버를 선택하면 일대일 관계를 확인할 수 있습니다.
+                        멤버를 선택하면 일대일 관계를 확인할 수 있습니다.
                     </motion.p>
                 </div>
             </RelationMapEmptyContainer>
