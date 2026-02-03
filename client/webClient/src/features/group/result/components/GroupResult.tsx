@@ -149,13 +149,60 @@ const MEMBER_CARD_PALETTE = [
     { badge: "bg-rose-50 text-rose-800 border-rose-200", tag: "bg-rose-50 text-rose-700 border-rose-200", icon: "text-rose-600" },
 ] as const;
 
+/** 모임 궁합 API 응답. overall + pairs 로 전체 화면 데이터 채움 */
+export type GroupAnalysisResultProp = {
+    success: boolean;
+    members: Array<{ id?: number; name: string; sajuInfo?: unknown }>;
+    groupCombination?: string;
+    /** 전체 궁합 (personality, compatibility, teamwork, maintenance, members) */
+    overall?: {
+        personality: { title: string; harmony: string; comprehensive: string; improvement: string };
+        compatibility: { score: number };
+        teamwork: {
+            communication: number;
+            speed: number;
+            stability: number;
+            communicationDetail: string;
+            speedDetail: string;
+            stabilityDetail: string;
+        };
+        maintenance: {
+            do: string[];
+            dont: string[];
+            maintenanceCards?: Array<{ label: string; title: string; description: string }>;
+        };
+        members: Array<{
+            name: string;
+            role: string;
+            keywords: string[];
+            roleBadge: string;
+            description: string;
+            strengths: string[];
+            warnings: string[];
+        }>;
+    };
+    /** 1대1 궁합 목록 */
+    pairs?: Array<{
+        member1: string;
+        member2: string;
+        rank: number;
+        score: number;
+        type: string;
+        reason: string;
+        summary: string;
+    }>;
+} | null;
+
 interface GroupResultProps {
     groupMembers?: GroupMember[];
+    /** 모임 궁합 API 응답 (members, groupCombination). 있으면 이 데이터로 렌더링 가능 */
+    groupAnalysisResult?: GroupAnalysisResultProp;
     onViewRanking?: (score: number, defaultName: string) => void;
 }
 
 export const GroupResult: React.FC<GroupResultProps> = ({
     groupMembers = [],
+    groupAnalysisResult = null,
     onViewRanking,
 }) => {
     const [currentTab, setCurrentTab] = useState<"overall" | "pairs">("overall");
@@ -186,23 +233,42 @@ export const GroupResult: React.FC<GroupResultProps> = ({
         });
     };
     
-    // 랭킹 등록 핸들러
+    // API 응답이 있으면 overall/pairs 사용, 없으면 Mock 사용
+    const dataSource = useMemo(() => {
+        const o = groupAnalysisResult?.overall;
+        if (o?.personality && o?.compatibility && o?.teamwork && o?.maintenance && o?.members) {
+            return {
+                personality: o.personality,
+                compatibility: o.compatibility,
+                teamwork: o.teamwork,
+                maintenance: o.maintenance,
+                membersFromApi: o.members,
+            };
+        }
+        return {
+            personality: GROUP_MOCK_DATA.personality,
+            compatibility: GROUP_MOCK_DATA.compatibility,
+            teamwork: GROUP_MOCK_DATA.teamwork,
+            maintenance: GROUP_MOCK_DATA.maintenance,
+            membersFromApi: GROUP_MOCK_DATA.members as Array<{ name: string; role: string; keywords: string[]; roleBadge: string; description: string; strengths: string[]; warnings: string[] }>,
+        };
+    }, [groupAnalysisResult]);
+
     const handleRegisterRanking = () => {
         if (onViewRanking) {
-            onViewRanking(GROUP_MOCK_DATA.compatibility.score, GROUP_MOCK_DATA.personality.title);
+            onViewRanking(dataSource.compatibility.score, dataSource.personality.title);
         }
     };
 
-    // 실제 멤버 데이터와 Mock 역할 데이터 매핑
+    // 실제 멤버 데이터와 역할 데이터 매핑 (API overall.members 또는 Mock)
     const membersWithRoles = useMemo(() => {
-        // groupMembers가 없으면 Mock 데이터를 GroupMember 형식으로 변환
         if (groupMembers.length === 0) {
-            return GROUP_MOCK_DATA.members.map((mock) => ({
-                id: mock.id,
+            return dataSource.membersFromApi.map((mock, idx) => ({
+                id: (mock as { id?: number }).id ?? idx + 1,
                 name: mock.name,
-                birthDate: mock.birthDate,
+                birthDate: (mock as { birthDate?: string }).birthDate ?? "",
                 birthTime: "",
-                gender: mock.gender,
+                gender: (mock as { gender?: string }).gender ?? "male",
                 avatar: undefined,
                 role: mock.role,
                 keywords: mock.keywords,
@@ -212,48 +278,36 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                 warnings: mock.warnings,
             }));
         }
-        // 디버깅: groupMembers의 avatar 확인
-        console.log('GroupResult - groupMembers:', groupMembers.map(m => ({ name: m.name, avatar: m.avatar ? 'exists' : 'missing', avatarLength: m.avatar?.length || 0 })));
-        
         return groupMembers.map((member, idx) => {
-            const mockMember = GROUP_MOCK_DATA.members[idx % GROUP_MOCK_DATA.members.length];
-            const result = {
+            const apiMember = dataSource.membersFromApi[idx];
+            const roleData = apiMember ?? dataSource.membersFromApi[idx % dataSource.membersFromApi.length];
+            return {
                 ...member,
-                role: mockMember.role,
-                keywords: mockMember.keywords,
-                roleBadge: mockMember.roleBadge,
-                description: mockMember.description,
-                strengths: mockMember.strengths,
-                warnings: mockMember.warnings,
+                role: roleData.role,
+                keywords: roleData.keywords ?? [],
+                roleBadge: roleData.roleBadge ?? "🌟",
+                description: roleData.description ?? "",
+                strengths: roleData.strengths ?? [],
+                warnings: roleData.warnings ?? [],
             };
-            // 디버깅: 매핑된 결과 확인
-            console.log(`GroupResult - member ${member.name}:`, { 
-                originalAvatar: member.avatar, 
-                mappedAvatar: result.avatar,
-                hasAvatar: !!result.avatar && result.avatar.trim() !== ''
-            });
-            return result;
-            });
-    }, [groupMembers]);
+        });
+    }, [groupMembers, dataSource]);
 
-    // 실제 멤버 이름으로 pairs 매핑
+    // 1대1 궁합: API pairs 우선, 없으면 Mock
     const mappedPairs = useMemo(() => {
+        const apiPairs = groupAnalysisResult?.pairs;
+        if (apiPairs && apiPairs.length > 0) return apiPairs;
         if (groupMembers.length === 0) return GROUP_MOCK_DATA.pairs;
-        
-        // Mock 이름과 실제 이름 매핑
         const nameMap = new Map<string, string>();
         GROUP_MOCK_DATA.members.forEach((mock, idx) => {
-            if (groupMembers[idx]) {
-                nameMap.set(mock.name, groupMembers[idx].name);
-            }
+            if (groupMembers[idx]) nameMap.set(mock.name, groupMembers[idx].name);
         });
-
-        return GROUP_MOCK_DATA.pairs.map(pair => ({
+        return GROUP_MOCK_DATA.pairs.map((pair) => ({
             ...pair,
-            member1: nameMap.get(pair.member1) || pair.member1,
-            member2: nameMap.get(pair.member2) || pair.member2,
+            member1: nameMap.get(pair.member1) ?? pair.member1,
+            member2: nameMap.get(pair.member2) ?? pair.member2,
         }));
-    }, [groupMembers]);
+    }, [groupMembers, groupAnalysisResult?.pairs]);
 
     // 베스트/워스트 TOP3 (실제 데이터만)
     const bestPairs = useMemo(() => mappedPairs.filter(p => p.type === "best").slice(0, 3), [mappedPairs]);
@@ -364,7 +418,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                     {/* 1) 가장 왼쪽: 네오모피즘 스타일 점수 뱃지 */}
                                     <div className="inline-flex items-baseline gap-1.5 shrink-0 rounded-2xl bg-orange-50 shadow-[6px_6px_12px_rgba(0,0,0,0.06),-6px_-6px_12px_rgba(255,255,255,0.9)] py-2.5 px-4 border border-orange-300">
                                         <span className="text-2xl sm:text-3xl font-extrabold text-orange-600 tabular-nums leading-none">
-                                            {GROUP_MOCK_DATA.compatibility.score}
+                                            {dataSource.compatibility.score}
                                         </span>
                                         <span className="text-sm sm:text-base font-bold text-orange-600 leading-none">점</span>
                                     </div>
@@ -374,14 +428,14 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                             우리 팀을 한마디로 정리하자면?
                                         </p>
                                         <p className="text-base sm:text-lg md:text-xl text-gray-800 font-display font-bold leading-snug">
-                                            "{GROUP_MOCK_DATA.personality.title}"
+                                            "{dataSource.personality.title}"
                                         </p>
                                     </div>
                                     {/* 3) 가장 우측 중앙: 랭킹 등록 버튼 */}
                                     <div className="flex items-center justify-start sm:justify-end shrink-0 self-center">
                                         <ActionButton
                                             variant="orange-primary"
-                                            onClick={() => onViewRanking?.(GROUP_MOCK_DATA.compatibility.score, GROUP_MOCK_DATA.personality.title)}
+                                            onClick={() => onViewRanking?.(dataSource.compatibility.score, dataSource.personality.title)}
                                             className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold shadow-lg hover:scale-105 transition-all"
                                         >
                                             <Trophy size={14} />
@@ -409,7 +463,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                 <span className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-sm text-orange-600 font-bold">1</span>
                                                 모임의 조화 및 균형 해석
                                             </h4>
-                                            <p className="text-gray-700 text-base leading-[1.8] font-sans">{GROUP_MOCK_DATA.personality.harmony}</p>
+                                            <p className="text-gray-700 text-base leading-[1.8] font-sans">{dataSource.personality.harmony}</p>
                                         </section>
 
                                         {/* 2. 종합 궁합 해석 */}
@@ -607,7 +661,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                 </div>
                                             </div>
                                             
-                                            <p className="text-gray-700 text-base leading-[1.8] font-sans mb-3">{GROUP_MOCK_DATA.personality.comprehensive}</p>
+                                            <p className="text-gray-700 text-base leading-[1.8] font-sans mb-3">{dataSource.personality.comprehensive}</p>
                                             
                                             {/* 핵심 포인트 */}
                                             <div className="mt-4 pt-3 border-t border-gray-200">
@@ -646,12 +700,12 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                     커뮤니케이션 밀도
                                                 </h4>
                                                 <div className="inline-flex items-baseline gap-1.5 rounded-2xl bg-orange-50 shadow-[6px_6px_12px_rgba(0,0,0,0.06),-6px_-6px_12px_rgba(255,255,255,0.9)] py-2.5 px-4 border border-orange-100/50">
-                                                    <span className="text-2xl font-extrabold text-orange-600 tabular-nums">{GROUP_MOCK_DATA.teamwork.communication}</span>
+                                                    <span className="text-2xl font-extrabold text-orange-600 tabular-nums">{dataSource.teamwork.communication}</span>
                                                     <span className="text-sm font-bold text-orange-500">점</span>
                                                 </div>
                                             </div>
                                             <p className="text-gray-600 text-base font-hand mb-3">"말이 많아서 문제인가, 적어서 문제인가?"</p>
-                                            <p className="text-gray-700 text-base leading-[1.8] font-sans">{GROUP_MOCK_DATA.teamwork.communicationDetail}</p>
+                                            <p className="text-gray-700 text-base leading-[1.8] font-sans">{dataSource.teamwork.communicationDetail}</p>
                                         </section>
 
                                         {/* 2. 갈등 발생 시 대응력 */}
@@ -662,12 +716,12 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                     갈등 발생 시 대응력
                                                 </h4>
                                                 <div className="inline-flex items-baseline gap-1.5 rounded-2xl bg-orange-50 shadow-[6px_6px_12px_rgba(0,0,0,0.06),-6px_-6px_12px_rgba(255,255,255,0.9)] py-2.5 px-4 border border-orange-100/50">
-                                                    <span className="text-2xl font-extrabold text-orange-600 tabular-nums">{GROUP_MOCK_DATA.teamwork.speed}</span>
+                                                    <span className="text-2xl font-extrabold text-orange-600 tabular-nums">{dataSource.teamwork.speed}</span>
                                                     <span className="text-sm font-bold text-orange-500">점</span>
                                                 </div>
                                             </div>
                                             <p className="text-gray-600 text-base font-hand mb-3">"문제가 생겼을 때 이 팀은 어떻게 반응하는가?"</p>
-                                            <p className="text-gray-700 text-base leading-[1.8] font-sans">{GROUP_MOCK_DATA.teamwork.speedDetail}</p>
+                                            <p className="text-gray-700 text-base leading-[1.8] font-sans">{dataSource.teamwork.speedDetail}</p>
                                         </section>
 
                                         {/* 3. 의사결정 구조 */}
@@ -678,12 +732,12 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                     의사결정 구조
                                                 </h4>
                                                 <div className="inline-flex items-baseline gap-1.5 rounded-2xl bg-orange-50 shadow-[6px_6px_12px_rgba(0,0,0,0.06),-6px_-6px_12px_rgba(255,255,255,0.9)] py-2.5 px-4 border border-orange-100/50">
-                                                    <span className="text-2xl font-extrabold text-orange-600 tabular-nums">{GROUP_MOCK_DATA.teamwork.stability}</span>
+                                                    <span className="text-2xl font-extrabold text-orange-600 tabular-nums">{dataSource.teamwork.stability}</span>
                                                     <span className="text-sm font-bold text-orange-500">점</span>
                                                 </div>
                                             </div>
                                             <p className="text-gray-600 text-base font-hand mb-3">"누가 말하면 정리가 되는가?"</p>
-                                            <p className="text-gray-700 text-base leading-[1.8] font-sans">{GROUP_MOCK_DATA.teamwork.stabilityDetail}</p>
+                                            <p className="text-gray-700 text-base leading-[1.8] font-sans">{dataSource.teamwork.stabilityDetail}</p>
                                         </section>
                                     </div>
                                 </GlassCard>
@@ -781,43 +835,31 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                     <h3 className="font-bold text-xl sm:text-2xl text-gray-800 font-display">모임을 오래 가게 만드는 방법</h3>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 min-h-0">
-                                    {/* 1. 소통 */}
-                                    <section className="flex items-center gap-3 p-4 min-h-[120px] bg-white/50 rounded-2xl border border-gray-200">
-                                        <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                                            <MessageSquare className="w-5 h-5 text-orange-600" />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="text-xs font-semibold text-orange-600 font-sans mb-0.5">소통</p>
-                                            <p className="text-sm font-bold text-gray-800 font-display mb-1">농담은 당사자 앞에서만</p>
-                                            <p className="text-xs text-gray-600 font-sans leading-snug">정현이의 즉흥적인 농담은 분위기를 읽고 말할 때만 유쾌해요.</p>
-                                        </div>
-                                    </section>
-                                    {/* 2. 리더십 */}
-                                    <section className="flex items-center gap-3 p-4 min-h-[120px] bg-white/50 rounded-2xl border border-gray-200">
-                                        <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                                            <ShieldCheck className="w-5 h-5 text-orange-600" />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="text-xs font-semibold text-orange-600 font-sans mb-0.5">리더십</p>
-                                            <p className="text-sm font-bold text-gray-800 font-display mb-1">결정은 윤환과 경보에게</p>
-                                            <p className="text-xs text-gray-600 font-sans leading-snug">두 사람은 현실 감각과 책임감이 있어 방향을 잘 잡아요.</p>
-                                        </div>
-                                    </section>
-                                    {/* 3. 빈도 */}
-                                    <section className="flex items-center gap-3 p-4 min-h-[120px] bg-white/50 rounded-2xl border border-gray-200">
-                                        <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                                            <Calendar className="w-5 h-5 text-orange-600" />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="text-xs font-semibold text-orange-600 font-sans mb-0.5">빈도</p>
-                                            <p className="text-sm font-bold text-gray-800 font-display mb-1">만남은 월 1~2회</p>
-                                            <p className="text-xs text-gray-600 font-sans leading-snug">
-                                                <span className="rounded bg-orange-50 px-1.5 py-0.5 font-medium text-orange-700 border border-orange-100">피로 방지</span>
-                                                {" · "}
-                                                <span className="rounded bg-orange-50 px-1.5 py-0.5 font-medium text-orange-700 border border-orange-100">오래가는 비결</span>
-                                            </p>
-                                        </div>
-                                    </section>
+                                    {(() => {
+                                        const cards = dataSource.maintenance.maintenanceCards;
+                                        const icons = [MessageSquare, ShieldCheck, Calendar];
+                                        const fallbacks = [
+                                            { label: "소통", title: "농담은 당사자 앞에서만", description: "분위기를 읽고 말할 때만 유쾌해요." },
+                                            { label: "리더십", title: "결정은 함께", description: "현실 감각과 책임감 있는 쪽이 방향을 잡아요." },
+                                            { label: "빈도", title: "만남은 월 1~2회", description: "피로 방지 · 오래 가는 비결" },
+                                        ];
+                                        const list = cards && cards.length >= 3 ? cards.slice(0, 3) : fallbacks;
+                                        return list.map((card, i) => {
+                                            const Icon = icons[i] ?? Calendar;
+                                            return (
+                                                <section key={card.label} className="flex items-center gap-3 p-4 min-h-[120px] bg-white/50 rounded-2xl border border-gray-200">
+                                                    <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                                        <Icon className="w-5 h-5 text-orange-600" />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-xs font-semibold text-orange-600 font-sans mb-0.5">{card.label}</p>
+                                                        <p className="text-sm font-bold text-gray-800 font-display mb-1">{card.title}</p>
+                                                        <p className="text-xs text-gray-600 font-sans leading-snug">{card.description}</p>
+                                                    </div>
+                                                </section>
+                                            );
+                                        });
+                                    })()}
                                 </div>
                             </GlassCard>
             </motion.div>
