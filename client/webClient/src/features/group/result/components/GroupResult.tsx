@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { Trophy, Users, UserCheck, AlertTriangle, Sparkles, Award, MessageSquare, ShieldCheck, Calendar, ScrollText, MousePointerClick, Share2, Download } from "lucide-react";
@@ -8,7 +8,7 @@ import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { TabNavigation } from "@/shared/components/TabNavigation";
 import { Badge } from "@/shared/ui/core/badge";
 import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
-import { RelationMapSidebar, MEMBER_PALETTE_HEX, type RelationMapMember } from "./RelationMapSidebar";
+import { RelationMapSidebar, type RelationMapMember } from "./RelationMapSidebar";
 import { RelationMapView, type RelationWithLevel } from "./RelationMapView";
 import { RelationDetailCard, getRelationLevel, type RelationPairForDetail } from "./RelationDetailCard";
 import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
@@ -162,6 +162,13 @@ export const GroupResult: React.FC<GroupResultProps> = ({
     const [selectedMemberForRelation, setSelectedMemberForRelation] = useState<string | null>(null);
     const [selectedPairDetail, setSelectedPairDetail] = useState<RelationPairForDetail | null>(null);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    
+    // 멤버 선택 해제 시 상세창도 닫기
+    useEffect(() => {
+        if (!selectedMemberForRelation) {
+            setSelectedPairDetail(null);
+        }
+    }, [selectedMemberForRelation]);
     
     // 링크 공유 기능
     const shareUrl = `${window.location.origin}${window.location.pathname}`;
@@ -321,25 +328,6 @@ export const GroupResult: React.FC<GroupResultProps> = ({
         }));
     }, [membersWithRoles]);
 
-    // 클릭된 멤버(오른쪽 노드)의 팔레트 색상 — 상세 카드 accent용
-    const relationDetailAccentColor = useMemo(() => {
-        if (!selectedPairDetail || !selectedMemberForRelation) return undefined;
-        const otherMember =
-            selectedPairDetail.member1 === selectedMemberForRelation
-                ? selectedPairDetail.member2
-                : selectedPairDetail.member1;
-        const idx = relationMapMembers.findIndex((m) => m.name === otherMember);
-        if (idx === -1) return undefined;
-        return MEMBER_PALETTE_HEX[idx % MEMBER_PALETTE_HEX.length];
-    }, [selectedPairDetail, selectedMemberForRelation, relationMapMembers]);
-
-    // 왼쪽(선택된) 멤버의 팔레트 색상 — 연애 궁합 팝업 그라데이션용
-    const relationDetailSecondAccentColor = useMemo(() => {
-        if (!selectedMemberForRelation) return undefined;
-        const idx = relationMapMembers.findIndex((m) => m.name === selectedMemberForRelation);
-        if (idx === -1) return undefined;
-        return MEMBER_PALETTE_HEX[idx % MEMBER_PALETTE_HEX.length];
-    }, [selectedMemberForRelation, relationMapMembers]);
 
     return (
         <div className="w-full max-w-7xl mx-auto pb-20">
@@ -851,12 +839,31 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                         <UserCheck className="w-6 h-6 text-orange-600" />
                                     </div>
                                     <h3 className="font-bold text-xl sm:text-2xl text-gray-800 font-display">관계맵</h3>
-                                    <div className="ml-auto hidden sm:flex items-center gap-2 px-4 py-2 bg-orange-50 text-brand-orange rounded-xl text-sm font-medium border border-orange-200 shadow-sm">
-                                        <span className="inline-flex" aria-hidden>
-                                            <MousePointerClick className="w-4 h-4" strokeWidth={2.5} />
-                                        </span>
-                                        <span>멤버를 선택하고 일대일 궁합을 확인해보세요.</span>
-                                    </div>
+                                    {selectedMemberForRelation && (
+                                        <motion.div 
+                                            className="ml-auto hidden sm:flex items-center gap-2 px-4 py-2 bg-orange-50 text-brand-orange rounded-xl text-sm font-medium border border-orange-200 shadow-sm"
+                                            initial={{ opacity: 0, x: 10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: 10 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            <motion.span 
+                                                className="inline-flex" 
+                                                aria-hidden
+                                                animate={{ 
+                                                    y: [0, -3, 0],
+                                                }}
+                                                transition={{
+                                                    duration: 1.5,
+                                                    repeat: Infinity,
+                                                    ease: "easeInOut",
+                                                }}
+                                            >
+                                                <MousePointerClick className="w-4 h-4" strokeWidth={2.5} />
+                                            </motion.span>
+                                            <span>상대 프로필을 클릭하면 상세 궁합을 확인할 수 있어요.</span>
+                                        </motion.div>
+                                    )}
                                 </div>
                                 <div className="flex flex-col lg:flex-row gap-4">
                                         <RelationMapSidebar
@@ -875,8 +882,6 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                             {selectedPairDetail && (
                                                 <RelationDetailCard
                                                     pair={selectedPairDetail}
-                                                    accentColor={relationDetailAccentColor}
-                                                    secondAccentColor={relationDetailSecondAccentColor}
                                                     avatar1={relationMapMembers.find((m) => m.name === selectedPairDetail.member1)?.avatar}
                                                     avatar2={relationMapMembers.find((m) => m.name === selectedPairDetail.member2)?.avatar}
                                                 />
@@ -903,8 +908,17 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                 initial={{ opacity: 0, x: -20 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ delay: 0.1 + idx * 0.1 }}
-                                                className="p-5 bg-gradient-to-br from-sky-50 to-blue-50/80 rounded-2xl border-2 border-sky-200 shadow-sm hover:shadow-md transition-all"
+                                                className="p-5 bg-gradient-to-br from-sky-50 to-blue-50/80 rounded-2xl border-2 border-sky-200 shadow-sm hover:shadow-md transition-all relative"
                                             >
+                                                {/* 순위 뱃지 */}
+                                                <div className="absolute -top-2 -left-2 z-10">
+                                                    <Badge 
+                                                        variant="default"
+                                                        className="text-sm font-bold px-3 py-1 rounded-full shadow-md bg-gradient-to-br from-blue-500 to-blue-600 text-blue-50 border-blue-700"
+                                                    >
+                                                        {pair.rank}위
+                                                    </Badge>
+                                                </div>
                                                 <div className="flex items-center justify-between mb-3">
                                                     <div className="flex items-center gap-3">
                                                         <div className="relative h-10 w-14 shrink-0 flex items-center" aria-hidden>
@@ -958,8 +972,17 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                 initial={{ opacity: 0, x: 20 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ delay: 0.1 + idx * 0.1 }}
-                                                className="p-5 bg-gradient-to-br from-slate-50 to-slate-100/80 rounded-2xl border-2 border-slate-200 shadow-sm hover:shadow-md transition-all"
+                                                className="p-5 bg-gradient-to-br from-slate-50 to-slate-100/80 rounded-2xl border-2 border-slate-200 shadow-sm hover:shadow-md transition-all relative"
                                             >
+                                                {/* 순위 뱃지 */}
+                                                <div className="absolute -top-2 -left-2 z-10">
+                                                    <Badge 
+                                                        variant="default"
+                                                        className="text-sm font-bold px-3 py-1 rounded-full shadow-md bg-gradient-to-br from-gray-500 to-gray-600 text-gray-50 border-gray-700"
+                                                    >
+                                                        {idx + 1}위
+                                                    </Badge>
+                                                </div>
                                                 <div className="flex items-center justify-between mb-3">
                                                     <div className="flex items-center gap-3">
                                                         <div className="relative h-10 w-14 shrink-0 flex items-center" aria-hidden>
