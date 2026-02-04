@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
-import { Trophy, Users, UserCheck, AlertTriangle, Sparkles, Award, MessageSquare, ShieldCheck, Calendar, ScrollText, MousePointerClick, Share2, Download } from "lucide-react";
+import { Trophy, Users, UserCheck, AlertTriangle, Sparkles, Award, MessageSquare, ShieldCheck, Calendar, ScrollText, MousePointerClick, Share2, Download, Loader2 } from "lucide-react";
 import { GroupMember } from "@/shared/types";
 import { CardTitle } from "@/shared/ui/core/card";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
@@ -42,7 +42,12 @@ const GROUP_MOCK_DATA = {
             "고성으로 싸우기",
             "대놓고 충돌하기",
             "말 줄어들 때 방치하기"
-        ]
+        ],
+        maintenanceCards: [
+            { label: "소통", title: "농담은 당사자 앞에서만", description: "분위기를 읽고 말할 때만 유쾌해요." },
+            { label: "리더십", title: "결정은 윤환과 경보에게", description: "현실 감각과 책임감이 있어 방향을 잘 잡아요." },
+            { label: "빈도", title: "만남은 월 1~2회", description: "피로 방지 · 오래 가는 비결" },
+        ],
     },
     members: [
         {
@@ -52,7 +57,6 @@ const GROUP_MOCK_DATA = {
             gender: "female" as const,
             role: "분위기 조율자",
             keywords: ["공기 흐름", "정서 기준점", "감정 밸런스"],
-            roleBadge: "🌿",
             description: "말은 세게 안 해도, 표정·톤으로 다 느끼는 타입. 모임에서 은근히 '정서 기준점' 역할",
             strengths: ["공기 흐름을 잘 읽음"],
             warnings: ["마음 상하면 말 안 하고 거리 둠"]
@@ -64,7 +68,6 @@ const GROUP_MOCK_DATA = {
             gender: "male" as const,
             role: "에너지 담당",
             keywords: ["즉흥적", "솔직함", "활력"],
-            roleBadge: "🔥",
             description: "에너지 담당, 말 많을 때 많고 없을 땐 없음. 즉흥적이고 솔직함",
             strengths: ["모임에 활력"],
             warnings: ["농담이 가끔 선 넘음"]
@@ -76,7 +79,6 @@ const GROUP_MOCK_DATA = {
             gender: "male" as const,
             role: "현실 담당",
             keywords: ["중심축", "책임감", "안정감"],
-            roleBadge: "🪨",
             description: "현실 담당, 중심축. 튀지 않지만 없으면 허전. 말 적어도 신뢰감 있음",
             strengths: ["책임감, 안정감"],
             warnings: ["답답하단 말 들을 수 있음"]
@@ -88,7 +90,6 @@ const GROUP_MOCK_DATA = {
             gender: "male" as const,
             role: "눈치 + 정보 수집형",
             keywords: ["완충", "중재", "계산"],
-            roleBadge: "🌊",
             description: "눈치 + 정보 수집형. 겉으론 무난, 속으로 계산 빠름",
             strengths: ["중재 능력"],
             warnings: ["본심 숨기다 오해받기 쉬움"]
@@ -100,7 +101,6 @@ const GROUP_MOCK_DATA = {
             gender: "male" as const,
             role: "형·리더 포지션",
             keywords: ["방향 제시", "결단력", "정리"],
-            roleBadge: "⚡",
             description: "형·리더 포지션. 말에 무게가 있음. 분위기 정리하거나 방향 제시 역할",
             strengths: ["결단력"],
             warnings: ["본인은 조언인데 상대는 잔소리로 느낄 수 있음"]
@@ -175,7 +175,6 @@ export type GroupAnalysisResultProp = {
             name: string;
             role: string;
             keywords: string[];
-            roleBadge: string;
             description: string;
             strengths: string[];
             warnings: string[];
@@ -258,13 +257,13 @@ export const GroupResult: React.FC<GroupResultProps> = ({
             compatibility: GROUP_MOCK_DATA.compatibility,
             teamwork: GROUP_MOCK_DATA.teamwork,
             maintenance: GROUP_MOCK_DATA.maintenance,
-            membersFromApi: GROUP_MOCK_DATA.members as Array<{ name: string; role: string; keywords: string[]; roleBadge: string; description: string; strengths: string[]; warnings: string[] }>,
+            membersFromApi: GROUP_MOCK_DATA.members as Array<{ name: string; role: string; keywords: string[]; description: string; strengths: string[]; warnings: string[] }>,
         };
     }, [groupAnalysisResult]);
 
     const handleRegisterRanking = () => {
         if (onViewRanking) {
-            onViewRanking(dataSource.compatibility.score, dataSource.personality.title);
+            onViewRanking(Number(dataSource.compatibility?.score) || 0, dataSource.personality.title);
         }
     };
 
@@ -280,7 +279,6 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                 avatar: undefined,
                 role: mock.role,
                 keywords: mock.keywords,
-                roleBadge: mock.roleBadge,
                 description: mock.description,
                 strengths: mock.strengths,
                 warnings: mock.warnings,
@@ -293,7 +291,6 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                 ...member,
                 role: roleData.role,
                 keywords: roleData.keywords ?? [],
-                roleBadge: roleData.roleBadge ?? "🌟",
                 description: roleData.description ?? "",
                 strengths: roleData.strengths ?? [],
                 warnings: roleData.warnings ?? [],
@@ -317,9 +314,20 @@ export const GroupResult: React.FC<GroupResultProps> = ({
         }));
     }, [groupMembers, groupAnalysisResult?.pairs]);
 
-    // 베스트/워스트 TOP3 (실제 데이터만)
-    const bestPairs = useMemo(() => mappedPairs.filter(p => p.type === "best").slice(0, 3), [mappedPairs]);
-    const worstPairs = useMemo(() => mappedPairs.filter(p => p.type === "worst" || p.rank >= 8).slice(0, 3), [mappedPairs]);
+    // 베스트/워스트 TOP3: 2명(1쌍)·3명(3쌍)은 50점 기준, 4명 이상은 점수 등수대로
+    const THRESHOLD = 50;
+    const bestPairs = useMemo(() => {
+        if (mappedPairs.length <= 3) {
+            return mappedPairs.filter(p => (p.score ?? 0) >= THRESHOLD).slice(0, 3);
+        }
+        return [...mappedPairs].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 3);
+    }, [mappedPairs]);
+    const worstPairs = useMemo(() => {
+        if (mappedPairs.length <= 3) {
+            return mappedPairs.filter(p => (p.score ?? 0) < THRESHOLD).slice(0, 3);
+        }
+        return [...mappedPairs].sort((a, b) => (a.score ?? 0) - (b.score ?? 0)).slice(0, 3);
+    }, [mappedPairs]);
 
     // 관계맵용: 멤버 수에 맞춰 누락된 1:1 쌍 보강 (7명이면 선택 시 6명 모두 표시)
     const completePairs = useMemo(() => {
@@ -426,7 +434,9 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                     {/* 1) 가장 왼쪽: 네오모피즘 스타일 점수 뱃지 */}
                                     <div className="inline-flex items-baseline gap-1.5 shrink-0 rounded-2xl bg-orange-50 shadow-[6px_6px_12px_rgba(0,0,0,0.06),-6px_-6px_12px_rgba(255,255,255,0.9)] py-2.5 px-4 border border-orange-300">
                                         <span className="text-2xl sm:text-3xl font-extrabold text-orange-600 tabular-nums leading-none">
-                                            {dataSource.compatibility.score}
+                                            {typeof dataSource.compatibility?.score === "number"
+                                                ? dataSource.compatibility.score
+                                                : "-"}
                                         </span>
                                         <span className="text-sm sm:text-base font-bold text-orange-600 leading-none">점</span>
                                     </div>
@@ -443,7 +453,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                     <div className="flex items-center justify-start sm:justify-end shrink-0 self-center">
                                         <ActionButton
                                             variant="orange-primary"
-                                            onClick={() => onViewRanking?.(dataSource.compatibility.score, dataSource.personality.title)}
+                                            onClick={() => onViewRanking?.(Number(dataSource.compatibility?.score) || 0, dataSource.personality.title)}
                                             className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold shadow-lg hover:scale-105 transition-all"
                                         >
                                             <Trophy size={14} />
@@ -852,7 +862,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                             { label: "빈도", title: "만남은 월 1~2회", description: "피로 방지 · 오래 가는 비결" },
                                         ];
                                         const list = cards && cards.length >= 3 ? cards.slice(0, 3) : fallbacks;
-                                        return list.map((card, i) => {
+                                        return list.map((card: { label: string; title: string; description: string }, i: number) => {
                                             const Icon = icons[i] ?? Calendar;
                                             return (
                                                 <section key={card.label} className="flex items-center gap-3 p-4 min-h-[120px] bg-white/50 rounded-2xl border border-gray-200">
@@ -881,7 +891,15 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                             transition={{ delay: 0.1, duration: 0.5, ease: "easeOut" }}
                             className="space-y-8"
                         >
-
+                            {/* API 분리 시: 전체 궁합은 왔고 1:1은 아직 로딩 중 */}
+                            {groupAnalysisResult?.overall != null && groupAnalysisResult?.pairs === undefined ? (
+                                <div className="flex flex-col items-center justify-center py-20 gap-4 text-gray-600">
+                                    <Loader2 className="w-12 h-12 text-brand-orange animate-spin" aria-hidden />
+                                    <p className="text-lg font-medium">1:1 궁합 분석 중...</p>
+                                    <p className="text-sm text-gray-500">잠시만 기다려 주세요.</p>
+                                </div>
+                            ) : (
+                        <>
                             {/* 관계맵 - 개인별 포지션 스타일 통일 */}
                             <div className="mt-8">
                                 <div className="flex items-center gap-4 pb-4">
@@ -1072,6 +1090,8 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                 </GlassCard>
                             </div>
 
+                        </>
+                            )}
                         </motion.div>
                     )}
                 </motion.div>
