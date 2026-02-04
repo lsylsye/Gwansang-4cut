@@ -1,17 +1,46 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown } from "lucide-react";
 import turtleImage from "@/assets/turtle.png";
 import turtleShellImage from "@/assets/turtle_shell.png";
 
+const AUTO_CLOSE_MS = 10000; // 멘트 표시 후 10초 뒤 말풍선 자동 닫기
+
 interface TurtleGuideProps {
   message?: string;
   isThinking?: boolean;
+  thinkingMessage?: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  /** 경로가 바뀌어 가이드가 다시 보일 때 말풍선 열기 (hideTurtleGuide → 표시로 전환 시) */
+  pathname?: string;
 }
 
-export const TurtleGuide: React.FC<TurtleGuideProps> = ({ message, isThinking }) => {
+export const TurtleGuide: React.FC<TurtleGuideProps> = ({ message, isThinking, thinkingMessage, actionLabel, onAction, pathname }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // hideTurtleGuide 상태에서 다른 페이지로 이동해 가이드가 다시 보이면 말풍선 열기
+  useEffect(() => {
+    if (pathname != null) setIsOpen(true);
+  }, [pathname]);
+
+  // 멘트가 바뀔 때마다 말풍선 열고, 10초 후 자동 닫기
+  useEffect(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+    setIsOpen(true);
+    autoCloseTimerRef.current = setTimeout(() => {
+      setIsOpen(false);
+      autoCloseTimerRef.current = null;
+    }, AUTO_CLOSE_MS);
+    return () => {
+      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+    };
+  }, [message, thinkingMessage, isThinking]);
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end md:bottom-8 md:right-8">
@@ -39,14 +68,25 @@ export const TurtleGuide: React.FC<TurtleGuideProps> = ({ message, isThinking })
               <div className="bg-white backdrop-blur-md rounded-[24px] px-6 py-5 relative z-10 text-gray-800 border border-white/40 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8)]">
                 <p className="relative z-20 font-medium text-base md:text-lg leading-relaxed whitespace-pre-line font-hand break-keep">
                   {isThinking ? (
-                    <span className="flex items-center gap-2">
-                      천기를 읽는 중이오...
-                      <span className="animate-pulse">🐢</span>
-                    </span>
+                    thinkingMessage ?? (
+                      <span className="flex items-center gap-2">
+                        천기를 읽는 중이오...
+                        <span className="animate-pulse">🐢</span>
+                      </span>
+                    )
                   ) : (
                     message
                   )}
                 </p>
+                {actionLabel && onAction && (!isThinking || thinkingMessage) && (
+                  <button
+                    type="button"
+                    onClick={onAction}
+                    className="mt-4 w-full py-2 px-4 rounded-xl bg-brand-green hover:bg-brand-green-deep text-white font-bold text-sm transition-colors border-2 border-brand-black shadow-pixel"
+                  >
+                    {actionLabel}
+                  </button>
+                )}
               </div>
 
               {/* Triangle Tail using border trick with Glassmorphism */}

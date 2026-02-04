@@ -61,6 +61,14 @@ interface UploadSectionProps {
   onNavigateToMembers?: () => void;
   /** 그룹 모드: 인적사항 페이지에서 업로드 페이지로 돌아가기 */
   onNavigateToUpload?: () => void;
+  /** 개인 모드: 사주 정보 입력 단계 표시 여부 (TurtleGuide 멘트용) */
+  onSajuInputVisible?: (visible: boolean) => void;
+  /** 개인 모드: 사진 촬영 후 확인 단계 표시 여부 (TurtleGuide 멘트용) */
+  onPersonalConfirmStepVisible?: (visible: boolean) => void;
+  /** 개인 모드: 카메라 촬영 뷰 표시 여부 (TurtleGuide 멘트용, 촬영할 때만 삼라만상 멘트) */
+  onPersonalCameraVisible?: (visible: boolean) => void;
+  /** 모임 모드: 실시간 촬영 뷰 표시 여부 (TurtleGuide 멘트용, 최대 7명 안내) */
+  onGroupCameraVisible?: (visible: boolean) => void;
 }
 
 const CAPTURE_STEPS = [
@@ -111,6 +119,10 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   onAnalyze,
   onNavigateToMembers,
   onNavigateToUpload,
+  onSajuInputVisible,
+  onPersonalConfirmStepVisible,
+  onPersonalCameraVisible,
+  onGroupCameraVisible,
 }) => {
   const location = useLocation();
   const pathname = pathnameProp || location.pathname;
@@ -330,6 +342,38 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       onNavigateToUpload();
     }
   }, [pathname, mode, groupMembers.length, onNavigateToUpload]);
+
+  // 개인 모드에서 사주 입력 단계 표시 여부를 상위에 알림 (TurtleGuide 멘트용)
+  useEffect(() => {
+    if (mode === "personal") {
+      onSajuInputVisible?.(showSajuInput);
+    } else {
+      onSajuInputVisible?.(false);
+    }
+  }, [mode, showSajuInput, onSajuInputVisible]);
+
+  // 개인 모드: "개인 관상 확인하기" 화면 = 사진 촬영/업로드 후 확인 단계일 때만 (TurtleGuide 멘트용)
+  useEffect(() => {
+    const isConfirmStep =
+      mode === "personal" && !showSajuInput && !!capturedImages[0];
+    onPersonalConfirmStepVisible?.(isConfirmStep);
+  }, [mode, capturedImages, showSajuInput, onPersonalConfirmStepVisible]);
+
+  // 개인 모드: 카메라 촬영 뷰가 보일 때만 true (TurtleGuide: 이때만 "삼라만상" 멘트)
+  useEffect(() => {
+    const cameraVisible =
+      mode === "personal" &&
+      currentStep === 0 &&
+      !showSajuInput &&
+      isCapturing;
+    onPersonalCameraVisible?.(cameraVisible);
+  }, [mode, currentStep, showSajuInput, isCapturing, onPersonalCameraVisible]);
+
+  // 모임 모드: 실시간 촬영 뷰가 보일 때 true (TurtleGuide: 최대 7명 안내 멘트)
+  useEffect(() => {
+    const groupCameraVisible = mode === "group" && isCameraActive;
+    onGroupCameraVisible?.(groupCameraVisible);
+  }, [mode, isCameraActive, onGroupCameraVisible]);
 
   const handleRetake = () => {
     if (mode === "personal") {

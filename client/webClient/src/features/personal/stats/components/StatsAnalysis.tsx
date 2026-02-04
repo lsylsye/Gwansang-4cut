@@ -743,10 +743,10 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
 
     if (tab === "constitution") {
         return (
-            <div className="relative min-h-[60vh] pb-24">
+            <div className="relative min-h-[60vh]">
                 {/* 인트로: 거북 도사 중앙 + 대사 + 시작하기 */}
                 {constitutionPhase === "intro" && (
-                    <div className="flex flex-col items-center justify-center py-12 px-4">
+                    <div className="flex flex-col items-center justify-center px-4">
                         <GlassCard className="max-w-2xl w-full p-10 border-8 border-white rounded-[40px] shadow-clay-lg bg-white/70 flex flex-col items-center text-center">
                             <div className="w-32 h-32 md:w-40 md:h-40 mb-8 drop-shadow-2xl animate-[float_4s_ease-in-out_infinite]">
                                 <img src={turtleImage} alt="거북 도사" className="w-full h-full object-contain" />

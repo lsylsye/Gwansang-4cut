@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images, Share2 } from "lucide-react";
+import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images, Share2, ImageOff, Loader2 } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { FaceAnalysis } from "./face/components/FaceAnalysis";
 import { StatsAnalysis, type ConstitutionPhase } from "./stats/components/StatsAnalysis";
@@ -15,6 +15,7 @@ import {
 import html2canvas from "html2canvas";
 import { useHideTurtleGuide } from "@/shared/contexts/HideTurtleGuideContext";
 import { TabNavigation } from "@/shared/components/TabNavigation";
+import { GlassCard } from "@/shared/ui/core/GlassCard";
 
 // --- Types ---
 interface AnalysisSectionProps {
@@ -23,6 +24,8 @@ interface AnalysisSectionProps {
     onNavigateToPhotoBooth?: () => void;
     frameImage?: string;
     fromPhotoBooth?: boolean;
+    /** 결과 페이지 탭 변경 시 TurtleGuide 멘트용 (App에서 구독) */
+    onTabChange?: (tab: "physiognomy" | "constitution" | "future" | "ssafy-cut") => void;
     // 실제 API 결과 데이터 (옵션)
     faceAnalysisResult?: Stage1Response | null;
     totalReview?: TotalReview | null;
@@ -315,6 +318,7 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
     onNavigateToPhotoBooth, 
     frameImage, 
     fromPhotoBooth,
+    onTabChange,
     faceAnalysisResult,
     totalReview: totalReviewProp,
     isLoading = false 
@@ -329,6 +333,11 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
         setHideTurtleGuide(currentTab === "constitution");
         return () => setHideTurtleGuide(false);
     }, [currentTab, setHideTurtleGuide]);
+
+    // 탭 변경 시 상위(App)에 알려 TurtleGuide 멘트 갱신
+    useEffect(() => {
+        onTabChange?.(currentTab);
+    }, [currentTab, onTabChange]);
 
     // API 결과가 있으면 변환하여 사용
     const featuresData = React.useMemo(() => {
@@ -492,11 +501,22 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                                 totalReview={totalReviewData}
                             />
                         ) : (
-                            <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-500">
-                                <div className="animate-spin w-12 h-12 border-4 border-brand-green border-t-transparent rounded-full mb-4" />
-                                <p className="text-lg font-medium">분석 결과를 불러오는 중...</p>
-                                <p className="text-sm text-gray-400 mt-2">잠시만 기다려주세요</p>
-                            </div>
+                            <GlassCard className="w-full max-w-2xl mx-auto min-h-[320px] p-10 sm:p-12 border-4 border-white rounded-[32px] shadow-clay-lg bg-white/70 flex flex-col items-center justify-center text-center">
+                                <div className="w-16 h-16 rounded-full bg-brand-green/10 flex items-center justify-center mb-5">
+                                    <Loader2 className="w-8 h-8 text-brand-green animate-spin" strokeWidth={2} />
+                                </div>
+                                <p className="text-gray-800 text-lg font-semibold font-display mb-1">분석 결과를 불러오는 중...</p>
+                                <p className="text-gray-500 text-sm">잠시만 기다려주세요</p>
+                                <div className="mt-6 flex gap-1.5">
+                                    {[0, 1, 2].map((i) => (
+                                        <span
+                                            key={i}
+                                            className="w-2 h-2 rounded-full bg-brand-green/60 animate-pulse"
+                                            style={{ animationDelay: `${i * 0.2}s` }}
+                                        />
+                                    ))}
+                                </div>
+                            </GlassCard>
                         )
                     )}
 
@@ -504,7 +524,6 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                     {(currentTab === "constitution" || currentTab === "future") && (
                         <StatsAnalysis
                             tab={currentTab}
-                            images={images}
                             futureImage={futureImage}
                             onFutureImageUpload={setFutureImage}
                             constitutionPhase={constitutionPhase}
@@ -518,7 +537,7 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
 
                     {/* --- Tab 4: 싸피네컷 --- */}
                     {currentTab === "ssafy-cut" && (
-                        <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 px-4">
+                        <div className="flex flex-col items-center justify-center px-4">
                             {(frameImage || savedFrameImage) ? (
                                 <div className="w-full max-w-4xl space-y-8">
                                     <div className="flex justify-center">
@@ -555,18 +574,22 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                                     </div>
                                 </div>
                             ) : (
-                                <div className="text-center space-y-4">
-                                    <p className="text-gray-500 text-lg">아직 싸피네컷이 없습니다.</p>
+                                <GlassCard className="w-full max-w-2xl mx-auto p-10 sm:p-12 border-4 border-white rounded-[32px] shadow-clay-lg bg-white/70 flex flex-col items-center justify-center text-center">
+                                    <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                                        <ImageOff className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
+                                    </div>
+                                    <p className="text-gray-600 text-lg font-medium font-sans mb-6">촬영된 사진이 없습니다.</p>
                                     {onNavigateToPhotoBooth && (
                                         <ActionButton
-                                            variant="primary"
+                                            variant="secondary"
                                             onClick={onNavigateToPhotoBooth}
+                                            className="flex items-center gap-2"
                                         >
-                                            <Images size={20} className="mr-2" />
-                                            싸피네컷 찍으러 가기
+                                            <Images size={20} />
+                                            사진 찍기
                                         </ActionButton>
                                     )}
-                                </div>
+                                </GlassCard>
                             )}
                         </div>
                     )}
