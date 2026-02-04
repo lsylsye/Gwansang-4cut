@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import ReactMarkdown from "react-markdown";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
@@ -276,8 +277,11 @@ interface FutureImages {
 }
 
 /** 사주 기반 체질 풀이 블록 — data는 백에서 받아서 교체 가능 */
+const HEALTH_FOODS_SECTION_TITLE = "건강 관리를 위해 꼭 챙기면 좋은 것들";
+
 function ConstitutionSajuBlock({ data }: { data: ConstitutionSajuData }) {
-    const { head, ilganSummary, oheng, sections, daeunAndFoods } = data;
+    const { head, oheng, sections } = data;
+    const filteredSections = sections.filter((item) => item.sub !== HEALTH_FOODS_SECTION_TITLE);
     return (
         <div className="pt-4">
             <h3 className="text-2xl font-bold text-gray-900 mb-6 font-display text-center">당신의 체질 풀이</h3>
@@ -293,26 +297,22 @@ function ConstitutionSajuBlock({ data }: { data: ConstitutionSajuData }) {
                 </div>
 
                 <div className="space-y-4 max-h-[45vh] overflow-y-auto custom-scrollbar pr-1">
-                    {sections.map((item, i) => (
+                    {filteredSections.map((item, i) => (
                         <div key={i}>
                             {item.sub != null && <h4 className="text-gray-800 font-bold text-base mb-1.5 font-display">{item.sub}</h4>}
-                            <p className="text-gray-700 text-base leading-[1.75] whitespace-pre-line">{item.text}</p>
+                            <div className="text-gray-700 text-base leading-[1.75] [&_strong]:font-bold [&_strong]:text-gray-800 [&_p:has(strong.total-review-subheading)]:mb-0 [&_p:not(:has(strong.total-review-subheading))]:mb-3 [&_p:last-child]:mb-0">
+                                <ReactMarkdown
+                                    components={{
+                                        p: ({ children }) => <p>{children}</p>,
+                                        strong: ({ children }) => <strong className="font-bold text-gray-800 total-review-subheading">{children}</strong>,
+                                    }}
+                                >
+                                    {String(item.text ?? "").trim()}
+                                </ReactMarkdown>
+                            </div>
                         </div>
                     ))}
                 </div>
-            </GlassCard>
-
-            {/* 마지막: 지금 대운 + 꼭 챙기면 좋은 음식 */}
-            <GlassCard className="w-full max-w-4xl mx-auto p-6 sm:p-8 border-4 border-white rounded-[32px] shadow-clay-md bg-green-50/40">
-                <h4 className="font-bold text-green-800 mb-3 font-display flex items-center gap-2">
-                    <Utensils size={18} /> {daeunAndFoods.title}
-                </h4>
-                <p className="text-gray-700 text-base leading-[1.75] whitespace-pre-line mb-4">{daeunAndFoods.body}</p>
-                <ul className="text-sm text-gray-700 space-y-1">
-                    {daeunAndFoods.priorityFoods.map((item, i) => (
-                        <li key={i} className="flex items-start gap-1.5"><span className="text-green-500">•</span> {item}</li>
-                    ))}
-                </ul>
             </GlassCard>
         </div>
     );
@@ -350,15 +350,25 @@ function fiveElementsToOheng(fe: Record<string, number> | undefined): OhengCount
     };
 }
 
+/** 오행 조사: 목·금 → '이', 화·토·수 → '가' */
+function ohengParticle(key: keyof OhengCounts): string {
+    return key === "wood" || key === "metal" ? "이" : "가";
+}
+/** 오행 접속: 목·금 → '과', 화·토·수 → '와' */
+function ohengConjunction(key: keyof OhengCounts): string {
+    return key === "wood" || key === "metal" ? "과" : "와";
+}
+
 /** 오행 개수로 가장 많은/적은 오행 키와 체질 요약 문구 */
 function getOhengHead(oheng: OhengCounts): { head: string; strongKey: keyof OhengCounts; weakKey: keyof OhengCounts } {
     const entries = (Object.entries(oheng) as [keyof OhengCounts, number][]).sort((a, b) => b[1] - a[1]);
     const strongKey = entries[0][0];
     const weakKey = entries[entries.length - 1][0];
     const top2 = entries.slice(0, 2).filter(([, v]) => v > 0);
+    const label = (k: keyof OhengCounts) => OHENG_LABELS[k].replace(/\(.*\)/, "").trim();
     const head = top2.length >= 2 && top2[0][1] === top2[1][1]
-        ? `${OHENG_LABELS[top2[0][0]].replace(/\(.*\)/, "").trim()}과 ${OHENG_LABELS[top2[1][0]].replace(/\(.*\)/, "").trim()}이 중심인 체질`
-        : `${OHENG_LABELS[strongKey].replace(/\(.*\)/, "").trim()}이 중심인 체질`;
+        ? `${label(top2[0][0])}${ohengConjunction(top2[0][0])} ${label(top2[1][0])}${ohengParticle(top2[1][0])} 중심인 체질`
+        : `${label(strongKey)}${ohengParticle(strongKey)} 중심인 체질`;
     return { head, strongKey, weakKey };
 }
 

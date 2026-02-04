@@ -31,17 +31,17 @@ const OHENG_COLORS: Record<string, Record<Strength, { bg: string; border: string
     },
     earth: {
         none: { bg: "#F5F5F5", border: "#E0E0E0", text: "#757575" },
-        light: { bg: "#FFF8E1", border: "#FFF3E0", text: "#E65100" },
-        normal: { bg: "#FFB74D", border: "#FF9800", text: "#FFFFFF" },
-        dark: { bg: "#F57C00", border: "#E65100", text: "#FFFFFF" },
-        veryDark: { bg: "#E64A19", border: "#BF360C", text: "#FFFFFF" },
+        light: { bg: "#EFEBE9", border: "#BCAAA4", text: "#6D4C41" },
+        normal: { bg: "#A1887F", border: "#8D6E63", text: "#FFFFFF" },
+        dark: { bg: "#6D4C41", border: "#5D4037", text: "#FFFFFF" },
+        veryDark: { bg: "#4E342E", border: "#3E2723", text: "#FFFFFF" },
     },
     metal: {
         none: { bg: "#F5F5F5", border: "#E0E0E0", text: "#757575" },
-        light: { bg: "#FAFAFA", border: "#F5F5F5", text: "#616161" },
-        normal: { bg: "#BDBDBD", border: "#9E9E9E", text: "#FFFFFF" },
-        dark: { bg: "#757575", border: "#616161", text: "#FFFFFF" },
-        veryDark: { bg: "#424242", border: "#212121", text: "#FFFFFF" },
+        light: { bg: "#ECEFF1", border: "#90A4AE", text: "#546E7A" },
+        normal: { bg: "#78909C", border: "#607D8B", text: "#FFFFFF" },
+        dark: { bg: "#546E7A", border: "#455A64", text: "#FFFFFF" },
+        veryDark: { bg: "#37474F", border: "#263238", text: "#FFFFFF" },
     },
     water: {
         none: { bg: "#F5F5F5", border: "#E0E0E0", text: "#757575" },
@@ -86,14 +86,23 @@ interface FiveElementsDisplayProps {
     className?: string;
 }
 
+/** 오행 조사: 목·금 → '이', 화·토·수 → '가' */
+function ohengParticle(key: keyof OhengCounts): string {
+    return key === "wood" || key === "metal" ? "이" : "가";
+}
+/** 오행 접속: 목·금 → '과', 화·토·수 → '와' */
+function ohengConjunction(key: keyof OhengCounts): string {
+    return key === "wood" || key === "metal" ? "과" : "와";
+}
+
 function getDefaultHeadLabel(counts: OhengCounts): string {
     const entries = (Object.entries(counts) as [keyof OhengCounts, number][]).sort((a, b) => b[1] - a[1]);
     if (entries.length === 0 || entries[0][1] === 0) return "오행 분포";
     const top2 = entries.filter(([, v]) => v > 0).slice(0, 2);
     const labels: Record<keyof OhengCounts, string> = { wood: "목", fire: "화", earth: "토", metal: "금", water: "수" };
     if (top2.length >= 2 && top2[0][1] === top2[1][1])
-        return `${labels[top2[0][0]]}과 ${labels[top2[1][0]]}이 중심인 체질`;
-    return `${labels[entries[0][0]]}이 중심인 체질`;
+        return `${labels[top2[0][0]]}${ohengConjunction(top2[0][0])} ${labels[top2[1][0]]}${ohengParticle(top2[1][0])} 중심인 체질`;
+    return `${labels[entries[0][0]]}${ohengParticle(entries[0][0])} 중심인 체질`;
 }
 
 export const FiveElementsDisplay: React.FC<FiveElementsDisplayProps> = ({
@@ -142,11 +151,10 @@ export const FiveElementsDisplay: React.FC<FiveElementsDisplayProps> = ({
                                         <div
                                             key={key}
                                             ref={buttonRefs[index]}
-                                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-colors duration-200"
+                                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border-[2.5px] bg-transparent transition-colors duration-200"
                                             style={{
-                                                backgroundColor: colors.bg,
                                                 borderColor: colors.border,
-                                                color: colors.text,
+                                                color: colors.border,
                                             }}
                                         >
                                             <span className="text-sm font-bold">{label}</span>

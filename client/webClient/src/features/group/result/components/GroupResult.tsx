@@ -453,7 +453,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                         <div className="w-12 h-12 bg-gradient-to-br from-orange-200 to-orange-100 border-2 rounded-xl flex items-center justify-center shadow-sm">
                                             <ScrollText className="w-6 h-6 text-orange-600" />
                                         </div>
-                                        <h3 className="font-bold text-xl sm:text-2xl text-gray-800 font-display">거북 도사의 총평</h3>
+                                        <h3 className="font-bold text-xl sm:text-2xl text-gray-800 font-display">거북 도사의 총평 및 취업운</h3>
                                     </div>
 
                                     <div className="flex-1 min-h-0 space-y-6 overflow-y-auto custom-scrollbar pr-2 max-h-[600px]">

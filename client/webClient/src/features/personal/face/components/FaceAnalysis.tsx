@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import ReactMarkdown from "react-markdown";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { Sparkles, X } from "lucide-react";
 
@@ -440,23 +441,41 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                 <GlassCard className="w-full min-w-0 flex flex-col p-6 sm:p-8 border-4 border-white rounded-[32px] shadow-clay-md bg-white/50">
                     <div className="flex items-center gap-3 mb-5">
                         <div className="w-10 h-10 bg-brand-green/10 border-2 border-brand-green rounded-xl flex items-center justify-center">🐢</div>
-                        <h3 className="font-bold text-xl sm:text-2xl text-gray-800">거북 도사의 총평</h3>
+                        <h3 className="font-bold text-xl sm:text-2xl text-gray-800">거북 도사의 총평 및 취업운</h3>
                     </div>
 
-                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 space-y-5 max-h-[50vh]">
-                        {/* 1. 전체 관상 분석 종합 의견 */}
+                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-4 max-h-[50vh]">
+                        {/* 1. 전체 관상 분석 종합 의견 — 마크다운(굵은 소제목·줄 띄움) 적용 */}
                         {(totalReview?.faceOverview || DEFAULT_TOTAL_REVIEW.faceOverview) && (
-                            <section>
-                                <h4 className="text-gray-800 font-bold text-base mb-2">1. 전체 관상 분석 종합 의견</h4>
-                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview?.faceOverview || DEFAULT_TOTAL_REVIEW.faceOverview}</p>
+                            <section className="total-review-content rounded-xl bg-gray-100 border border-gray-200 p-4 sm:p-5">
+                                <h4 className="text-gray-800 font-bold text-base mb-3 pb-2 border-b border-gray-200/80">1. 전체 관상 분석 종합 의견</h4>
+                                <div className="text-gray-700 text-base leading-[1.75] [&_strong]:font-bold [&_strong]:text-gray-800 [&_p:has(strong.total-review-subheading)]:mb-0 [&_p:not(:has(strong.total-review-subheading))]:mb-3 [&_p:last-child]:mb-0">
+                                    <ReactMarkdown
+                                        components={{
+                                            p: ({ children }) => <p>{children}</p>,
+                                            strong: ({ children }) => <strong className="font-bold text-gray-800 total-review-subheading">{children}</strong>,
+                                        }}
+                                    >
+                                        {(totalReview?.faceOverview || DEFAULT_TOTAL_REVIEW.faceOverview).trim()}
+                                    </ReactMarkdown>
+                                </div>
                             </section>
                         )}
 
-                        {/* 2. 취업운 */}
+                        {/* 2. 취업운 — 마크다운(굵은 소제목·줄 띄움) 적용 */}
                         {(totalReview?.careerFortune || DEFAULT_TOTAL_REVIEW.careerFortune) && (
-                            <section>
-                                <h4 className="text-gray-800 font-bold text-base mb-2">2. 올해의 취업운 💼</h4>
-                                <p className="text-gray-700 text-base leading-[1.75] whitespace-pre-line">{totalReview?.careerFortune || DEFAULT_TOTAL_REVIEW.careerFortune}</p>
+                            <section className="total-review-content rounded-xl bg-gray-100 border border-gray-200 p-4 sm:p-5">
+                                <h4 className="text-gray-800 font-bold text-base mb-3 pb-2 border-b border-gray-200/80">2. 올해의 취업운 💼</h4>
+                                <div className="text-gray-700 text-base leading-[1.75] [&_strong]:font-bold [&_strong]:text-gray-800 [&_p:has(strong.total-review-subheading)]:mb-0 [&_p:not(:has(strong.total-review-subheading))]:mb-3 [&_p:last-child]:mb-0">
+                                    <ReactMarkdown
+                                        components={{
+                                            p: ({ children }) => <p>{children}</p>,
+                                            strong: ({ children }) => <strong className="font-bold text-gray-800 total-review-subheading">{children}</strong>,
+                                        }}
+                                    >
+                                        {(totalReview?.careerFortune || DEFAULT_TOTAL_REVIEW.careerFortune).trim()}
+                                    </ReactMarkdown>
+                                </div>
                             </section>
                         )}
                     </div>
