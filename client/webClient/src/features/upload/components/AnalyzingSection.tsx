@@ -24,12 +24,12 @@ const ZOOM_TARGETS = [
 ];
 
 const ANALYSIS_STEPS = [
-  { text: "이마의 기운을 살피는 중...", detailText: "이마의 기운을 살피는 중이니 잠시만 정적을 유지하게나.", icon: <Sparkles className="w-5 h-5" />, target: 0, label: "얼굴형" },
-  { text: "눈매의 인상을 분석하는 중...", detailText: "눈매의 인상을 읽는 중이니 잠깐만 기다리게나.", icon: <Search className="w-5 h-5" />, target: 1, label: "눈" },
-  { text: "코의 균형과 특징을 살펴보는 중...", detailText: "코의 균형과 특징을 살펴보는 중이니 조금만 기다리게.", icon: <Brain className="w-5 h-5" />, target: 2, label: "코" },
-  { text: "입매의 느낌을 확인하는 중...", detailText: "입매의 느낌을 확인하는 중이니 잠시만.", icon: <Sparkles className="w-5 h-5" />, target: 3, label: "입" },
-  { text: "턱의 안정감을 분석하는 중...", detailText: "턱의 안정감을 분석하는 중이니 정적을 유지하게나.", icon: <Search className="w-5 h-5" />, target: 4, label: "턱" },
-  { text: "얼굴 전체의 조화를 종합하는 중...", detailText: "얼굴 전체의 조화를 종합하는 중이니 곧 끝나리다.", icon: <Brain className="w-5 h-5" />, target: 5, label: "조합" },
+  { text: "이마의 기운을 살피는 중...", detailText: "이마는 타고난 기운과 삶의 초반 흐름을 살필 수 있는 부위라 하오.\n생각의 방향과 기본 성향이 이마에 자연스레 드러난다 보오.", icon: <Sparkles className="w-5 h-5" />, target: 0, label: "얼굴형" },
+  { text: "눈매의 인상을 분석하는 중...", detailText: "눈은 사람의 감정과 성격이 가장 솔직하게 나타나는 곳이라 하오.\n대인관계에서의 태도와 내면의 기운을 읽는 데 중요하다 보오.", icon: <Search className="w-5 h-5" />, target: 1, label: "눈" },
+  { text: "코의 균형과 특징을 살펴보는 중...", detailText: "코는 얼굴의 중심으로, 삶을 이끄는 힘과 균형을 상징한다 하오.\n코를 통해 내면의 안정감과 일의 추진력을 살피고 있소.", icon: <Brain className="w-5 h-5" />, target: 2, label: "코" },
+  { text: "입매의 느낌을 확인하는 중...", detailText: "입은 말과 표정, 인간관계를 보여주는 중요한 부위라 하오.\n어떤 인상을 주는 사람인지 판단하는 데 기준이 된다오.", icon: <Sparkles className="w-5 h-5" />, target: 3, label: "입" },
+  { text: "턱의 안정감을 분석하는 중...", detailText: "턱은 삶의 후반과 생활의 안정감을 살피는 부위라 하오.\n책임감과 버티는 힘이 턱의 인상에 담기게 되오.", icon: <Search className="w-5 h-5" />, target: 4, label: "턱" },
+  { text: "얼굴 전체의 조화를 종합하는 중...", detailText: "관상은 개별 요소보다 얼굴 전체의 조화를 중히 여기고 있소.\n얼굴 전체의 조화를 종합하는 중이니 잠시만 기다려 주시게나.", icon: <Brain className="w-5 h-5" />, target: 5, label: "조합" },
 ];
 
 export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ 
@@ -402,7 +402,7 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({
                       <motion.div key={i} animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} className="w-2 h-2 bg-brand-green rounded-full" />
                     ))}
                   </div>
-                  <p className="text-gray-500 font-hand text-lg md:text-xl italic leading-relaxed">
+                  <p className="text-gray-500 font-hand text-lg md:text-xl italic leading-relaxed whitespace-pre-line">
                     "{ANALYSIS_STEPS[currentStep].detailText}"
                   </p>
                 </>
