@@ -337,10 +337,10 @@ export default function App() {
   const shouldHideHeader = isPhotoBooth && isPhotoBoothCapturing;
 
   return (
-    <Layout>
+    <Layout pathname={pathname}>
       <HideTurtleGuideProvider>
       {!shouldHideHeader && (
-        <header className="w-full h-16 px-6 flex justify-between items-center bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40">
+        <header className="w-full h-16 px-6 flex justify-between items-center bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm sticky top-0 z-40">
         <div
           className="flex items-center gap-0.5 cursor-pointer"
           onClick={() => navigate(ROUTES.HOME)}
@@ -477,7 +477,6 @@ export default function App() {
               >
                 <RankingSection
                   onBack={() => navigate(ROUTES.GROUP_RESULT)}
-                  onHome={handleRestart}
                   userScore={groupScore}
                   initialTeamName={userTeamName}
                   fromAnalysis={fromAnalysis}
@@ -609,6 +608,7 @@ function TurtleGuideGate({
       }
       actionLabel={photoBoothAction?.label}
       onAction={photoBoothAction?.onClick}
+      disableAutoClose={pathname === ROUTES.PERSONAL_ANALYZING}
     />
   );
 }
