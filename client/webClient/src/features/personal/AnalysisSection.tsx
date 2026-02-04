@@ -575,17 +575,6 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
 
             {/* Bottom Actions */}
             <div className="flex flex-wrap justify-center gap-4 mt-16 pb-10 no-capture">
-                <ActionButton variant="secondary" onClick={onRestart} className="flex items-center gap-2">
-                    <RotateCcw size={20} /> 처음으로
-                </ActionButton>
-                <ActionButton 
-                    variant="secondary" 
-                    onClick={handleDownload} 
-                    className="flex items-center gap-2"
-                    disabled={isDownloading}
-                >
-                    <Download size={20} /> {isDownloading ? "저장 중..." : "결과 다운로드"}
-                </ActionButton>
                 <ActionButton variant="primary" onClick={handleShare} className="flex items-center gap-2">
                     <Share2 size={20} /> 링크 공유하기
                 </ActionButton>

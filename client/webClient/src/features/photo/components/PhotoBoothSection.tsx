@@ -18,6 +18,9 @@ interface PhotoBoothSectionProps {
   onBack: () => void;
   onComplete: (photos: string[]) => void;
   mode?: AnalyzeMode;
+  analysisDone?: boolean;
+  onNavigateToResult?: () => void;
+  onStepChange?: (isCapturing: boolean) => void;
 }
 
 
@@ -31,6 +34,9 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
   onBack,
   onComplete,
   mode = "personal",
+  analysisDone = false,
+  onNavigateToResult,
+  onStepChange,
 }) => {
   const isPersonal = mode === "personal";
 
@@ -601,6 +607,17 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
     });
   };
 
+  // 분석 완료 알림은 App.tsx에서 관리하므로 여기서는 제거
+
+  // 헤더 표시 제어: 사진 촬영 단계가 아닐 때 헤더 표시
+  useEffect(() => {
+    const isCapturing = !frameType ? false : !showSelection;
+    onStepChange?.(isCapturing);
+    return () => {
+      onStepChange?.(false);
+    };
+  }, [frameType, showSelection, onStepChange]);
+
   // Step 1: 프레임 선택하기기
   if (!frameType) {
     return (
@@ -967,39 +984,35 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
           className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12 pb-24 lg:pb-12 lg:max-w-[calc(100%-20rem)] xl:max-w-[calc(100%-24rem)] scrollbar-hide" 
           style={{ minHeight: '100vh' }}
         >
-          {/* Header */}
+        {/* Header */}
           <div className="w-full max-w-5xl mb-6 sm:mb-8 md:mb-12">
             <div className="text-center space-y-2 sm:space-y-3">
               <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 font-display tracking-tight">프레임 꾸미기</h2>
               <p className="text-gray-500 text-sm sm:text-base md:text-lg font-medium">나만의 취향이 담긴 배경 색상을 골라보세요.</p>
-            </div>
           </div>
+        </div>
 
           {/* Frame Preview */}
           <div className="relative w-full max-w-5xl flex-1 flex items-center justify-center">
-            <div className={`absolute inset-0 scale-[1.2] blur-[120px] opacity-30 -z-10 transition-colors duration-1000`}
-              style={{ backgroundColor: frameColor }}
-            />
-
-            <motion.div
+        <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
               className="relative transform transition-transform duration-700 flex justify-center w-full"
             >
-              {/* Canvas로 프레임과 이미지 렌더링 */}
-              <canvas
-                ref={frameCanvasRef}
-                className="mx-auto w-full"
-                style={{
-                  aspectRatio: frameType === "vertical" ? "579 / 1740" : "1800 / 1200",
+                {/* Canvas로 프레임과 이미지 렌더링 */}
+                <canvas
+                  ref={frameCanvasRef}
+                  className="mx-auto w-full"
+                  style={{
+                    aspectRatio: frameType === "vertical" ? "579 / 1740" : "1800 / 1200",
                   maxWidth: frameType === "vertical" ? "min(40vw, 450px)" : "min(75vw, 1000px)",
-                  transition: "background-color 0.5s ease"
-                }}
-              />
+                    transition: "background-color 0.5s ease"
+                  }}
+                />
             </motion.div>
+            </div>
           </div>
-        </div>
 
         {/* Sidebar - Controls (플로팅바처럼 따라오기) */}
         <motion.div
@@ -1021,10 +1034,10 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
           <div className="space-y-4 sm:space-y-5 md:space-y-6">
             {/* 배경 색상 선택 */}
             <div className="space-y-2 sm:space-y-3 md:space-y-4">
-              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                 <div className={`w-1 h-5 sm:w-1.5 sm:h-6 ${isPersonal ? "bg-brand-green" : "bg-brand-orange"} rounded-full shadow-sm`} />
                 <h3 className="text-sm sm:text-base md:text-lg font-bold text-gray-900">배경 색상</h3>
-              </div>
+                </div>
               <div className="grid grid-cols-8 lg:grid-cols-4 gap-2.5 sm:gap-3 md:gap-3 lg:gap-4 w-full max-w-[420px] sm:max-w-[480px] lg:max-w-none mx-auto">
                   {PRESET_COLORS.map((color) => (
                     <motion.button
@@ -1054,30 +1067,30 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
             {/* 가로 프레임 말풍선 커스텀 문구 (가로 프레임일 때만 표시) */}
             {frameType === "horizontal" && (
               <div className="space-y-3 sm:space-y-4">
-                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                   <div className={`w-1.5 h-6 ${isPersonal ? "bg-brand-green" : "bg-brand-orange"} rounded-full shadow-sm`} />
                   <h3 className="text-base sm:text-lg font-bold text-gray-900">말풍선 문구</h3>
-                </div>
-                <select
-                  value={isCustomInput ? "직접입력" : customText}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === "직접입력") {
-                      setIsCustomInput(true);
-                    } else {
-                      setIsCustomInput(false);
-                      setCustomText(value);
-                    }
-                  }}
+                  </div>
+                  <select
+                    value={isCustomInput ? "직접입력" : customText}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === "직접입력") {
+                        setIsCustomInput(true);
+                      } else {
+                        setIsCustomInput(false);
+                        setCustomText(value);
+                      }
+                    }}
                   className="w-full px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border-2 border-gray-200 focus:border-brand-green focus:outline-none text-sm font-medium bg-white"
-                >
-                  {PRESET_TEXTS.map((text) => (
-                    <option key={text} value={text}>
-                      {text}
-                    </option>
-                  ))}
-                </select>
-                {isCustomInput && (
+                  >
+                    {PRESET_TEXTS.map((text) => (
+                      <option key={text} value={text}>
+                        {text}
+                      </option>
+                    ))}
+                  </select>
+                  {isCustomInput && (
                   <>
                     <input
                       type="text"
@@ -1096,8 +1109,8 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
                       {customText.length}/8 글자
                     </p>
                   </>
-                )}
-              </div>
+                  )}
+                </div>
             )}
 
             {/* Action Buttons */}

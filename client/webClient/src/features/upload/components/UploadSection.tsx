@@ -145,7 +145,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   const [hasConsented, setHasConsented] = useState(false);
   const [sajuData, setSajuData] = useState<SajuData>({
     birthDate: "",
-    birthTime: "00:00",
+    birthTime: "",
     gender: "male",
     birthTimeUnknown: false,
   });
@@ -351,7 +351,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       setCurrentStep(0);
       if (pathname === ROUTES.GROUP_UPLOAD_MEMBERS && onNavigateToUpload) onNavigateToUpload();
       if (groupFileInputRef.current) groupFileInputRef.current.value = "";
-      // 모임: 다시 촬영하기 → 모임 관상 확인하기(촬영/업로드 선택) 섹션으로
+      // 모임: 다시 촬영하기 → 모임 궁합 확인하기(촬영/업로드 선택) 섹션으로
     }
   };
 
@@ -647,7 +647,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                           setSajuData({
                             ...sajuData,
                             birthTimeUnknown: checked === true,
-                            birthTime: checked === true ? "" : "00:00",
+                            birthTime: checked === true ? "" : "",
                           });
                         }}
                       />
@@ -663,16 +663,19 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                         <Select
                           value={
                             sajuData.birthTime
-                              ? parseInt(sajuData.birthTime.split(":")[0], 10).toString()
+                              ? (() => {
+                                  const hours = sajuData.birthTime.split(":")[0];
+                                  return hours ? parseInt(hours, 10).toString() : "0";
+                                })()
                               : "0"
                           }
                           onValueChange={(value) => {
-                            const currentTime = sajuData.birthTime || "00:00";
+                            const currentTime = sajuData.birthTime || "";
                             const [, minutes] = currentTime.split(":");
                             const h = value.padStart(2, "0");
                             setSajuData({
                               ...sajuData,
-                              birthTime: `${h}:${minutes}`,
+                              birthTime: `${h}:${minutes || ""}`,
                             });
                           }}
                         >
@@ -693,34 +696,53 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                         <Input
                           type="text"
                           inputMode="numeric"
-                          placeholder="0"
+                          placeholder="00"
                           maxLength={2}
                           value={
                             sajuData.birthTime
-                              ? sajuData.birthTime.split(":")[1]
+                              ? sajuData.birthTime.split(":")[1] || ""
                               : ""
                           }
                           onChange={(e) => {
                             const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-                            const currentTime = sajuData.birthTime || "00:00";
-                            const [hours] = currentTime.split(":");
-                            const num = v === "" ? 0 : parseInt(v, 10);
-                            const clamped = num > 59 ? "59" : v === "" ? "00" : v;
-                            setSajuData({
-                              ...sajuData,
-                              birthTime: `${hours}:${clamped}`,
-                            });
-                          }}
-                          onBlur={() => {
-                            const currentTime = sajuData.birthTime || "00:00";
-                            const [hours, min] = currentTime.split(":");
-                            const parsed = parseInt(min || "0", 10);
-                            const clamped = Math.min(59, Math.max(0, isNaN(parsed) ? 0 : parsed)).toString().padStart(2, "0");
-                            if (min !== clamped) {
+                            const currentTime = sajuData.birthTime || "";
+                            const [hours = "00"] = currentTime.split(":");
+                            if (v === "") {
+                              // 빈 값일 때는 빈 문자열로 유지
+                              setSajuData({
+                                ...sajuData,
+                                birthTime: hours ? `${hours}:` : "",
+                              });
+                            } else {
+                              // 입력 중에는 그대로 저장 (포맷팅은 onBlur에서)
+                              const num = parseInt(v, 10);
+                              const clamped = num > 59 ? "59" : v;
                               setSajuData({
                                 ...sajuData,
                                 birthTime: `${hours}:${clamped}`,
                               });
+                            }
+                          }}
+                          onBlur={() => {
+                            const currentTime = sajuData.birthTime || "";
+                            if (!currentTime) return;
+                            const [hours, min] = currentTime.split(":");
+                            if (min === undefined || min === "") {
+                              // 분이 없으면 "00"으로 설정
+                              setSajuData({
+                                ...sajuData,
+                                birthTime: `${hours || "00"}:00`,
+                              });
+                            } else {
+                              // 포맷팅: 2자리로 맞춤
+                              const parsed = parseInt(min, 10);
+                              const clamped = Math.min(59, Math.max(0, isNaN(parsed) ? 0 : parsed)).toString().padStart(2, "0");
+                              if (min !== clamped) {
+                                setSajuData({
+                                  ...sajuData,
+                                  birthTime: `${hours || "00"}:${clamped}`,
+                                });
+                              }
                             }
                           }}
                           className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm pl-3 pr-9"
@@ -761,7 +783,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     );
   }
 
-  // --- Segmenting Animation Overlay (모임 관상 단체 사진 MediaPipe 분석 중) ---
+  // --- Segmenting Animation Overlay (모임 궁합 단체 사진 MediaPipe 분석 중) ---
   if (isSegmenting) {
     return (
       <div className="flex flex-col items-center justify-center w-full min-h-[50vh]">
@@ -987,7 +1009,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           className="text-center mb-12"
         >
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 font-display">
-            {isPersonal ? "개인 관상 확인하기" : "모임 관상 확인하기"}
+            {isPersonal ? "개인 관상 확인하기" : "모임 궁합 확인하기"}
           </h2>
         </motion.div>
 
@@ -1013,7 +1035,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               <p className="text-base text-gray-500 font-sans leading-relaxed">
                 실시간 안면 인식 시스템으로
                 <br />
-                {isPersonal ? "나의 관상을 확인합니다." : "모임 관상을 확인합니다."}
+                {isPersonal ? "나의 관상을 확인합니다." : "모임 궁합을 확인합니다."}
               </p>
             </div>
           </GlassCard>
@@ -1038,7 +1060,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               <p className="text-base text-gray-500 font-sans leading-relaxed">
                 미리 촬영한 사진을 업로드하여
                 <br />
-                {isPersonal ? "나의 관상을 확인합니다." : "모임 관상을 확인합니다."}
+                {isPersonal ? "나의 관상을 확인합니다." : "모임 궁합을 확인합니다."}
               </p>
             </div>
           </GlassCard>

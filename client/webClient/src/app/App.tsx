@@ -12,6 +12,7 @@ import { RankingSection } from "@/features/ranking/components/RankingSection";
 import { PhotoBoothSection } from "@/features/photo/components/PhotoBoothSection";
 import { TurtleGuide } from "@/shared/components/TurtleGuide";
 import { HideTurtleGuideProvider, useHideTurtleGuide } from "@/shared/contexts/HideTurtleGuideContext";
+import { Toast } from "@/shared/components/Toast";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { AnimatePresence, motion } from "motion/react";
 import { Trophy } from "lucide-react";
@@ -30,6 +31,7 @@ import {
   getPhotoBoothPath,
   isPhotoBoothPath,
   isAnalyzingPath,
+  isResultPath,
 } from "@/shared/config/routes";
 import { 
   analyzeFace, 
@@ -58,6 +60,8 @@ export default function App() {
   const [faceAnalysisResult, setFaceAnalysisResult] = useState<FaceAnalysisApiResponse | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showAnalysisCompleteToast, setShowAnalysisCompleteToast] = useState(false);
+  const [isPhotoBoothCapturing, setIsPhotoBoothCapturing] = useState(false);
   // faceMeshMetadata를 App에서 관리
   const [faceMeshMetadata, setFaceMeshMetadata] = useState<any>(null);
   /** 모임 궁합 API 응답 (members + groupCombination). API 연결 후 결과 화면에서 렌더링용 */
@@ -161,6 +165,10 @@ export default function App() {
           setFaceAnalysisResult(result);
           setAnalysisDone(true);
           setIsAnalyzing(false);
+          // 결과 페이지가 아닐 때만 토스트 표시
+          if (!isResultPath(pathnameRef.current)) {
+            setShowAnalysisCompleteToast(true);
+          }
           if (!isPhotoBoothPath(pathnameRef.current)) {
             navigate(ROUTES.PERSONAL_RESULT);
           }
@@ -179,6 +187,10 @@ export default function App() {
     navigate(ROUTES.GROUP_ANALYZING);
     setTimeout(() => {
       setAnalysisDone(true);
+      // 결과 페이지가 아닐 때만 토스트 표시
+      if (!isResultPath(pathnameRef.current)) {
+        setShowAnalysisCompleteToast(true);
+      }
       if (isAnalyzingPath(pathnameRef.current)) {
         navigate(ROUTES.GROUP_RESULT);
       }
@@ -210,7 +222,7 @@ export default function App() {
       case ROUTES.PERSONAL_UPLOAD:
         return "자네의 얼굴에 삼라만상이 담겨 있구먼. \n내 신통한 거울에 얼굴을 비추어 보게나. \n숨겨진 운명을 내가 낱낱이 읽어보리다.";
       case ROUTES.GROUP_UPLOAD:
-        return "허허, 모임 관상을 보러 왔구먼! \n사진을 주거나, 직접 한 자리에 모여 보게. \n자네들 사이의 기운을 내가 한 번 짚어보리다.";
+        return "허허, 모임 궁합을 보러 왔구먼! \n사진을 주거나, 직접 한 자리에 모여 보게. \n자네들 사이의 기운을 내가 한 번 짚어보리다.";
       case ROUTES.GROUP_UPLOAD_MEMBERS:
         return "이제 각 멤버의 이름과 생년월일을 입력해 주게. \n다 적었으면 모임 궁합 분석하기를 눌러 보게나.";
       case ROUTES.PERSONAL_ANALYZING:
@@ -231,11 +243,12 @@ export default function App() {
   };
 
   const isPhotoBooth = isPhotoBoothPath(pathname);
+  const shouldHideHeader = isPhotoBooth && isPhotoBoothCapturing;
 
   return (
     <Layout>
       <HideTurtleGuideProvider>
-      {!isPhotoBooth && (
+      {!shouldHideHeader && (
         <header className="w-full h-16 px-6 flex justify-between items-center bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40">
         <div
           className="flex items-center gap-0.5 cursor-pointer"
@@ -389,6 +402,9 @@ export default function App() {
               >
                 <PhotoBoothSection
                   mode={mode}
+                  analysisDone={analysisDone}
+                  onNavigateToResult={() => navigate(getResultPath(mode))}
+                  onStepChange={(isCapturing) => setIsPhotoBoothCapturing(isCapturing)}
                   onBack={() => {
                     // analyzing이 완료된 상태면 결과창으로, 진행 중이면 analyzing으로
                     if (analysisDone) {
@@ -437,6 +453,27 @@ export default function App() {
         pathname={pathname}
         getGuideMessage={getGuideMessage}
         isPhotoBooth={isPhotoBooth}
+      />
+
+      {/* 관상 분석 완료 Toast - 결과 페이지가 아닐 때만 표시 */}
+      <Toast
+        message="관상 분석이 완료되었습니다. 결과를 확인하시겠어요?"
+        isOpen={showAnalysisCompleteToast && !isResultPath(pathname)}
+        onClose={() => setShowAnalysisCompleteToast(false)}
+        onAction={() => {
+          if (analysisDone) {
+            const currentPath = pathnameRef.current;
+            if (isPhotoBoothPath(currentPath)) {
+              navigate(getResultPath(mode));
+            } else {
+              navigate(getResultPath(mode));
+            }
+            setShowAnalysisCompleteToast(false);
+          }
+        }}
+        type="success"
+        variant="morphism"
+        duration={10000}
       />
       </HideTurtleGuideProvider>
     </Layout>
