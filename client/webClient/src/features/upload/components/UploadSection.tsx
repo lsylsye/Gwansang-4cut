@@ -57,8 +57,8 @@ interface UploadSectionProps {
     groupMembers?: GroupMember[],
     faceMeshMetadata?: any,
   ) => void;
-  /** 그룹 모드: 사진 등록 후 인적사항 등록 페이지로 이동 */
-  onNavigateToMembers?: () => void;
+  /** 그룹 모드: 사진 등록/촬영 후 인적사항 등록 페이지로 이동 (state.initialGroupMembers 있으면 촬영 플로우) */
+  onNavigateToMembers?: (state?: { initialGroupMembers?: GroupMember[] }) => void;
   /** 그룹 모드: 인적사항 페이지에서 업로드 페이지로 돌아가기 */
   onNavigateToUpload?: () => void;
   /** 개인 모드: 사주 정보 입력 단계 표시 여부 (TurtleGuide 멘트용) */
@@ -128,6 +128,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   const pathname = pathnameProp || location.pathname;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const groupFileInputRef = useRef<HTMLInputElement>(null);
+  /** 촬영 → 멤버 페이지 이동 시 state.initialGroupMembers 한 번만 적용용 */
+  const appliedInitialGroupMembersRef = useRef(false);
 
   const [capturedImages, setCapturedImages] = useState<
     (string | null)[]
@@ -225,7 +227,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       );
       setGroupMembers(members);
       setIsSegmenting(false);
-      if (onNavigateToMembers) onNavigateToMembers();
+      if (onNavigateToMembers) onNavigateToMembers({ initialGroupMembers: members });
       else setCurrentStep(3);
       analyzeGroupPhotoForApi(photo).then(setGroupUploadFaceMetadata).catch(() => {});
     } catch {
@@ -336,12 +338,25 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     faceMeshMetadata,
   ]);
 
-  // 인적사항 URL(/group/upload/members)로 직접 왔는데 멤버가 없으면 업로드 페이지로
+  // 촬영 플로우: 멤버 페이지로 이동 시 state로 전달된 initialGroupMembers 한 번만 적용 (업로드와 동일 구조)
   useEffect(() => {
-    if (pathname === ROUTES.GROUP_UPLOAD_MEMBERS && mode === "group" && groupMembers.length < 2 && onNavigateToUpload) {
-      onNavigateToUpload();
+    if (pathname !== ROUTES.GROUP_UPLOAD_MEMBERS) {
+      appliedInitialGroupMembersRef.current = false;
+      return;
     }
-  }, [pathname, mode, groupMembers.length, onNavigateToUpload]);
+    const initial = location.state?.initialGroupMembers;
+    if (Array.isArray(initial) && initial.length >= 2 && !appliedInitialGroupMembersRef.current) {
+      setGroupMembers(initial);
+      appliedInitialGroupMembersRef.current = true;
+    }
+  }, [pathname, location.state]);
+
+  // 인적사항 URL로 직접 왔는데 멤버가 없으면 업로드 페이지로 (촬영에서 state로 넘어온 경우는 제외)
+  useEffect(() => {
+    if (pathname !== ROUTES.GROUP_UPLOAD_MEMBERS || mode !== "group" || groupMembers.length >= 2) return;
+    if (location.state?.initialGroupMembers?.length >= 2) return;
+    if (onNavigateToUpload) onNavigateToUpload();
+  }, [pathname, mode, groupMembers.length, onNavigateToUpload, location.state?.initialGroupMembers]);
 
   // 개인 모드에서 사주 입력 단계 표시 여부를 상위에 알림 (TurtleGuide 멘트용)
   useEffect(() => {
@@ -515,25 +530,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       }
     }
 
-    let groupApiResponse: { success: boolean; members?: unknown[]; groupCombination?: string } | null = null;
-    if (finalPayload) {
-      try {
-        const res = await fetch(API_ENDPOINTS.FACEMESH_GROUP, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(finalPayload),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && data?.success) {
-          groupApiResponse = data;
-        } else {
-          console.error("모임 API 응답 오류:", data?.detail ?? data);
-        }
-      } catch (err) {
-        console.error("모임 데이터 전송 실패:", err);
-      }
-    }
-
+    // 개인 관상과 동일: API는 App에서 /group/analyzing 이동 후 호출. 여기서는 payload만 전달.
     const validImages = capturedImages.filter((img): img is string => img !== null);
     onAnalyze(
       validImages,
@@ -546,7 +543,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         birthTimeUnknown: false,
       },
       groupMembers,
-      groupApiResponse ?? undefined,
+      finalPayload ?? undefined,
     );
   };
 
@@ -1385,7 +1382,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     (mode === "group" &&
       isGroupPhotoConfirming &&
       capturedImages[0] !== null &&
-      currentStep !== 3) ||
+      currentStep !== 3 &&
+      pathname !== ROUTES.GROUP_UPLOAD_MEMBERS) ||
     isPersonalConfirming
   ) {
     const accentColor = mode === "personal" ? "bg-brand-green" : "bg-brand-orange";
@@ -1461,9 +1459,10 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
   // --- Camera View ---
   // 개인 모드에서 사주 정보 입력 화면이 아니고, 촬영 중일 때만 카메라 뷰 표시
+  // 모임: 멤버 입력 페이지(pathname === GROUP_UPLOAD_MEMBERS)면 카메라 숨기고 사주 입력 보여줌
   if (
     (mode === "personal" && currentStep === 0 && !showSajuInput && isCapturing) ||
-    (mode === "group" && isCameraActive)
+    (mode === "group" && isCameraActive && pathname !== ROUTES.GROUP_UPLOAD_MEMBERS)
   ) {
     const stepInfo =
       mode === "personal"

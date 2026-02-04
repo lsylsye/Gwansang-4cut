@@ -22,7 +22,6 @@ import {
   SajuData,
   GroupMember,
 } from "@/shared/types";
-import { ANALYSIS_LOADING_MS, DEV_SKIP_ANALYZING_FOR_GROUP } from "@/shared/config/analysis";
 import {
   ROUTES,
   getUploadPath,
@@ -36,7 +35,9 @@ import {
 import { 
   analyzeFace, 
   FaceAnalysisApiResponse,
-  TotalReview 
+  TotalReview,
+  analyzeGroupOverall,
+  analyzeGroupPairs,
 } from "@/shared/api/faceAnalysisApi";
 
 export default function App() {
@@ -64,11 +65,14 @@ export default function App() {
   const [isPhotoBoothCapturing, setIsPhotoBoothCapturing] = useState(false);
   // faceMeshMetadata를 App에서 관리
   const [faceMeshMetadata, setFaceMeshMetadata] = useState<any>(null);
-  /** 모임 궁합 API 응답 (members + groupCombination). API 연결 후 결과 화면에서 렌더링용 */
+  /** 모임 궁합 API 응답 (members, overall, pairs). API 연결 후 결과 화면에서 렌더링용 */
   const [groupAnalysisResult, setGroupAnalysisResult] = useState<{
     success: boolean;
+    timestamp?: string;
     members: Array<{ id?: number; name: string; sajuInfo?: unknown }>;
     groupCombination?: string;
+    overall?: unknown;
+    pairs?: unknown[];
   } | null>(null);
   /** 개인 결과 페이지에서 선택된 탭 (TurtleGuide 탭별 멘트용) */
   const [personalResultTab, setPersonalResultTab] = useState<string | null>(null);
@@ -156,28 +160,20 @@ export default function App() {
     setImages(capturedImages);
     setFeatures(selectedFeatures);
     setSaju(sajuData);
-    // members 있으면 그룹 플로우 (직접 /group/upload 접근 시 mode 지연 대비)
     const isGroupFlow = Boolean(members && members.length > 0);
-    if (isGroupFlow && metadata?.success && Array.isArray(metadata?.members)) {
-      setGroupAnalysisResult(metadata);
-    } else if (!isGroupFlow && metadata) {
-      setFaceMeshMetadata(metadata);
-    } else if (isGroupFlow) {
-      setGroupAnalysisResult(null);
-    }
     if (members) {
       setGroupMembers(members);
       setUserTeamName("기운찬 도사님들의 모임");
     }
-
-    // 그룹 모드: [개발용] 바로 /group/result 이동 — 이 분기 없으면 모임 궁합 분석하기 결과창 안 나옴
-    if (isGroupFlow && DEV_SKIP_ANALYZING_FOR_GROUP) {
-      setAnalysisDone(true);
-      setTimeout(() => navigate(ROUTES.GROUP_RESULT), 0);
-      return;
+    if (!isGroupFlow && metadata) {
+      setFaceMeshMetadata(metadata);
+    }
+    if (isGroupFlow) {
+      setGroupAnalysisResult(null);
+      setFaceMeshMetadata(metadata ?? null);
     }
 
-    // 개인 모드: /analyzing 이동 후 API 호출
+    // 개인 모드: /analyzing 이동 후 API 호출 (기존과 동일)
     if (!isGroupFlow) {
       navigate(ROUTES.PERSONAL_ANALYZING);
       setIsAnalyzing(true);
@@ -222,18 +218,64 @@ export default function App() {
       return;
     }
 
-    // 그룹 모드 (DEV_SKIP=false): /analyzing → 타이머 후 /result
+    // 그룹 모드: 개인 관상과 동일하게 API 레이어 사용, 전체 궁합·1:1 궁합 병렬 호출
     navigate(ROUTES.GROUP_ANALYZING);
-    setTimeout(() => {
-      setAnalysisDone(true);
-      if (isPhotoBoothPath(pathnameRef.current)) {
-        setShowAnalysisCompleteToast(true);
+    setIsAnalyzing(true);
+    (async () => {
+      if (!metadata || !metadata.groupMembers || (metadata.groupMembers as unknown[]).length < 2) {
+        setAnalysisError("분석할 모임 데이터가 없습니다. 멤버 정보를 확인해 주세요.");
+        setIsAnalyzing(false);
+        return;
       }
-      if (isAnalyzingPath(pathnameRef.current)) {
-        navigate(ROUTES.GROUP_RESULT);
-        setShowAnalysisCompleteToast(false);
+      const payload = {
+        ...metadata,
+        timestamp: (metadata as { timestamp?: string }).timestamp ?? new Date().toISOString(),
+      };
+
+      try {
+        // 개인 관상(analyzeFace)처럼 단일 API 함수로 병렬 호출
+        const overallPromise = analyzeGroupOverall(payload);
+        const pairsPromise = analyzeGroupPairs(payload);
+
+        // 1:1 궁합 완료 시 즉시 state에 반영 (overall보다 먼저 오면 pairs만 먼저 저장)
+        pairsPromise.then((pairsResult) => {
+          if (pairsResult.success && "pairs" in pairsResult && Array.isArray(pairsResult.pairs)) {
+            setGroupAnalysisResult((prev) =>
+              prev
+                ? { ...prev, pairs: pairsResult.pairs }
+                : {
+                    success: true,
+                    timestamp: pairsResult.timestamp ?? "",
+                    members: pairsResult.members ?? [],
+                    pairs: pairsResult.pairs,
+                  }
+            );
+          }
+        });
+
+        // 전체 궁합 응답 대기 → 성공 시 기존 state(이미 온 pairs) 유지하며 병합 후 결과 페이지 이동
+        const overallResult = await overallPromise;
+        if (!overallResult.success || !("overall" in overallResult)) {
+          setAnalysisError("error" in overallResult ? overallResult.error : "전체 궁합 분석에 실패했습니다.");
+          setIsAnalyzing(false);
+          return;
+        }
+        setGroupAnalysisResult((prev) => ({
+          ...(prev || {}),
+          success: true,
+          timestamp: overallResult.timestamp ?? payload.timestamp ?? "",
+          members: overallResult.members ?? prev?.members ?? [],
+          overall: overallResult.overall,
+        }));
+        setAnalysisDone(true);
+        if (!isResultPath(pathnameRef.current)) setShowAnalysisCompleteToast(true);
+        if (isAnalyzingPath(pathnameRef.current)) navigate(ROUTES.GROUP_RESULT);
+        setIsAnalyzing(false);
+      } catch (error) {
+        setAnalysisError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
+        setIsAnalyzing(false);
       }
-    }, ANALYSIS_LOADING_MS);
+    })();
   };
 
   const handleViewRanking = (score?: number, name?: string) => {
@@ -358,7 +400,7 @@ export default function App() {
                   mode={mode}
                   pathname={pathname}
                   onAnalyze={handleAnalyze}
-                  onNavigateToMembers={() => navigate(ROUTES.GROUP_UPLOAD_MEMBERS)}
+                  onNavigateToMembers={(state) => navigate(ROUTES.GROUP_UPLOAD_MEMBERS, { state: state ?? {} })}
                   onNavigateToUpload={() => navigate(ROUTES.GROUP_UPLOAD)}
                   onSajuInputVisible={setPersonalUploadSajuStep}
                   onPersonalConfirmStepVisible={setPersonalUploadConfirmStep}
