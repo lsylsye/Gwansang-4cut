@@ -20,6 +20,7 @@ import {
   Clock,
   CheckCircle2,
   X,
+  Pencil,
 } from "lucide-react";
 import { Checkbox } from "@/shared/ui/forms/checkbox";
 import { Label } from "@/shared/ui/forms/label";
@@ -217,7 +218,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       const members: GroupMember[] = Array.from({ length: count }).map(
         (_, i) => ({
           id: Date.now() + i,
-          name: `멤버 ${i + 1}`,
+          name: `멤버${i + 1}`,
           birthDate: getTodayDateString(),
           birthTime: "",
           gender: "male",
@@ -442,7 +443,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     }
     const newMember: GroupMember = {
       id: Date.now(),
-      name: "",
+      name: `멤버${groupMembers.length + 1}`,
       birthDate: getTodayDateString(),
       birthTime: "",
       gender: "male",
@@ -1298,7 +1299,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                     setGroupMembers([
                       {
                         id: Date.now(),
-                        name: "",
+                        name: "멤버1",
                         birthDate: getTodayDateString(),
                         birthTime: "",
                         gender: "male",
@@ -1307,7 +1308,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       },
                       {
                         id: Date.now() + 1,
-                        name: "",
+                        name: "멤버2",
                         birthDate: getTodayDateString(),
                         birthTime: "",
                         gender: "male",
@@ -1697,11 +1698,14 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       </div>
 
                       <div className="flex-1 flex flex-col gap-3 min-w-0 w-full">
-                        <div className="w-full">
+                        <div className="w-full relative">
                           <Input
                             placeholder="성함을 입력하세요."
-                            className="h-10 w-full text-sm bg-white/90 border-2 border-gray-200 focus:bg-white focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 transition-all rounded-xl font-semibold px-3 placeholder:text-gray-400 shadow-sm"
-                            value={member.name && !member.name.startsWith('멤버 ') ? member.name : ''}
+                            className="h-10 w-full text-sm bg-white/90 border-2 border-gray-200 focus:bg-white focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 transition-all rounded-xl font-semibold pl-3 pr-10 placeholder:text-gray-400 shadow-sm"
+                            value={member.name ?? ''}
+                            onFocus={() =>
+                              updateGroupMember(member.id, "name", "")
+                            }
                             onChange={(e) =>
                               updateGroupMember(
                                 member.id,
@@ -1709,6 +1713,10 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                                 e.target.value,
                               )
                             }
+                          />
+                          <Pencil
+                            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                            strokeWidth={2}
                           />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start w-full min-w-0">

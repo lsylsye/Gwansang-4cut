@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Trophy, TrendingUp, Sparkles, CheckCircle, Medal, Users, ArrowLeft, Crown, ChevronLeft, ChevronRight, Star, Share2, RefreshCw } from "lucide-react";
+import { Trophy, Turtle, TrendingUp, Sparkles, CheckCircle, Users, ArrowLeft, Share2 } from "lucide-react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
-// @ts-ignore
-import { getRandomNickname } from "@woowa-babble/random-nickname";
 
 interface RankingItem {
   id: string | number;
@@ -34,384 +32,391 @@ const MOCK_RANKINGS: RankingItem[] = [
   { id: 15, teamName: "영화 보는 친구들", score: 38, members: 6, rank: 15, tag: "시네마틱" },
 ];
 
-// Mock user's team rankings
-const MOCK_USER_RANKINGS: RankingItem[] = [
-  { id: "user1", teamName: "우리 팀", score: 88, members: 4, rank: 1, tag: "내 모임", isUser: true },
-  { id: "user2", teamName: "지난주 모임", score: 76, members: 5, rank: 2, tag: "내 모임" },
-  { id: "user3", teamName: "동창 모임", score: 64, members: 6, rank: 3, tag: "내 모임" },
-];
+const CIRCLE_R = 21;
 
-// Random team name candidates
-// const RANDOM_TEAM_NAMES = [
-//   "환상의 짝꿍들",
-//   "운명의 동반자",
-//   "천생연분 크루",
-//   "도원결의 팀",
-//   "불타는 우정",
-//   "황금빛 인연",
-//   "영원한 벗들",
-//   "행운의 파트너",
-//   "별이 빛나는 모임",
-//   "무지개 우정단",
-//   "기적의 조합",
-//   "찰떡궁합 팀",
-//   "비밀의 화원",
-//   "드림팀 클럽",
-//   "우주 최강 모임",
-//   "레전드 친구들",
-//   "불패신화 크루",
-//   "기운이 넘치는 팀",
-//   "빛나는 인연",
-//   "특급 우정단",
-// ];
+/** 원형 점수 표시 (isTop3 또는 isHighRank 시 진한 색) */
+function ScoreCircle({
+  score,
+  isUser,
+  isTop3,
+  isHighRank,
+  size = 48,
+  className = "",
+}: {
+  score: number;
+  isUser?: boolean;
+  isTop3?: boolean;
+  /** 리스트 내 4~10위 등 강조 */
+  isHighRank?: boolean;
+  size?: number;
+  className?: string;
+}) {
+  const r = (CIRCLE_R / 48) * size;
+  const circumference = 2 * Math.PI * r;
+  const strokeDash = (score / 100) * circumference;
+
+  const strokeColor = isUser ? "var(--brand-orange)" : isTop3 || isHighRank ? "var(--brand-orange)" : "var(--color-gray-200)";
+  const textColor = isUser ? "text-brand-orange" : isTop3 || isHighRank ? "text-amber-700" : "text-gray-800";
+
+  return (
+    <div className={`relative flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size }}>
+      <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox={`0 0 ${size} ${size}`}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="currentColor"
+          className="text-gray-100"
+          strokeWidth={Math.max(2, (3 / 48) * size)}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth={Math.max(2, (3 / 48) * size)}
+          strokeLinecap="round"
+          strokeDasharray={`${strokeDash} ${circumference}`}
+        />
+      </svg>
+      <span className={`text-[10px] font-black font-sans absolute ${textColor}`} style={{ fontSize: `${size * 0.28}px` }}>
+        {score}
+      </span>
+    </div>
+  );
+}
 
 interface RankingSectionProps {
   onBack: () => void;
-  onHome: () => void;
   userScore: number;
   initialTeamName: string;
-  fromAnalysis?: boolean; // 분석 완료 후 랭킹으로 왔는지 여부
+  fromAnalysis?: boolean;
 }
 
 export const RankingSection: React.FC<RankingSectionProps> = ({
   onBack,
-  onHome,
   userScore,
   initialTeamName,
-  fromAnalysis = false
+  fromAnalysis = false,
 }) => {
   const [teamName, setTeamName] = useState(initialTeamName);
   const [isFixed, setIsFixed] = useState(false);
   const [rankings, setRankings] = useState<RankingItem[]>(MOCK_RANKINGS);
-  const [userRank, setUserRank] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<"all" | "my">("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   useEffect(() => {
     if (isFixed) {
-      // Calculate user position
-      const allRankings = [...MOCK_RANKINGS, {
-        id: "user",
-        teamName: teamName,
-        score: userScore,
-        members: 4, // Assume 4 for demo or pass it from props
-        rank: 0,
-        tag: "우리 팀",
-        isUser: true
-      }].sort((a, b) => b.score - a.score);
-
-      const rankedWithIndex = allRankings.map((item, index) => ({
-        ...item,
-        rank: index + 1
-      }));
-
+      const allRankings = [
+        ...MOCK_RANKINGS,
+        { id: "user", teamName, score: userScore, members: 4, rank: 0, tag: "우리 팀", isUser: true },
+      ].sort((a, b) => b.score - a.score);
+      const rankedWithIndex = allRankings.map((item, index) => ({ ...item, rank: index + 1 }));
       setRankings(rankedWithIndex);
-      setUserRank(rankedWithIndex.find(item => item.isUser)?.rank || 0);
     }
   }, [isFixed, teamName, userScore]);
 
-  const handleTabChange = (tab: "all" | "my") => {
-    setActiveTab(tab);
-    setCurrentPage(1);
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  // 랜덤 팀 이름 생성 함수
-  const handleRandomTeamName = () => {
-    // animals, characters, heros, monsters 중 랜덤 선택
-    const types = ['animals', 'characters', 'heros', 'monsters'] as const;
-    const randomType = types[Math.floor(Math.random() * types.length)];
-    const randomNickname = getRandomNickname(randomType);
-    setTeamName(randomNickname || '환상의 팀');
-  };
-
-  // 현재 보여줄 랭킹 데이터 결정
-  const currentRankings = activeTab === "my" ? MOCK_USER_RANKINGS : rankings;
-  const totalPages = Math.ceil(currentRankings.length / itemsPerPage);
-  const paginatedRankings = currentRankings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const top3 = rankings.filter((r) => r.rank <= 3);
+  const restRankings = rankings.filter((r) => r.rank > 3);
 
   return (
-    <div className="w-full max-w-3xl mx-auto pb-20">
+    <div className="w-full max-w-6xl mx-auto pb-20 px-4 relative">
+      {/* 배경 깊이감: TOP3 상단 영역 뒤 은은한 블러/그라데이션 (초록 톤) */}
+      <div
+        className="absolute top-[140px] left-1/2 -translate-x-1/2 w-[min(100%,900px)] h-72 rounded-full pointer-events-none opacity-70"
+        style={{
+          background: "radial-gradient(ellipse 90% 80% at 50% 50%, rgba(16,185,129,0.12) 0%, rgba(5,150,105,0.04) 50%, transparent 75%)",
+          filter: "blur(28px)",
+        }}
+        aria-hidden
+      />
+
+      {/* 상단 타이틀 - 컬러·타이포 대비 강화 */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-10"
+        className="text-center mb-8 relative z-10"
       >
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-50 text-yellow-600 rounded-full border-2 border-yellow-100 shadow-sm mb-4">
-          <Trophy size={20} className="animate-bounce" />
-          <span className="font-bold text-sm font-sans uppercase tracking-widest">Global Ranking</span>
+        <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-50 rounded-2xl border-2 border-emerald-200 shadow-clay-sm mb-4">
+          <Turtle size={22} className="text-emerald-600" />
+          <span className="font-bold text-base font-sans uppercase tracking-widest text-emerald-800">Global Ranking</span>
         </div>
-        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 font-display">천하제일 궁합 랭킹</h2>
-        <p className="text-gray-500 mt-3 font-sans">거북도사가 인증한 전국의 환상적인 모임들을 확인해 보세요</p>
+        <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 font-display tracking-tight drop-shadow-sm">
+          관상네컷 모임 랭킹
+        </h2>
+        <p className="text-gray-600 mt-3 font-hand font-medium text-base md:text-lg">거북도사님이 분석한 최고의 궁합 모임을 확인해보세요!</p>
       </motion.div>
 
-      {/* Team Name Registration / Highlight Card */}
-      {fromAnalysis && !isFixed ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="mb-12"
-        >
-          <GlassCard className="p-8 border-4 border-brand-orange/30 bg-orange-50/30 shadow-pixel-lg">
-            <div className="flex flex-col items-center text-center space-y-6">
-              <div className="w-20 h-20 rounded-3xl bg-white shadow-clay-sm flex items-center justify-center text-brand-orange relative">
-                <Sparkles className="absolute -top-2 -right-2 text-yellow-500 animate-pulse" />
-                <TrendingUp size={40} />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-bold text-gray-800 font-display">먼저 우리 팀 이름을 정해주게!</h3>
-                <p className="text-gray-500 font-sans">궁합 점수 <span className="text-brand-orange font-bold">{userScore}점</span>으로 랭킹에 등록하려네.</p>
-              </div>
-
-              <div className="w-full max-w-md space-y-3">
-                <div className="relative group flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={teamName}
-                    onChange={(e) => setTeamName(e.target.value)}
-                    className="flex-1 px-6 py-4 bg-white border-2 border-gray-100 rounded-2xl text-xl font-bold font-display text-center focus:outline-none focus:border-brand-orange transition-all shadow-clay-xs group-hover:shadow-clay-sm"
-                    placeholder="팀명을 입력해 주세요"
-                  />
-                  <ActionButton
-                    variant="secondary"
-                    onClick={handleRandomTeamName}
-                    className="!p-0 !w-12 !h-12 shrink-0"
-                    title="랜덤 이름 생성"
-                  >
-                    <RefreshCw size={20} />
-                  </ActionButton>
+      {/* 팀명 등록 카드 (fromAnalysis && !isFixed) — 3줄 레이아웃, 테두리 비오렌지 */}
+      {fromAnalysis && !isFixed && (
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="mt-14 mb-24 mx-2 sm:mx-4">
+          <GlassCard className="p-6 sm:p-8 border-2 border-emerald-200 bg-emerald-50/90 shadow-clay-md">
+            <div className="flex flex-col gap-4">
+              {/* 1줄: 아이콘 + 제목·부제 */}
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white shadow-sm flex items-center justify-center text-brand-orange relative shrink-0">
+                  <Sparkles className="absolute -top-0.5 -right-0.5 text-yellow-500 animate-pulse" size={12} />
+                  <TrendingUp size={24} />
+                </div>
+                <div className="min-w-0 flex-1 text-left">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 font-display">먼저 우리 팀 이름을 정해주게!</h3>
+                  <p className="text-gray-500 font-sans text-sm mt-0.5">
+                    궁합 점수 <span className="text-brand-orange font-bold">{userScore}점</span>으로 랭킹에 등록하려네.
+                  </p>
                 </div>
               </div>
-
-              <ActionButton onClick={() => setIsFixed(true)} className="px-12 py-5 text-xl flex items-center gap-2">
-                <CheckCircle size={24} />
-                랭킹에 등록하기
-              </ActionButton>
+              {/* 2줄: 팀명 입력 + 랭킹에 등록하기 나란히 */}
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-stretch">
+                <input
+                  type="text"
+                  value={teamName}
+                  onChange={(e) => setTeamName(e.target.value)}
+                  className="flex-1 min-w-0 h-12 px-4 bg-white border-2 border-gray-200 rounded-xl text-base font-bold font-display text-center sm:text-left focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 transition-all shadow-sm"
+                  placeholder="팀명을 입력해 주세요"
+                />
+                <ActionButton variant="primary-soft" onClick={() => setIsFixed(true)} className="shrink-0 h-12 px-6 text-base flex items-center justify-center gap-2 !rounded-xl">
+                  <CheckCircle size={20} />
+                  랭킹에 등록하기
+                </ActionButton>
+              </div>
             </div>
           </GlassCard>
         </motion.div>
-      ) : fromAnalysis && isFixed ? (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="bg-brand-orange text-white p-6 rounded-3xl shadow-clay-md flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
-            <div className="relative z-10 flex items-center gap-5">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center font-black">
-                <span className="text-xs uppercase opacity-70">RANK</span>
-                <span className="text-2xl">{userRank}</span>
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold font-display leading-tight">{teamName}</h3>
-                <p className="text-white/80 font-sans text-sm">상위 {Math.round((userRank / rankings.length) * 100)}%의 기운을 가진 팀이구먼!</p>
-              </div>
-            </div>
-            <div className="relative z-10 flex items-center gap-2">
-              <div className="text-right">
-                <span className="block text-xs uppercase opacity-70 font-bold">Total Score</span>
-                <span className="text-3xl font-black font-sans">{userScore}</span>
-              </div>
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-brand-orange shadow-clay-sm">
-                <Trophy size={24} />
-              </div>
-            </div>
-            {/* Background Decoration */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-          </div>
-        </motion.div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="bg-brand-orange text-white p-6 rounded-3xl shadow-clay-md flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
-            <div className="relative z-10 flex items-center gap-5">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center font-black">
-                <span className="text-xs uppercase opacity-70">RANK</span>
-                <span className="text-2xl">{userRank}</span>
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold font-display leading-tight">{teamName}</h3>
-                <p className="text-white/80 font-sans text-sm">상위 {Math.round((userRank / rankings.length) * 100)}%의 기운을 가진 팀이구먼!</p>
-              </div>
-            </div>
-            <div className="relative z-10 flex items-center gap-2">
-              <div className="text-right">
-                <span className="block text-xs uppercase opacity-70 font-bold">Total Score</span>
-                <span className="text-3xl font-black font-sans">{userScore}</span>
-              </div>
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-brand-orange shadow-clay-sm">
-                <Trophy size={24} />
-              </div>
-            </div>
-            {/* Background Decoration */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-          </div>
-        </motion.div>
       )}
 
-      {/* Ranking List */}
-      <div className={`space-y-4 transition-opacity duration-500 ${fromAnalysis && !isFixed ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
-        {paginatedRankings.map((item, index) => {
-          const isTop3 = item.rank <= 3;
-          const isUser = item.isUser;
+      {/* 상하 레이아웃: TOP3(상) 강조 → 순위 리스트(하) */}
+      <div className={`flex flex-col gap-10 transition-opacity duration-300 ${fromAnalysis && !isFixed ? "opacity-40 pointer-events-none" : ""}`}>
+        {/* 상단: TOP3 전용 섹션 — 좌우 32px 여백 */}
+        <section className="relative px-8">
+          {/* 왕관 이모지 */}
+          <motion.span
+            className="absolute right-[12%] top-[-18%] z-20 select-none pointer-events-none opacity-90 rotate-[5deg]"
+            style={{ fontSize: "clamp(3.75rem, 7.5vw, 6rem)", lineHeight: 1 }}
+            animate={{
+              y: [0, -10, 0],
+            }}
+            transition={{
+              duration: 4.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            aria-hidden
+          >
+            👑
+          </motion.span>
 
-          const rankColors = {
-            1: "bg-yellow-50 border-yellow-200 text-yellow-700",
-            2: "bg-gray-50 border-gray-200 text-gray-600",
-            3: "bg-orange-50 border-orange-200 text-orange-700",
-          }[item.rank as 1 | 2 | 3] || "bg-white border-gray-100 text-gray-400";
+          <div className="relative z-10 rounded-3xl bg-gradient-to-b from-emerald-50/90 to-white shadow-clay-md p-4 sm:p-6 max-w-3xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              {top3.map((item, index) => {
+                const rankNum = item.rank;
+                const rankLabel = rankNum === 1 ? "1위" : rankNum === 2 ? "2위" : "3위";
+                // 1위 금, 2위 은, 3위 동
+                const rankGradient =
+                  rankNum === 1
+                    ? "from-amber-300 to-yellow-200"
+                    : rankNum === 2
+                      ? "from-gray-300 to-slate-200"
+                      : "from-orange-300 to-amber-200";
+                const profileEmoji = rankNum === 1 ? "🏆" : rankNum === 2 ? "🥈" : "🥉";
+                const isFirst = rankNum === 1;
 
-          const RankIcon = {
-            1: Crown,
-            2: Medal,
-            3: Star,
-          }[item.rank as 1 | 2 | 3] || Users;
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className={`flex flex-col ${isFirst ? "sm:order-2 sm:z-10" : rankNum === 2 ? "sm:order-1" : "sm:order-3"}`}
+                  >
+                    <GlassCard
+                      className={`relative flex flex-col flex-1 p-4 sm:p-5 overflow-hidden rounded-2xl border-2 shadow-clay-sm ${
+                        item.isUser
+                          ? "border-orange-300 bg-orange-50/90 ring-2 ring-orange-200/40 sm:scale-[1.02]"
+                          : isFirst
+                            ? "border-amber-200/80 bg-gradient-to-br from-amber-50 to-amber-100/90 sm:scale-[1.02]"
+                            : rankNum === 2
+                              ? "border-gray-200/80 bg-gradient-to-br from-white to-gray-50/80"
+                              : "border-gray-200/80 bg-gradient-to-br from-white to-orange-50/60"
+                      }`}
+                      style={isFirst && !item.isUser ? { boxShadow: "0 0 20px rgba(245,158,11,0.22), 0 0 40px rgba(251,191,36,0.12), 0 2px 10px rgba(0,0,0,0.05)" } : item.isUser ? { boxShadow: "0 0 16px rgba(249,115,22,0.2), 0 2px 10px rgba(0,0,0,0.06)" } : undefined}
+                    >
+                      {/* 1·2·3위 뱃지: 카드 우측 상단에 고정 */}
+                      <div className={`absolute top-2.5 right-2.5 z-20 px-2.5 py-1 rounded-lg bg-gradient-to-br ${rankGradient} border border-white shadow-sm`}>
+                        <span className={`text-sm font-black font-sans ${rankNum === 1 ? "text-amber-900" : rankNum === 2 ? "text-gray-700" : "text-orange-900"}`}>{rankLabel}</span>
+                      </div>
 
-          return (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <GlassCard
-                className={`p-5 flex items-center gap-6 relative overflow-hidden group transition-all 
-                  ${isUser ? 'border-2 border-brand-orange bg-orange-50/10 shadow-clay-sm z-20 scale-[1.02]' : 'border-gray-100 shadow-pixel'}`}
-              >
-                {/* Rank Number */}
-                <div className={`w-12 h-12 rounded-xl ${isUser ? 'bg-brand-orange text-white shadow-clay-xs' : rankColors} flex flex-col items-center justify-center shrink-0 relative z-10`}>
-                  <span className="text-base font-black font-sans">{item.rank}</span>
-                  <RankIcon size={14} className="mt-[-2px]" />
-                </div>
+                      <div className={`relative z-10 flex flex-col flex-1`}>
+                      <div className="flex justify-center mt-0.5 mb-2">
+                        <div
+                          className={`rounded-xl border-2 flex items-center justify-center shadow-sm ${
+                            isFirst
+                              ? "w-16 h-16 sm:w-20 sm:h-20 text-4xl sm:text-5xl bg-amber-50 border-amber-200"
+                              : item.isUser
+                                ? "w-14 h-14 sm:w-16 sm:h-16 text-3xl sm:text-4xl bg-orange-50 border-orange-300"
+                                : rankNum === 2
+                                  ? "w-14 h-14 sm:w-16 sm:h-16 text-3xl sm:text-4xl bg-gray-50 border-gray-200"
+                                  : "w-14 h-14 sm:w-16 sm:h-16 text-3xl sm:text-4xl bg-orange-50/80 border-orange-200"
+                          }`}
+                        >
+                          {profileEmoji}
+                        </div>
+                      </div>
 
-                {/* Team Info */}
-                <div className="flex-1 relative z-10">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <h3 className={`text-lg font-bold font-display tracking-tight ${isUser ? 'text-brand-orange' : 'text-gray-800'}`}>
-                      {item.teamName}
-                      {isUser && <span className="ml-2 text-xs font-bold font-sans bg-brand-orange/10 px-2 py-0.5 rounded-md uppercase">YOU</span>}
-                    </h3>
-                    {!isUser && (
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded-lg border border-gray-200 uppercase">
-                        {item.tag}
-                      </span>
+                      {/* 점수 뱃지 — 1위 노란/금, 2·3위 초록 톤 */}
+                      <div className="flex justify-center gap-2 mb-2">
+                        <span
+                          className={`relative inline-flex items-center gap-3 px-4 py-3 rounded-2xl overflow-hidden ${
+                            item.isUser
+                              ? "bg-gradient-to-br from-orange-100 via-orange-50 to-amber-50/80 border-2 border-orange-300 shadow-sm shadow-orange-200/20"
+                              : isFirst
+                                ? "bg-gradient-to-br from-amber-200 via-amber-100 to-yellow-50 border-2 border-amber-400/80 shadow-sm shadow-amber-200/20"
+                                : rankNum === 2
+                                  ? "bg-gradient-to-br from-emerald-100/80 via-white to-emerald-50/50 border-2 border-emerald-300/60 shadow-sm shadow-emerald-100/20"
+                                  : "bg-gradient-to-br from-emerald-100/80 via-white to-emerald-50/50 border-2 border-emerald-300/60 shadow-sm shadow-emerald-100/20"
+                          }`}
+                        >
+                          <span className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent rounded-2xl pointer-events-none" aria-hidden />
+                          <Trophy size={isFirst || item.isUser ? 26 : 24} className={`relative z-10 shrink-0 ${item.isUser ? "text-brand-orange drop-shadow-sm" : isFirst ? "text-amber-600 drop-shadow-sm" : "text-emerald-600"}`} />
+                          <span className="relative z-10 font-black font-sans tabular-nums">
+                            <span className={item.isUser ? "text-2xl text-brand-orange" : isFirst ? "text-2xl text-amber-900" : "text-xl text-emerald-800"}>{item.score}</span>
+                            <span className={item.isUser ? "text-lg text-orange-600 ml-0.5" : isFirst ? "text-lg text-amber-700 ml-0.5" : "text-lg text-emerald-600 ml-0.5"}>점</span>
+                          </span>
+                        </span>
+                      </div>
+
+                      <h4 className={`font-bold text-gray-900 font-display text-center px-1 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 ${isFirst ? "text-lg sm:text-xl" : "text-base sm:text-lg"}`}>
+                        <span className="truncate max-w-full">{item.teamName}</span>
+                        {item.isUser && (
+                          <span className="shrink-0 text-xs font-sans bg-brand-orange/25 text-brand-orange font-bold px-2 py-0.5 rounded uppercase">
+                            우리 팀
+                          </span>
+                        )}
+                      </h4>
+                      <p className="text-xs text-gray-500 font-sans text-center mt-1">
+                        {item.members}명 · {item.tag}
+                      </p>
+                      </div>
+                      {/* 1위 전용 반짝거리는 효과 — 콘텐츠 위 레이어로 표시 */}
+                      {isFirst && (
+                        <div
+                          className="absolute inset-0 pointer-events-none rounded-2xl overflow-hidden z-[15]"
+                          aria-hidden
+                        >
+                          <motion.div
+                            className="absolute inset-0 w-[70%]"
+                            style={{
+                              background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.7) 45%, rgba(255,255,255,0.5) 50%, transparent 100%)",
+                            }}
+                            animate={{ x: ["-120%", "220%"] }}
+                            transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+                          />
+                          <motion.div
+                            className="absolute inset-0 w-[70%]"
+                            style={{
+                              background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.5) 45%, rgba(255,255,255,0.35) 50%, transparent 100%)",
+                            }}
+                            animate={{ x: ["-120%", "220%"] }}
+                            transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 1.6 }}
+                          />
+                        </div>
+                      )}
+                    </GlassCard>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* 하단: 나머지 순위 리스트 */}
+        <section className="flex flex-col min-h-0">
+          <div className="min-h-0 overflow-y-auto rounded-2xl border border-gray-200 bg-white/90 shadow-md p-3 space-y-3 pr-1 max-h-[calc(100vh-520px)] lg:max-h-[480px]">
+            {restRankings.length === 0 ? (
+              <p className="text-gray-500 font-sans text-center py-8 text-base">4위 이하는 없습니다.</p>
+            ) : (
+              restRankings.map((item, index) => {
+                const isUser = item.isUser;
+                const isTens = item.rank % 10 === 0 && item.rank >= 20; // TOP 20, TOP 30 … (TOP 10은 아래 구분선으로 표시)
+                const showTrophy = item.rank <= 10;
+                const isFirstAfterTop10 = item.rank === 11; // 10위 이후 구분선 (TOP10 / 그 이하)
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.04 }}
+                  >
+                    {/* 20위 단위 구분선 (TOP 20, TOP 30 …) */}
+                    {isTens && (
+                      <div className="flex items-center gap-3 py-2 mb-1">
+                        <div className="flex-1 h-px bg-gray-200" />
+                        <span className="text-sm font-bold text-gray-400 font-sans uppercase tracking-wider">TOP {item.rank}</span>
+                        <div className="flex-1 h-px bg-gray-200" />
+                      </div>
                     )}
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-400 font-sans">
-                    <span className="flex items-center gap-1">
-                      <Users size={12} /> {item.members}명
-                    </span>
-                    <span className={`flex items-center gap-1 font-bold ${isUser ? 'text-brand-orange' : 'text-gray-400'}`}>
-                      <TrendingUp size={12} /> {item.score}점
-                    </span>
-                  </div>
-                </div>
-
-                {/* Small Score Circle */}
-                <div className="shrink-0 relative z-10">
-                  <div className={`w-12 h-12 rounded-full border-2 flex items-center justify-center bg-white shadow-inner relative ${isUser ? 'border-brand-orange/30' : 'border-gray-50'}`}>
-                    <svg className="absolute inset-0 w-full h-full -rotate-90">
-                      <circle
-                        cx="24"
-                        cy="24"
-                        r="21"
-                        fill="none"
-                        stroke={isUser ? "var(--brand-orange)" : (isTop3 ? "var(--brand-orange)" : "var(--color-gray-200)")}
-                        strokeWidth="3"
-                        strokeDasharray={`${(item.score / 100) * 131.9} 131.9`}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <span className={`text-[10px] font-black font-sans ${isUser ? 'text-brand-orange' : 'text-gray-800'}`}>{item.score}</span>
-                  </div>
-                </div>
-              </GlassCard>
-            </motion.div>
-          );
-        })}
+                    {/* 10위 이후 구분선 — TOP 10 */}
+                    {isFirstAfterTop10 && (
+                      <div className="flex items-center gap-3 py-2 mb-1">
+                        <div className="flex-1 h-0.5 bg-gray-300" />
+                        <span className="text-xs font-bold text-gray-400 font-sans">TOP 10</span>
+                        <div className="flex-1 h-0.5 bg-gray-300" />
+                      </div>
+                    )}
+                    <GlassCard
+                      className={`p-4 sm:p-5 flex items-center gap-4 border transition-all rounded-xl ${isUser ? "border-brand-orange bg-orange-50/80 ring-2 ring-brand-orange/25 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)]" : "border-gray-200 bg-white shadow-sm hover:shadow-md"}`}
+                    >
+                      <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 font-black text-base font-sans ${
+                        isUser ? "bg-brand-orange text-white shadow-clay-xs" : showTrophy ? "bg-brand-orange/90 text-white shadow-clay-xs" : "bg-gray-100 text-gray-600"
+                      }`}>
+                        {item.rank}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className={`font-bold font-display truncate text-base sm:text-lg ${isUser ? "text-brand-orange" : "text-gray-900"}`}>
+                            {item.teamName}
+                            {isUser && <span className="ml-1 text-xs font-sans bg-brand-orange/25 text-brand-orange font-bold px-1.5 py-0.5 rounded uppercase">YOU</span>}
+                          </h4>
+                          <span className="text-xs text-gray-500 font-sans border border-gray-200 rounded-md px-2 py-0.5">{item.tag}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-gray-600 font-sans mt-1">
+                          <span className="flex items-center gap-1"><Users size={12} /> {item.members}명</span>
+                          {/* 미니 게이지 바: 점수 시각화 */}
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-14 h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <span
+                                className="block h-full rounded-full bg-amber-500"
+                                style={{ width: `${item.score}%` }}
+                              />
+                            </span>
+                            <span className={`font-black text-base ${isUser ? "text-brand-orange" : "text-gray-800"}`}>{item.score}</span>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {showTrophy && <Trophy size={18} className="text-amber-500" />}
+                        <ScoreCircle score={item.score} isUser={isUser} isTop3={false} isHighRank={showTrophy} size={44} />
+                      </div>
+                    </GlassCard>
+                  </motion.div>
+                );
+              })
+            )}
+          </div>
+        </section>
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mt-8 flex items-center justify-center gap-2"
-        >
-          <ActionButton
-            variant="outline"
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className={`px-3 py-2 ${currentPage === 1 ? 'opacity-30 cursor-not-allowed' : ''}`}
-          >
-            <ChevronLeft size={18} />
-          </ActionButton>
-
-          <div className="flex items-center gap-2">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => handlePageChange(page)}
-                className={`w-10 h-10 rounded-xl font-bold text-sm transition-all ${currentPage === page
-                  ? 'bg-brand-orange text-white shadow-clay-xs'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-              >
-                {page}
-              </button>
-            ))}
-          </div>
-
-          <ActionButton
-            variant="outline"
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className={`px-3 py-2 ${currentPage === totalPages ? 'opacity-30 cursor-not-allowed' : ''}`}
-          >
-            <ChevronRight size={18} />
-          </ActionButton>
-        </motion.div>
-      )}
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.8 }}
-        className="mt-12 flex flex-wrap justify-center gap-4"
-      >
+      {/* 하단 버튼 */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="mt-10 flex flex-wrap justify-center gap-4">
         {fromAnalysis && (
           <>
-            <ActionButton
-              variant="secondary"
-              onClick={onBack}
-              className="px-8 py-4 flex items-center gap-2"
-            >
+            <ActionButton variant="secondary" onClick={onBack} className="px-8 py-4 flex items-center gap-2">
               <ArrowLeft size={18} />
               돌아가기
-            </ActionButton>
-            <ActionButton
-              variant="outline"
-              onClick={onHome}
-              className="px-8 py-4 flex items-center gap-2"
-            >
-              처음으로
             </ActionButton>
           </>
         )}
         {isFixed && (
-          <ActionButton
-            onClick={() => alert("준비 중입니다!")}
-            className="px-8 py-4 flex items-center gap-2"
-          >
+          <ActionButton onClick={() => alert("준비 중입니다!")} className="px-8 py-4 flex items-center gap-2">
             <Share2 size={18} />
             이 랭킹 공유하기
           </ActionButton>
