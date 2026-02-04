@@ -59,7 +59,7 @@ export const Toast: React.FC<ToastProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed top-1/2 -translate-y-[60%] right-4 z-50 pointer-events-none">
+        <div className="fixed top-[40%] -translate-y-1/2 right-4 z-50 pointer-events-none">
           <motion.div
             initial={{ opacity: 0, x: 20, scale: 0.95 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}

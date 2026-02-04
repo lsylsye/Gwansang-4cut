@@ -70,7 +70,45 @@ export default function App() {
     members: Array<{ id?: number; name: string; sajuInfo?: unknown }>;
     groupCombination?: string;
   } | null>(null);
+  /** 개인 결과 페이지에서 선택된 탭 (TurtleGuide 탭별 멘트용) */
+  const [personalResultTab, setPersonalResultTab] = useState<string | null>(null);
+  /** 개인 업로드 페이지에서 사주 정보 입력 단계 표시 여부 (TurtleGuide 멘트용) */
+  const [personalUploadSajuStep, setPersonalUploadSajuStep] = useState(false);
+  /** 개인 업로드 페이지에서 사진 확인 단계(촬영 후·사주 입력 전) 표시 여부 (TurtleGuide 멘트용) */
+  const [personalUploadConfirmStep, setPersonalUploadConfirmStep] = useState(false);
+  /** 개인 업로드 페이지에서 카메라 촬영 뷰 표시 여부 (TurtleGuide: 촬영할 때만 삼라만상 멘트) */
+  const [personalUploadCameraVisible, setPersonalUploadCameraVisible] = useState(false);
+  /** 모임 업로드 페이지에서 실시간 촬영 뷰 표시 여부 (TurtleGuide: 최대 7명 안내) */
+  const [groupUploadCameraVisible, setGroupUploadCameraVisible] = useState(false);
+  /** 모임 결과 페이지에서 선택된 탭 (TurtleGuide 멘트용: overall | pairs) */
+  const [groupResultTab, setGroupResultTab] = useState<"overall" | "pairs" | null>(null);
   const pathnameRef = useRef(location.pathname);
+
+  // 결과 페이지 벗어나면 탭 초기화
+  useEffect(() => {
+    if (location.pathname !== ROUTES.PERSONAL_RESULT) setPersonalResultTab(null);
+  }, [location.pathname]);
+
+  // 개인 업로드 페이지 벗어나면 사주/확인/카메라 플래그 초기화
+  useEffect(() => {
+    if (location.pathname !== ROUTES.PERSONAL_UPLOAD) {
+      setPersonalUploadSajuStep(false);
+      setPersonalUploadConfirmStep(false);
+      setPersonalUploadCameraVisible(false);
+    }
+  }, [location.pathname]);
+
+  // 모임 업로드 페이지 벗어나면 실시간 촬영 플래그 초기화
+  useEffect(() => {
+    if (location.pathname !== ROUTES.GROUP_UPLOAD && location.pathname !== ROUTES.GROUP_UPLOAD_MEMBERS) {
+      setGroupUploadCameraVisible(false);
+    }
+  }, [location.pathname]);
+
+  // 모임 결과 페이지 벗어나면 탭 플래그 초기화
+  useEffect(() => {
+    if (location.pathname !== ROUTES.GROUP_RESULT) setGroupResultTab(null);
+  }, [location.pathname]);
 
   // URL 변경 시 스크롤 맨 위로
   useEffect(() => {
@@ -165,12 +203,13 @@ export default function App() {
           setFaceAnalysisResult(result);
           setAnalysisDone(true);
           setIsAnalyzing(false);
-          // 결과 페이지가 아닐 때만 토스트 표시
-          if (!isResultPath(pathnameRef.current)) {
+          // photo booth에 있을 때만 토스트 플래그 켜기 (다른 경로로 이동 시 토스트 안 뜨게)
+          if (isPhotoBoothPath(pathnameRef.current)) {
             setShowAnalysisCompleteToast(true);
           }
           if (!isPhotoBoothPath(pathnameRef.current)) {
             navigate(ROUTES.PERSONAL_RESULT);
+            setShowAnalysisCompleteToast(false);
           }
         } else {
           setAnalysisError("얼굴 분석 데이터가 없습니다. 다시 촬영해주세요.");
@@ -187,12 +226,12 @@ export default function App() {
     navigate(ROUTES.GROUP_ANALYZING);
     setTimeout(() => {
       setAnalysisDone(true);
-      // 결과 페이지가 아닐 때만 토스트 표시
-      if (!isResultPath(pathnameRef.current)) {
+      if (isPhotoBoothPath(pathnameRef.current)) {
         setShowAnalysisCompleteToast(true);
       }
       if (isAnalyzingPath(pathnameRef.current)) {
         navigate(ROUTES.GROUP_RESULT);
+        setShowAnalysisCompleteToast(false);
       }
     }, ANALYSIS_LOADING_MS);
   };
@@ -220,18 +259,28 @@ export default function App() {
       case ROUTES.HOME:
         return "허허, 어서 오시게! \n천기를 읽는 거북도사가 자네를 기다리고 있었다네. \n어떤 관상이 궁금하여 나를 찾아왔는가?";
       case ROUTES.PERSONAL_UPLOAD:
-        return "자네의 얼굴에 삼라만상이 담겨 있구먼. \n내 신통한 거울에 얼굴을 비추어 보게나. \n숨겨진 운명을 내가 낱낱이 읽어보리다.";
+        if (personalUploadSajuStep) return "태어난 시간을 안다면 더 정확하게 \n분석해 줄 수 있다네. 아는 대로 골라 넣어 주시게.";
+        if (personalUploadCameraVisible) return "자네의 얼굴에 삼라만상이 담겨 있구먼. \n내 신통한 거울에 얼굴을 비추어 보게나. \n숨겨진 운명을 내가 낱낱이 읽어보리다.";
+        return "허허, 개인 관상을 보러오셨구먼. \n깨끗이 잘 나온 사진 하나 건네보시오.";
       case ROUTES.GROUP_UPLOAD:
+        if (groupUploadCameraVisible) return "이 거울에는 최대 7명까지 비춰질 수 있네. \n모두가 잘 보이게 모여 보게.";
         return "허허, 모임 궁합을 보러 왔구먼! \n사진을 주거나, 직접 한 자리에 모여 보게. \n자네들 사이의 기운을 내가 한 번 짚어보리다.";
       case ROUTES.GROUP_UPLOAD_MEMBERS:
-        return "이제 각 멤버의 이름과 생년월일을 입력해 주게. \n다 적었으면 모임 궁합 분석하기를 눌러 보게나.";
+        return "이제 각 멤버의 이름과 생년월일을 입력해 주게. \n태어난 시간을 안다면 더 정확한 궁합을 알 수 있을 걸세.";
       case ROUTES.PERSONAL_ANALYZING:
+        return "기다리는 동안 심심하지 않게 작은 선물을 준비했소. \n아래 버튼으로 가 보시게.";
       case ROUTES.GROUP_ANALYZING:
         return "음... 가만있어 보자... \n천기를 스르지 않고 기운을 읽는 중이니, \n잠시만 정적을 지켜주시게나.";
-      case ROUTES.PERSONAL_RESULT:
-        return "허허! 역시 내 눈은 틀리지 않았어. \n자네의 관상에 이런 놀라운 기운이 숨어있을 줄이야! \n결과를 한 번 찬찬히 살펴보게나.";
+      case ROUTES.PERSONAL_RESULT: {
+        const tab = personalResultTab ?? "physiognomy";
+        if (tab === "constitution") return "자네의 체질과 오행을 살펴보는 구간이구먼. \n사주에 맞는 음식과 기운을 내가 짚어 보았네. \n꼭 챙겨 먹게나.";
+        if (tab === "future") return "미래의 자네 모습을 그려 보는 구간이야. \n10년에서 50년 후까지, 얼굴이 어떻게 변할지 \n한번 구경해 보시게.";
+        if (tab === "ssafy-cut") return "싸피네컷이구먼! \n사진을 찍어서 프레임에 담아 두었나? \n없다면 어서 찍으러 가 보시게.";
+        return "허허! 관상이란 타고난 얼굴만 보는 것이 아니오. \n 자네가 걸어온 시간과 마음이 비춰지는 법이지. \n자, 이제 결과를 한 번 보세나.";
+      }
       case ROUTES.GROUP_RESULT:
-        return "오호라, 이 모임의 궁합이 아주 예사롭지 않구먼! \n서로의 기운이 어떻게 어우러지는지 내가 정리해 보았네. \n궁금하지 않은가?";
+        if (groupResultTab === "pairs") return "원하는 상대를 클릭하면 세부 궁합을\n확인할 수 있다네. 어서 클릭해 보시게.";
+        return "오호라, 이 모임의 기운이 보통이 아니구먼.\n모임 전체부터 일대일 궁합까지 정리해 두었네.\n자, 찬찬히 읽어보시게.";
       case ROUTES.RANKING:
         return "허허, 전국 방방곡곡의 인연들이 다 모였구먼! \n자네들의 모임은 과연 몇 번째 기운을 가졌을꼬?";
       case ROUTES.PERSONAL_PHOTO_BOOTH:
@@ -311,6 +360,10 @@ export default function App() {
                   onAnalyze={handleAnalyze}
                   onNavigateToMembers={() => navigate(ROUTES.GROUP_UPLOAD_MEMBERS)}
                   onNavigateToUpload={() => navigate(ROUTES.GROUP_UPLOAD)}
+                  onSajuInputVisible={setPersonalUploadSajuStep}
+                  onPersonalConfirmStepVisible={setPersonalUploadConfirmStep}
+                  onPersonalCameraVisible={setPersonalUploadCameraVisible}
+                  onGroupCameraVisible={setGroupUploadCameraVisible}
                 />
               </motion.div>
             )}
@@ -324,9 +377,6 @@ export default function App() {
                 className="w-full h-full"
               >
                 <AnalyzingSection
-                  onNavigateToPhotoBooth={() =>
-                    navigate(getPhotoBoothPath(mode), { state: { from: "analyzing" } })
-                  }
                   isAnalyzing={isAnalyzing}
                   analysisError={analysisError}
                   analysisComplete={analysisDone}
@@ -354,11 +404,13 @@ export default function App() {
                     groupMembers={groupMembers}
                     groupAnalysisResult={groupAnalysisResult}
                     onViewRanking={handleViewRanking}
+                    onTabChange={setGroupResultTab}
                   />
                 ) : (
                   <AnalysisSection
                     images={images}
                     onRestart={handleRestart}
+                    onTabChange={setPersonalResultTab}
                     onNavigateToPhotoBooth={() =>
                       navigate(getPhotoBoothPath(mode), { state: { from: "result" } })
                     }
@@ -453,12 +505,20 @@ export default function App() {
         pathname={pathname}
         getGuideMessage={getGuideMessage}
         isPhotoBooth={isPhotoBooth}
+        photoBoothAction={
+          pathname === ROUTES.PERSONAL_ANALYZING
+            ? {
+                label: "네컷 사진 찍기",
+                onClick: () => navigate(getPhotoBoothPath(mode), { state: { from: "analyzing" } }),
+              }
+            : undefined
+        }
       />
 
-      {/* 관상 분석 완료 Toast - 결과 페이지가 아닐 때만 표시 */}
+      {/* 관상 분석 완료 Toast - success 응답 시 photo booth 에서만 표시 */}
       <Toast
         message="관상 분석이 완료되었습니다. 결과를 확인하시겠어요?"
-        isOpen={showAnalysisCompleteToast && !isResultPath(pathname)}
+        isOpen={showAnalysisCompleteToast && isPhotoBoothPath(pathname)}
         onClose={() => setShowAnalysisCompleteToast(false)}
         onAction={() => {
           if (analysisDone) {
@@ -484,17 +544,29 @@ function TurtleGuideGate({
   pathname,
   getGuideMessage,
   isPhotoBooth,
+  photoBoothAction,
 }: {
   pathname: string;
   getGuideMessage: () => string;
   isPhotoBooth: boolean;
+  photoBoothAction?: { label: string; onClick: () => void };
 }) {
   const { hideTurtleGuide } = useHideTurtleGuide();
-  if (isPhotoBooth || hideTurtleGuide) return null;
+  if (isPhotoBooth) return null;
+  // /personal/analyzing에서는 토글 닫아둔 상태여도 무조건 TurtleGuide 표시
+  if (hideTurtleGuide && pathname !== ROUTES.PERSONAL_ANALYZING) return null;
   return (
     <TurtleGuide
+      pathname={pathname}
       message={getGuideMessage()}
       isThinking={isAnalyzingPath(pathname)}
+      thinkingMessage={
+        pathname === ROUTES.PERSONAL_ANALYZING
+          ? "기다리는 동안 심심하지 않게 작은 선물을 준비했소.\n아래 버튼으로 가 보시게."
+          : undefined
+      }
+      actionLabel={photoBoothAction?.label}
+      onAction={photoBoothAction?.onClick}
     />
   );
 }

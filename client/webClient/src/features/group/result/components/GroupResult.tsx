@@ -198,12 +198,15 @@ interface GroupResultProps {
     /** 모임 궁합 API 응답 (members, groupCombination). 있으면 이 데이터로 렌더링 가능 */
     groupAnalysisResult?: GroupAnalysisResultProp;
     onViewRanking?: (score: number, defaultName: string) => void;
+    /** 탭 변경 시 TurtleGuide 멘트용 (App에서 구독) */
+    onTabChange?: (tab: "overall" | "pairs") => void;
 }
 
 export const GroupResult: React.FC<GroupResultProps> = ({
     groupMembers = [],
     groupAnalysisResult = null,
     onViewRanking,
+    onTabChange,
 }) => {
     const [currentTab, setCurrentTab] = useState<"overall" | "pairs">("overall");
     const [selectedMemberForRelation, setSelectedMemberForRelation] = useState<string | null>(null);
@@ -216,6 +219,11 @@ export const GroupResult: React.FC<GroupResultProps> = ({
             setSelectedPairDetail(null);
         }
     }, [selectedMemberForRelation]);
+
+    // 탭 변경 시 상위(App)에 알려 TurtleGuide 멘트 갱신
+    useEffect(() => {
+        onTabChange?.(currentTab);
+    }, [currentTab, onTabChange]);
     
     // 링크 공유 기능
     const shareUrl = `${window.location.origin}${window.location.pathname}`;
