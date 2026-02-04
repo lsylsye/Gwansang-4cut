@@ -6,14 +6,6 @@ import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { ANALYSIS_STEP_INTERVAL_MS } from "@/shared/config/analysis";
 
 interface AnalyzingSectionProps {
-  ragData?: {
-    eyes?: string;
-    nose?: string;
-    mouth?: string;
-    faceShape?: string;
-    chin?: string;
-    combination?: string;
-  };
   onNavigateToPhotoBooth?: () => void;
   isAnalyzing?: boolean;
   analysisError?: string | null;
@@ -32,18 +24,17 @@ const ZOOM_TARGETS = [
 ];
 
 const ANALYSIS_STEPS = [
-  { text: "천정(이마)의 기운을 살피는 중...", icon: <Sparkles className="w-5 h-5" />, target: 0, label: "얼굴형" },
-  { text: "용안(눈매)의 깊이를 투시하는 중...", icon: <Search className="w-5 h-5" />, target: 1, label: "눈" },
-  { text: "준두(코)의 재복을 읽는 중...", icon: <Brain className="w-5 h-5" />, target: 2, label: "코" },
-  { text: "수성(입술)의 복록을 확인하는 중...", icon: <Sparkles className="w-5 h-5" />, target: 3, label: "입" },
-  { text: "지각(턱)의 말년운을 감정하는 중...", icon: <Search className="w-5 h-5" />, target: 4, label: "턱" },
-  { text: "삼라만상의 조화를 갈무리하는 중...", icon: <Brain className="w-5 h-5" />, target: 5, label: "조합" },
+  { text: "이마의 기운을 살피는 중...", detailText: "이마의 기운을 살피는 중이니 잠시만 정적을 유지하게나.", icon: <Sparkles className="w-5 h-5" />, target: 0, label: "얼굴형" },
+  { text: "눈매의 인상을 분석하는 중...", detailText: "눈매의 인상을 읽는 중이니 잠깐만 기다리게나.", icon: <Search className="w-5 h-5" />, target: 1, label: "눈" },
+  { text: "코의 균형과 특징을 살펴보는 중...", detailText: "코의 균형과 특징을 살펴보는 중이니 조금만 기다리게.", icon: <Brain className="w-5 h-5" />, target: 2, label: "코" },
+  { text: "입매의 느낌을 확인하는 중...", detailText: "입매의 느낌을 확인하는 중이니 잠시만.", icon: <Sparkles className="w-5 h-5" />, target: 3, label: "입" },
+  { text: "턱의 안정감을 분석하는 중...", detailText: "턱의 안정감을 분석하는 중이니 정적을 유지하게나.", icon: <Search className="w-5 h-5" />, target: 4, label: "턱" },
+  { text: "얼굴 전체의 조화를 종합하는 중...", detailText: "얼굴 전체의 조화를 종합하는 중이니 곧 끝나리다.", icon: <Brain className="w-5 h-5" />, target: 5, label: "조합" },
 ];
 
 export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ 
-  ragData, 
   onNavigateToPhotoBooth,
-  isAnalyzing = true,
+  isAnalyzing: _isAnalyzing = true,
   analysisError = null,
   analysisComplete = false,
   onRetry
@@ -114,23 +105,6 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({
     }
   }, [currentStep]);
 
-  // RAG 데이터 매핑 함수
-  const getRagContent = () => {
-    if (!ragData) return null;
-    const step = ANALYSIS_STEPS[currentStep];
-    switch (step.label) {
-      case "얼굴형": return ragData.faceShape;
-      case "눈": return ragData.eyes;
-      case "코": return ragData.nose;
-      case "입": return ragData.mouth;
-      case "턱": return ragData.chin;
-      case "조합": return ragData.combination;
-      default: return null;
-    }
-  };
-
-  const currentRagContent = getRagContent();
-
   // 에러 상태일 때 표시할 UI
   if (analysisError) {
     return (
@@ -163,7 +137,6 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({
           {onRetry && (
             <ActionButton
               variant="primary"
-              size="md"
               onClick={onRetry}
               className="mt-4"
             >
@@ -406,50 +379,35 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({
             <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-brand-green/40 rounded-tl-2xl" />
             <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-brand-green/40 rounded-br-2xl" />
             
-            {!ragData ? (
-              <div className="flex flex-col items-center lg:items-start gap-4">
-                {analysisError ? (
-                  <>
-                    <AlertCircle className="w-6 h-6 text-red-500" />
-                    <p className="text-red-500 font-hand text-lg md:text-xl leading-relaxed">
-                      "허허, 천기를 읽는 데 어려움이 있구먼... 잠시 후 다시 시도해보게나."
-                    </p>
-                    <p className="text-gray-400 text-sm mt-2">{analysisError}</p>
-                  </>
-                ) : analysisComplete ? (
-                  <>
-                    <CheckCircle2 className="w-6 h-6 text-green-500" />
-                    <p className="text-green-600 font-hand text-lg md:text-xl leading-relaxed">
-                      "허허, 관상을 다 읽었네! 곧 결과를 보여주리다..."
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex gap-2">
-                      {[0, 1, 2].map(i => (
-                        <motion.div key={i} animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} className="w-2 h-2 bg-brand-green rounded-full" />
-                      ))}
-                    </div>
-                    <p className="text-gray-500 font-hand text-lg md:text-xl italic leading-relaxed">
-                      "천기를 읽는 중이니 잠시만 정적을 유지하게나..."
-                    </p>
-                  </>
-                )}
-              </div>
-            ) : currentRagContent ? (
-              <div className="space-y-4">
-                <p className="text-gray-800 font-hand text-2xl md:text-3xl tracking-wide leading-relaxed drop-shadow-sm">
-                  "{currentRagContent}"
-                </p>
-                <div className="flex justify-end opacity-40">
-                  <Sparkles className="w-6 h-6 text-brand-orange" />
-                </div>
-              </div>
-            ) : (
-              <p className="text-gray-500 font-hand text-xl md:text-2xl italic">
-                {ANALYSIS_STEPS[currentStep].label}의 조화를 살피고 있네.
-              </p>
-            )}
+            <div className="flex flex-col items-center lg:items-start gap-4">
+              {analysisError ? (
+                <>
+                  <AlertCircle className="w-6 h-6 text-red-500" />
+                  <p className="text-red-500 font-hand text-lg md:text-xl leading-relaxed">
+                    "허허, 천기를 읽는 데 어려움이 있구먼... 잠시 후 다시 시도해보게나."
+                  </p>
+                  <p className="text-gray-400 text-sm mt-2">{analysisError}</p>
+                </>
+              ) : analysisComplete ? (
+                <>
+                  <CheckCircle2 className="w-6 h-6 text-green-500" />
+                  <p className="text-green-600 font-hand text-lg md:text-xl leading-relaxed">
+                    "허허, 관상을 다 읽었네! 곧 결과를 보여주리다..."
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="flex gap-2">
+                    {[0, 1, 2].map(i => (
+                      <motion.div key={i} animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} className="w-2 h-2 bg-brand-green rounded-full" />
+                    ))}
+                  </div>
+                  <p className="text-gray-500 font-hand text-lg md:text-xl italic leading-relaxed">
+                    "{ANALYSIS_STEPS[currentStep].detailText}"
+                  </p>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Progress Section - Nature Inspired */}
