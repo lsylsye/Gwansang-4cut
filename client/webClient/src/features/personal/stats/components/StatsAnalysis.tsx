@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
-import { Utensils, Sparkles, TrendingUp, Download, Upload, X, CheckCircle2 } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Utensils, Sparkles, Download, Upload, X, CheckCircle2 } from "lucide-react";
 import { SajuAnalysisResponse } from "@/shared/api/sajuApi";
 import { API_ENDPOINTS } from "@/shared/api/config";
 import profileImage from "@/assets/profile.png";
 import selfieImage from "@/assets/selfie.png";
 import turtleImage from "@/assets/turtle.png";
+import futureFilmLogoSrc from "@/assets/future_film_logo.svg";
 import { FiveElementsDisplay, type OhengCounts } from "./FiveElementsDisplay";
 import type { SajuInfo, TotalReview, WelstoryMenuItem, RecommendedMenu } from "@/shared/api/faceAnalysisApi";
 
@@ -267,19 +267,6 @@ const CAMPUS_MENUS: Record<Campus, typeof SSABAP_MENUS> = {
     ],
 };
 
-const FUTURE_PERIODS = [
-    { age: "현재", label: "Current", desc: "풋풋하고 열정 넘치는 현재의 모습입니다. 눈빛에서 미래를 향한 포부가 느껴지는군요." },
-    { age: "+10년", label: "2036년", desc: "성숙함과 여유가 묻어나기 시작하는 시기입니다. 사회적 지위와 안정을 얻어 인상이 더욱 편안해졌습니다." },
-    { age: "+30년", label: "2056년", desc: "지혜가 얼굴에 깊게 새겨진 전성기입니다. 인자한 미소가 주변 사람들에게 신뢰를 주는 관상으로 변모했습니다." },
-    { age: "+50년", label: "2076년", desc: "모든 것을 통달한 듯한 평온한 노년의 모습입니다. 거북 도사와 닮은 신통방통한 기운이 느껴지네요!" },
-];
-
-const FUTURE_CHART_DATA = [
-    { period: "현재", year: 2026, 재물운: 65, 애정운: 75, 건강운: 80, 지혜: 60, 사회운: 55 },
-    { period: "+10년", year: 2036, 재물운: 80, 애정운: 85, 건강운: 75, 지혜: 78, 사회운: 82 },
-    { period: "+30년", year: 2056, 재물운: 95, 애정운: 70, 건강운: 65, 지혜: 92, 사회운: 90 },
-    { period: "+50년", year: 2076, 재물운: 85, 애정운: 60, 건강운: 55, 지혜: 98, 사회운: 88 },
-];
 
 interface FutureImages {
     current: string | null;
@@ -400,6 +387,7 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
 
     const [selectedCampus, setSelectedCampus] = useState<Campus>("부울경");
     const futureFileInputRef = useRef<HTMLInputElement>(null);
+    const futureCanvasRef = useRef<HTMLCanvasElement>(null);
 
     // 마운트 시점의 체질 phase (다른 탭 갔다가 복귀 시 마운트면 select/result일 수 있음)
     const initialConstitutionPhaseRef = useRef<ConstitutionPhase | null>(null);
@@ -506,6 +494,7 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
     });
     const [isGenerating, setIsGenerating] = useState(false); // TODO: 테스트 후 false로 되돌리기
     const [generateError, setGenerateError] = useState<string | null>(null);
+    const [isCanvasReady, setIsCanvasReady] = useState(false);
 
     const handleFutureImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -573,8 +562,174 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
     };
 
     const handleDownload = () => {
-        alert("이미지가 저장되었습니다. (준비 중)");
+        if (!futureCanvasRef.current) {
+            alert("이미지를 생성할 수 없습니다.");
+            return;
+        }
+
+        if (!isCanvasReady) {
+            alert("이미지가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.");
+            return;
+        }
+
+        try {
+            const canvas = futureCanvasRef.current;
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    console.error("Canvas blob 생성 실패");
+                    alert("이미지 저장에 실패했습니다.");
+                    return;
+                }
+
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.download = `미래의나_${new Date().getTime()}.png`;
+                link.href = url;
+                link.click();
+                
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+            }, "image/png", 1.0);
+        } catch (error) {
+            console.error("이미지 저장 오류:", error);
+            alert("이미지 저장에 실패했습니다.");
+        }
     };
+
+    // Canvas에 프레임과 이미지 그리기 (프레임 크기 = 콘텐츠 높이 + 하단 20px)
+    useEffect(() => {
+        if (tab !== "future" || !futureCanvasRef.current || !futureImage) return;
+
+        const canvas = futureCanvasRef.current;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const paddingTop = 28;
+        const gap = 12;
+        const paddingLeft = 24;
+        const logoPadding = 32; // 로고 상하 패딩
+
+        const loadAndDrawImages = async () => {
+            const imagePromises: Promise<HTMLImageElement>[] = [];
+            const futureImageList = [
+                futureImage,
+                futureImages.year_10 || futureImage,
+                futureImages.year_30 || futureImage,
+                futureImages.year_50 || futureImage,
+            ];
+
+            const photoImages: (HTMLImageElement | null)[] = [];
+            for (let i = 0; i < 4; i++) {
+                const imgSrc = futureImageList[i];
+                if (imgSrc) {
+                    const img = new Image();
+                    img.crossOrigin = "anonymous";
+                    const photoPromise = new Promise<HTMLImageElement>((resolve, reject) => {
+                        img.onload = () => resolve(img);
+                        img.onerror = reject;
+                        img.src = imgSrc;
+                    });
+                    imagePromises.push(photoPromise);
+                    photoImages[i] = img;
+                } else {
+                    photoImages[i] = null;
+                }
+            }
+
+            await Promise.all(imagePromises);
+
+            // 첫 번째 이미지 기준 가용 너비 (원본 크기 활용, 최대 600)
+            const firstImg = photoImages[0];
+            const imageWidth = firstImg
+                ? Math.min(firstImg.width, 600)
+                : 500;
+
+            // 각 슬롯 높이 = 이미지 비율 유지
+            const slotHeights: number[] = [];
+            for (let i = 0; i < 4; i++) {
+                const img = photoImages[i];
+                if (img) {
+                    slotHeights[i] = Math.round((imageWidth * img.height) / img.width);
+                } else {
+                    slotHeights[i] = Math.round(imageWidth * 0.68); // fallback 비율
+                }
+            }
+
+            const targetWidth = imageWidth + paddingLeft * 2;
+            // 로고 너비: 기존 기준의 50%
+            const logoDisplayWidth = (targetWidth - 120) * 0.7;
+            const totalContentHeight =
+                paddingTop +
+                slotHeights[0] + gap + slotHeights[1] + gap + slotHeights[2] + gap + slotHeights[3] +
+                Math.round((logoDisplayWidth * 93) / 272) + logoPadding * 2;
+            const targetHeight = totalContentHeight;
+
+            // 고해상도 렌더링 (로고·전체 선명도) — SVG가 캔버스에 그려질 때 픽셀 깨짐 방지
+            const dpr = Math.max(2, window.devicePixelRatio || 2);
+            canvas.width = targetWidth * dpr;
+            canvas.height = targetHeight * dpr;
+            // 표시 크기: 넓이만 360px, 높이는 비율에 맞춰 자동 계산
+            canvas.style.width = "360px";
+            canvas.style.height = `${360 * (targetHeight / targetWidth)}px`;
+            ctx.scale(dpr, dpr);
+
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+            let y = paddingTop;
+            for (let i = 0; i < 4; i++) {
+                const img = photoImages[i];
+                const slotHeight = slotHeights[i];
+                if (img) {
+                    const x = paddingLeft;
+                    const imgAspect = img.width / img.height;
+                    const slotAspect = imageWidth / slotHeight;
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(x, y, imageWidth, slotHeight);
+                    ctx.clip();
+
+                    let drawWidth = imageWidth;
+                    let drawHeight = slotHeight;
+                    let drawX = x;
+                    let drawY = y;
+
+                    if (imgAspect > slotAspect) {
+                        drawHeight = slotHeight;
+                        drawWidth = drawHeight * imgAspect;
+                        drawX = x - (drawWidth - imageWidth) / 2;
+                    } else {
+                        drawWidth = imageWidth;
+                        drawHeight = drawWidth / imgAspect;
+                        drawY = y - (drawHeight - slotHeight) / 2;
+                    }
+
+                    ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+                    ctx.restore();
+                }
+                y += slotHeight + gap;
+            }
+
+            // 프레임 로고 (future_film_logo.svg)
+            const logoImg = new Image();
+            logoImg.crossOrigin = "anonymous";
+            logoImg.src = typeof futureFilmLogoSrc === "string" ? futureFilmLogoSrc : (futureFilmLogoSrc as { default?: string })?.default ?? "";
+            await new Promise<void>((resolve, reject) => {
+                logoImg.onload = () => resolve();
+                logoImg.onerror = () => reject(new Error("Logo load failed"));
+            });
+            const logoX = (targetWidth - logoDisplayWidth) / 2;
+            const logoH = logoDisplayWidth * (logoImg.naturalHeight / logoImg.naturalWidth);
+            ctx.drawImage(logoImg, logoX, targetHeight - logoPadding - logoH, logoDisplayWidth, logoH);
+
+            setIsCanvasReady(true);
+        };
+
+        loadAndDrawImages().catch((error) => {
+            console.error("이미지 로드 오류:", error);
+            setIsCanvasReady(false);
+        });
+    }, [tab, futureImage, futureImages]);
 
     if (tab === "constitution") {
         return (
@@ -747,9 +902,6 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
     }
 
     if (tab === "future") {
-        // 생성된 이미지들이 있는지 확인
-        const hasGeneratedImages = futureImages.current || futureImages.year_10 || futureImages.year_30 || futureImages.year_50;
-        
         return (
             <div className="flex flex-col items-center">
                 {!futureImage ? (
@@ -908,210 +1060,23 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
                         </GlassCard>
                     </div>
                 ) : (
-                    <div className="flex flex-col xl:flex-row gap-12 items-center xl:items-start max-w-5xl w-full">
-                        {/* Photo Strip Frame */}
+                    <div className="flex flex-col items-center">
+                        {/* Photo Strip Frame - Canvas로 변경 */}
                         <div className="flex flex-col gap-6">
-                            <div className="bg-brand-black-light p-8 pb-14 shadow-[20px_20px_60px_rgba(0,0,0,0.4)] max-w-[360px] w-full relative group rounded-sm transform -rotate-1">
-                                <div className="flex justify-between text-white/40 text-[9px] font-mono mb-4 uppercase tracking-[0.3em] font-bold">
-                                    <span>Turtle AI Simulation</span>
-                                    <span>{new Date().toLocaleDateString().replace(/\./g, ' /')}</span>
-                                    <button 
-                                        onClick={handleResetFutureImages}
-                                        className="hover:text-white transition-colors flex items-center gap-1"
-                                    >
-                                        <X size={10} /> RESET
-                                    </button>
-                                </div>
-
-                                <div className="flex flex-col gap-4 mb-10">
-                                    {FUTURE_PERIODS.map((period, i) => {
-                                        // 현재(i=0)는 업로드 원본 사용, 나머지는 AI 생성 이미지
-                                        const getImageSrc = () => {
-                                            // 현재 사진은 항상 업로드한 원본 이미지 사용
-                                            if (i === 0) return futureImage;
-                                            
-                                            if (hasGeneratedImages) {
-                                                switch(i) {
-                                                    case 1: return futureImages.year_10 || futureImage;
-                                                    case 2: return futureImages.year_30 || futureImage;
-                                                    case 3: return futureImages.year_50 || futureImage;
-                                                    default: return futureImage;
-                                                }
-                                            }
-                                            return futureImage;
-                                        };
-                                        
-                                        const imgSrc = getImageSrc();
-                                        
-                                        // AI 생성 이미지가 있으면 필터 제거, 없으면 기존 필터 적용
-                                        const filterClass = hasGeneratedImages ? "" : (
-                                            i === 0 ? "grayscale contrast-125" :
-                                            i === 1 ? "grayscale sepia-[0.2] brightness-110 blur-[0.5px]" :
-                                            i === 2 ? "grayscale sepia-[0.4] contrast-110 blur-[1px]" :
-                                            "grayscale sepia-[0.6] contrast-150 brightness-90 blur-[1.5px]"
-                                        );
-
-                                        return (
-                                            <div key={i} className="aspect-[3/4] bg-gray-900 relative overflow-hidden group/item">
-                                                <img src={imgSrc || ""} alt={period.age} className={`w-full h-full object-cover opacity-90 transition-all duration-700 ${filterClass}`} />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                                                <div className="absolute top-2 left-2 text-white/50 text-[8px] font-mono">#{String(i + 1).padStart(2, '0')}</div>
-                                                <div className="absolute bottom-3 right-3 text-white/80 text-[10px] font-mono uppercase tracking-widest bg-black/40 px-2 py-0.5 rounded-sm">
-                                                    {period.age}
-                                                </div>
-                                                {/* AI 생성 배지 - 현재 사진(i=0)에는 표시 안함 */}
-                                                {hasGeneratedImages && i !== 0 && (
-                                                    <div className="absolute top-2 right-2 bg-brand-green/80 text-white text-[7px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                                                        <Sparkles size={8} /> AI
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-
-                                <div className="text-center pt-2 border-t border-white/10">
-                                    <h2 className="text-white font-bold text-2xl tracking-tighter font-sans italic">관상네컷</h2>
-                                    <p className="text-white/30 text-[9px] mt-1 tracking-[0.4em] uppercase font-bold">BY TURTLE GURU STUDIO</p>
-                                </div>
-
-                                {/* Film Grain/Dust overlays */}
-                                <div className="absolute inset-0 pointer-events-none opacity-10 mix-blend-screen bg-[url('https://www.transparenttextures.com/patterns/pinstriped-suit.png')]" />
-                            </div>
-
-                            <ActionButton variant="primary" onClick={handleDownload} className="w-full flex items-center justify-center gap-3 py-6 text-base max-w-[360px]">
-                                <Download size={20} /> 나의 미래 사진 저장하기
+                            {/* Canvas로 프레임과 이미지 렌더링 */}
+                            <canvas
+                                ref={futureCanvasRef}
+                                style={{ width: "360px" }}
+                            />
+                            <ActionButton
+                                variant="secondary"
+                                onClick={handleDownload}
+                                disabled={!isCanvasReady}
+                                className="flex items-center gap-2 bg-white"
+                            >
+                                <Download size={20} />
+                                사진 저장하기
                             </ActionButton>
-                        </div>
-
-                        {/* Period Descriptions */}
-                        <div className="flex-1 space-y-6">
-                            <h4 className="text-2xl font-bold text-gray-800 font-display mb-6 flex items-center gap-3">
-                                <TrendingUp className="text-brand-green" />
-                                시대별 인상 변화 풀이
-                            </h4>
-
-                            {/* Chart Section */}
-                            <GlassCard className="p-8 border-4 border-white shadow-clay-md rounded-[32px] bg-white">
-                                <div className="mb-8">
-                                    <h5 className="text-xl font-bold text-gray-800 mb-2 font-display">운세 흐름 그래프</h5>
-                                    <p className="text-sm text-gray-500 font-hand">시간이 흐를수록 변화하는 당신의 운기를 한눈에 확인하세요</p>
-                                </div>
-
-                                <div className="h-[320px] bg-white rounded-2xl p-4">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={FUTURE_CHART_DATA} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
-                                            <CartesianGrid strokeDasharray="5 5" stroke="var(--color-gray-100)" vertical={false} />
-                                            <XAxis
-                                                dataKey="period"
-                                                tick={{ fill: "var(--color-gray-400)", fontSize: 13, fontWeight: '600' }}
-                                                stroke="var(--color-gray-200)"
-                                                axisLine={{ stroke: "var(--color-gray-200)" }}
-                                            />
-                                            <YAxis
-                                                tick={{ fill: "var(--color-gray-400)", fontSize: 12 }}
-                                                stroke="var(--color-gray-200)"
-                                                axisLine={{ stroke: "var(--color-gray-200)" }}
-                                                domain={[0, 100]}
-                                            />
-                                            <Tooltip
-                                                contentStyle={{
-                                                    backgroundColor: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '12px',
-                                                    padding: '12px 16px',
-                                                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-                                                }}
-                                                labelStyle={{ fontWeight: '700', color: "var(--color-gray-800)", marginBottom: '8px', fontSize: '14px' }}
-                                                itemStyle={{ fontSize: '13px', padding: '2px 0' }}
-                                            />
-                                            <Legend
-                                                wrapperStyle={{ paddingTop: '24px' }}
-                                                iconType="line"
-                                                iconSize={20}
-                                            />
-                                            <Line
-                                                type="monotone"
-                                                dataKey="재물운"
-                                                stroke="var(--color-amber-500)"
-                                                strokeWidth={3}
-                                                dot={{ fill: "var(--color-amber-500)", r: 5, strokeWidth: 2, stroke: 'white' }}
-                                                activeDot={{ r: 7 }}
-                                            />
-                                            <Line
-                                                type="monotone"
-                                                dataKey="애정운"
-                                                stroke="var(--color-pink-500)"
-                                                strokeWidth={3}
-                                                dot={{ fill: "var(--color-pink-500)", r: 5, strokeWidth: 2, stroke: 'white' }}
-                                                activeDot={{ r: 7 }}
-                                            />
-                                            <Line
-                                                type="monotone"
-                                                dataKey="건강운"
-                                                stroke="var(--color-emerald-500)"
-                                                strokeWidth={3}
-                                                dot={{ fill: "var(--color-emerald-500)", r: 5, strokeWidth: 2, stroke: 'white' }}
-                                                activeDot={{ r: 7 }}
-                                            />
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </GlassCard>
-
-                            <div className="space-y-4">
-                                {FUTURE_PERIODS.map((period, i) => {
-                                    // 썸네일 이미지 결정 - 현재(i=0)는 항상 업로드 원본 사용
-                                    const getThumbnailSrc = () => {
-                                        // 현재 사진은 항상 업로드한 원본 이미지 사용
-                                        if (i === 0) return futureImage;
-                                        
-                                        if (hasGeneratedImages) {
-                                            switch(i) {
-                                                case 1: return futureImages.year_10 || futureImage;
-                                                case 2: return futureImages.year_30 || futureImage;
-                                                case 3: return futureImages.year_50 || futureImage;
-                                                default: return futureImage;
-                                            }
-                                        }
-                                        return futureImage;
-                                    };
-                                    
-                                    return (
-                                        <GlassCard
-                                            key={i}
-                                            className="p-6 border-2 border-white/50 bg-white/40 hover:bg-white/60 transition-colors rounded-2xl"
-                                        >
-                                            <div className="flex gap-4">
-                                                <div className="w-16 h-16 bg-gray-100 rounded-xl overflow-hidden shrink-0">
-                                                    <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-400 overflow-hidden">
-                                                        <img 
-                                                            src={getThumbnailSrc() || ""} 
-                                                            alt={period.age} 
-                                                            className={`w-full h-full object-cover ${hasGeneratedImages ? "" : (i === 0 ? "grayscale" : "grayscale sepia-[0.3]")}`} 
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-baseline gap-2 mb-1">
-                                                        <h5 className="font-bold text-gray-800 text-lg">{period.label}</h5>
-                                                        <span className="text-xs font-bold text-brand-green bg-brand-green-muted px-2 py-0.5 rounded-full">{period.age}</span>
-                                                        {/* AI 생성 배지 - 현재(i=0)에는 표시 안함 */}
-                                                        {hasGeneratedImages && i !== 0 && (
-                                                            <span className="text-[10px] font-bold text-brand-orange bg-orange-50 px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                                                                <Sparkles size={10} /> AI 생성
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-sm text-gray-600 leading-relaxed font-hand">
-                                                        {period.desc}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </GlassCard>
-                                    );
-                                })}
-                            </div>
                         </div>
                     </div>
                 )}

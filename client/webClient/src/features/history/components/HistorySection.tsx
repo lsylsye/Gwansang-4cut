@@ -136,7 +136,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
       </h3>
       <p className="text-gray-500 text-center mb-8 max-w-md leading-relaxed">
         {activeTab === "personal" && "개인 관상을 본 기록이 없습니다."}
-        {activeTab === "group" && "모임 관상을 본 기록이 없습니다."}
+        {activeTab === "group" && "모임 궁합을 본 기록이 없습니다."}
         {activeTab === "all" && "아직 관상을 본 기록이 없습니다."}
         <br />
         거북도사와 함께 운명을 확인해보세요.
@@ -232,7 +232,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
             <div className="flex items-center gap-2 mb-2">
               <div className="px-3 py-1 bg-gradient-to-r from-brand-orange-muted to-brand-orange-lightest text-brand-orange rounded-full text-xs font-bold flex items-center gap-1 shadow-sm">
                 <Users size={12} />
-                모임 관상
+                모임 궁합
               </div>
               {item.score && (
                 <div className="px-3 py-1 bg-gradient-to-r from-brand-yellow to-brand-yellow-muted text-brand-yellow-dark rounded-full text-xs font-bold shadow-sm">
@@ -349,7 +349,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
               </div>
               <div>
                 <div className="text-3xl font-bold text-brand-orange mb-1 font-display">{stats.group}</div>
-                <div className="text-sm text-gray-600 font-medium">모임 관상</div>
+                <div className="text-sm text-gray-600 font-medium">모임 궁합</div>
               </div>
             </GlassCard>
           </motion.div>
@@ -430,7 +430,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
             }`}
         >
           <Users size={16} />
-          모임 관상
+          모임 궁합
         </button>
       </motion.div>
 

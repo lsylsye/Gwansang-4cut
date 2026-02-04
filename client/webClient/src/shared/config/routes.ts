@@ -34,3 +34,6 @@ export const isPhotoBoothPath = (pathname: string) =>
 
 export const isAnalyzingPath = (pathname: string) =>
   pathname === ROUTES.PERSONAL_ANALYZING || pathname === ROUTES.GROUP_ANALYZING;
+
+export const isResultPath = (pathname: string) =>
+  pathname === ROUTES.PERSONAL_RESULT || pathname === ROUTES.GROUP_RESULT;
