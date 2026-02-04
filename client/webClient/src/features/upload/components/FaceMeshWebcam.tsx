@@ -40,7 +40,7 @@ const ELLIPSE_CX = 0.5;
 const ELLIPSE_CY = 0.5;
 const ELLIPSE_RX = 0.35;
 const ELLIPSE_RY = 0.45;
-const MIN_FACE_RATIO = 0.5; // 얼굴이 ellipse 크기의 최소 50% 이상이어야 함
+const MIN_FACE_RATIO = 0.25; // 얼굴이 ellipse 크기의 최소 25% 이상이어야 함
 
 // Ellipse 범위 안에 점이 있는지 체크
 const isPointInsideEllipse = (x: number, y: number): boolean => {
@@ -68,7 +68,7 @@ const isFaceInsideEllipse = (minX: number, minY: number, maxX: number, maxY: num
   const widthRatio = faceWidth / ellipseWidth;
   const heightRatio = faceHeight / ellipseHeight;
   
-  // 너비 또는 높이가 ellipse의 40% 이상이어야 함
+  // 너비 또는 높이가 ellipse의 5% 이상이어야 함
   return widthRatio >= MIN_FACE_RATIO || heightRatio >= MIN_FACE_RATIO;
 };
 
