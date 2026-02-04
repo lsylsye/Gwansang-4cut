@@ -11,70 +11,30 @@ export interface OhengCounts {
     water: number;  // 수
 }
 
-type Strength = "veryDark" | "dark" | "normal" | "light" | "none";
+/** 오행 없음(0개)일 때만 사용 — 연한 회색 */
+const NONE_STYLE = { border: "#E0E0E0", text: "#757575" } as const;
 
-/** 오행별 색상 (톤다운된 버전 - 채도 낮춤) */
-const OHENG_COLORS: Record<string, Record<Strength, { bg: string; border: string; text: string }>> = {
-    wood: {
-        none: { bg: "#F5F5F5", border: "#E0E0E0", text: "#757575" }, // 연한 회색
-        light: { bg: "#F1F8F4", border: "#E8F5E9", text: "#4A7C59" },
-        normal: { bg: "#81C784", border: "#66BB6A", text: "#FFFFFF" },
-        dark: { bg: "#4CAF50", border: "#388E3C", text: "#FFFFFF" },
-        veryDark: { bg: "#2E7D32", border: "#1B5E20", text: "#FFFFFF" },
-    },
-    fire: {
-        none: { bg: "#F5F5F5", border: "#E0E0E0", text: "#757575" },
-        light: { bg: "#FCE4EC", border: "#FFEBEE", text: "#AD1457" },
-        normal: { bg: "#E57373", border: "#EF5350", text: "#FFFFFF" },
-        dark: { bg: "#D32F2F", border: "#C62828", text: "#FFFFFF" },
-        veryDark: { bg: "#C2185B", border: "#B71C1C", text: "#FFFFFF" },
-    },
-    earth: {
-        none: { bg: "#F5F5F5", border: "#E0E0E0", text: "#757575" },
-        light: { bg: "#EFEBE9", border: "#BCAAA4", text: "#6D4C41" },
-        normal: { bg: "#A1887F", border: "#8D6E63", text: "#FFFFFF" },
-        dark: { bg: "#6D4C41", border: "#5D4037", text: "#FFFFFF" },
-        veryDark: { bg: "#4E342E", border: "#3E2723", text: "#FFFFFF" },
-    },
-    metal: {
-        none: { bg: "#F5F5F5", border: "#E0E0E0", text: "#757575" },
-        light: { bg: "#ECEFF1", border: "#90A4AE", text: "#546E7A" },
-        normal: { bg: "#78909C", border: "#607D8B", text: "#FFFFFF" },
-        dark: { bg: "#546E7A", border: "#455A64", text: "#FFFFFF" },
-        veryDark: { bg: "#37474F", border: "#263238", text: "#FFFFFF" },
-    },
-    water: {
-        none: { bg: "#F5F5F5", border: "#E0E0E0", text: "#757575" },
-        light: { bg: "#E1F5FE", border: "#E3F2FD", text: "#0277BD" },
-        normal: { bg: "#64B5F6", border: "#42A5F5", text: "#FFFFFF" },
-        dark: { bg: "#1976D2", border: "#1565C0", text: "#FFFFFF" },
-        veryDark: { bg: "#0D47A1", border: "#0A3D7A", text: "#FFFFFF" },
-    },
+/** 오행별 고정 테두리/글자 색 (개수와 관계없이 1개 이상이면 동일 색상) */
+const OHENG_FIXED_COLORS: Record<string, { border: string; text: string }> = {
+    wood: { border: "#66BB6A", text: "#2E7D32" },   // 목 - 녹색
+    fire: { border: "#EF5350", text: "#C62828" }, // 화 - 빨간색
+    earth: { border: "#8D6E63", text: "#5D4037" }, // 토 - 갈색
+    metal: { border: "#607D8B", text: "#37474F" }, // 금 - 슬레이트
+    water: { border: "#42A5F5", text: "#1565C0" }, // 수 - 파란색
 };
 
-function getStrength(count: number): Strength {
-    if (count === 0) return "none";
-    if (count >= 5) return "veryDark";
-    if (count >= 3) return "dark";
-    if (count === 2) return "normal";
-    return "light"; // count === 1
-}
-
-const strengthLabel: Record<Strength, string> = {
-    veryDark: "매우 진함",
-    dark: "진함",
-    normal: "기본",
-    light: "밝음",
-    none: "없음",
-};
-
-const OHENG_LABELS: { key: keyof OhengCounts; label: string; short: string; colorKey: keyof typeof OHENG_COLORS }[] = [
+const OHENG_LABELS: { key: keyof OhengCounts; label: string; short: string; colorKey: keyof typeof OHENG_FIXED_COLORS }[] = [
     { key: "wood", label: "목(木)", short: "목", colorKey: "wood" },
     { key: "fire", label: "화(火)", short: "화", colorKey: "fire" },
     { key: "earth", label: "토(土)", short: "토", colorKey: "earth" },
     { key: "metal", label: "금(金)", short: "금", colorKey: "metal" },
     { key: "water", label: "수(水)", short: "수", colorKey: "water" },
 ];
+
+/** 별 차트와 ref 매칭용 고정 순서 인덱스 */
+const OHENG_REF_INDEX: Record<keyof OhengCounts, number> = {
+    wood: 0, fire: 1, earth: 2, metal: 3, water: 4,
+};
 
 interface FiveElementsDisplayProps {
     /** 오행 개수 (백 연동 시 API 응답 그대로 전달) */
@@ -143,18 +103,20 @@ export const FiveElementsDisplay: React.FC<FiveElementsDisplayProps> = ({
                         <div className="bg-white/40">
                             <p className="text-brand-green font-bold text-base mb-4">{displayHead}</p>
                             <div className="flex flex-wrap gap-3 sm:gap-4">
-                                {OHENG_LABELS.map(({ key, label, colorKey }, index) => {
+                                {[...OHENG_LABELS]
+                                    .sort((a, b) => counts[b.key] - counts[a.key])
+                                    .map(({ key, label, colorKey }) => {
                                     const count = counts[key];
-                                    const strength = getStrength(count);
-                                    const colors = OHENG_COLORS[colorKey][strength];
+                                    const isNone = count === 0;
+                                    const colors = isNone ? NONE_STYLE : OHENG_FIXED_COLORS[colorKey];
                                     return (
                                         <div
                                             key={key}
-                                            ref={buttonRefs[index]}
+                                            ref={buttonRefs[OHENG_REF_INDEX[key]]}
                                             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border-[2.5px] bg-transparent transition-colors duration-200"
                                             style={{
                                                 borderColor: colors.border,
-                                                color: colors.border,
+                                                color: colors.text,
                                             }}
                                         >
                                             <span className="text-sm font-bold">{label}</span>
