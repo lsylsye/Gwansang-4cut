@@ -280,9 +280,9 @@ export default function App() {
     })();
   };
 
-  const handleViewRanking = (score?: number, name?: string) => {
+  const handleViewRanking = (score?: number, _name?: string) => {
     if (score !== undefined) setGroupScore(score);
-    if (name) setUserTeamName(name);
+    setUserTeamName(""); // 랭킹 등록 시 팀명은 빈 칸으로 (분석 결과 문구 안 불러옴)
     setFromAnalysis(true);
     navigate(ROUTES.RANKING);
   };
@@ -487,6 +487,7 @@ export default function App() {
                   userScore={groupScore}
                   initialTeamName={userTeamName}
                   fromAnalysis={fromAnalysis}
+                  memberNames={groupMembers.map((m) => m.name).filter(Boolean)}
                 />
               </motion.div>
             )}

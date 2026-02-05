@@ -1700,19 +1700,17 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       <div className="flex-1 flex flex-col gap-3 min-w-0 w-full">
                         <div className="w-full relative">
                           <Input
-                            placeholder="성함을 입력하세요."
+                            placeholder="이름을 입력하세요. (최대 6글자)"
+                            maxLength={6}
                             className="h-10 w-full text-sm bg-white/90 border-2 border-gray-200 focus:bg-white focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 transition-all rounded-xl font-semibold pl-3 pr-10 placeholder:text-gray-400 shadow-sm"
                             value={member.name ?? ''}
                             onFocus={() =>
                               updateGroupMember(member.id, "name", "")
                             }
-                            onChange={(e) =>
-                              updateGroupMember(
-                                member.id,
-                                "name",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => {
+                              const v = e.target.value.slice(0, 6);
+                              updateGroupMember(member.id, "name", v);
+                            }}
                           />
                           <Pencil
                             className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
@@ -1848,21 +1846,31 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                                     const v = e.target.value.replace(/\D/g, "").slice(0, 2);
                                     const currentTime = member.birthTime || "00:00";
                                     const [hours] = currentTime.split(":");
-                                    const num = v === "" ? 0 : parseInt(v, 10);
-                                    const clamped = num > 59 ? "59" : v === "" ? "00" : v;
-                                    updateGroupMember(
-                                      member.id,
-                                      "birthTime",
-                                      `${hours}:${clamped}`
-                                    );
+                                    if (v === "") {
+                                      // 빈 값일 때는 분만 비움 (지울 수 있도록)
+                                      updateGroupMember(member.id, "birthTime", hours ? `${hours}:` : "");
+                                    } else {
+                                      const num = parseInt(v, 10);
+                                      const clamped = num > 59 ? "59" : v;
+                                      updateGroupMember(
+                                        member.id,
+                                        "birthTime",
+                                        `${hours}:${clamped}`
+                                      );
+                                    }
                                   }}
                                   onBlur={() => {
                                     const currentTime = member.birthTime || "00:00";
                                     const [hours, min] = currentTime.split(":");
-                                    const parsed = parseInt(min || "0", 10);
-                                    const clamped = Math.min(59, Math.max(0, isNaN(parsed) ? 0 : parsed)).toString().padStart(2, "0");
-                                    if (min !== clamped) {
-                                      updateGroupMember(member.id, "birthTime", `${hours}:${clamped}`);
+                                    if (min === undefined || min === "") {
+                                      // 분이 비어 있으면 포커스 나갈 때 "00"으로 채움
+                                      updateGroupMember(member.id, "birthTime", `${hours || "00"}:00`);
+                                    } else {
+                                      const parsed = parseInt(min || "0", 10);
+                                      const clamped = Math.min(59, Math.max(0, isNaN(parsed) ? 0 : parsed)).toString().padStart(2, "0");
+                                      if (min !== clamped) {
+                                        updateGroupMember(member.id, "birthTime", `${hours}:${clamped}`);
+                                      }
                                     }
                                   }}
                                   className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-9 rounded-lg transition-all w-full min-w-0 text-sm pl-3 pr-9"
