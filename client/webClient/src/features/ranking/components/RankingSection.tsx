@@ -277,14 +277,12 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                   variant="primary-soft"
                   onClick={async () => {
                     const names = memberNames.filter(Boolean);
-                    const payload = [
-                      {
-                        score: userScore,
-                        title: teamName.trim() || "우리 팀",
-                        numberOfMembers: names.length || 4,
-                        memberNames: (names.length ? names : []).map((name) => ({ name })),
-                      },
-                    ];
+                    const payload = {
+                      score: userScore,
+                      title: teamName.trim() || "우리 팀",
+                      numberOfMembers: names.length || 4,
+                      memberNames: (names.length ? names : []).map((name) => ({ name })),
+                    };
                     setIsSubmitting(true);
                     try {
                       await registerRanking(payload);

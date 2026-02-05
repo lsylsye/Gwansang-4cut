@@ -8,16 +8,13 @@ import { API_ENDPOINTS } from './config';
 // Types
 // ============================================================
 
-/** 랭킹 등록 요청 한 건 (모임 1개) */
-export interface RankingRegisterItem {
+/** 랭킹 등록 요청 (단일 객체) */
+export interface RankingRegisterRequest {
   score: number; // Long
   title: string; // 모임명
   numberOfMembers: number; // Long
   memberNames: { name: string }[];
 }
-
-/** 랭킹 등록 요청 본문 — 배열 */
-export type RankingRegisterRequest = RankingRegisterItem[];
 
 /** 랭킹 조회 응답 한 건 (백엔드 DTO) */
 export interface RankingResponseItem {
@@ -36,7 +33,7 @@ export interface RankingResponseItem {
 /**
  * 랭킹 등록
  * POST /api/db/ranking
- * @param payload 랭킹 등록 데이터 배열 (한 팀만 보낼 때는 길이 1)
+ * @param payload 랭킹 등록 데이터 (단일 객체)
  */
 export async function registerRanking(
   payload: RankingRegisterRequest
