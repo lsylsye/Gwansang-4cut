@@ -1066,9 +1066,9 @@ async def analyze_facemesh_group_overall(request: GroupFaceMeshRequest):
         member_names = [m["name"] for m in members_result]
 
         system_overall, user_overall = build_group_overall_prompt(members_data_for_llm)
-        overall_text = call_gms_api(
-            system_prompt=system_overall,
-            user_prompt=user_overall,
+        overall_text = await call_gms_api_async(
+            system_overall,
+            user_overall,
             model=request.model,
             timeout=request.timeout,
         )
@@ -1104,9 +1104,9 @@ async def analyze_facemesh_group_pairs(request: GroupFaceMeshRequest):
         member_names = [m["name"] for m in members_result]
 
         system_pairs, user_pairs = build_group_pairs_prompt(member_names, members_data_for_llm)
-        pairs_text = call_gms_api(
-            system_prompt=system_pairs,
-            user_prompt=user_pairs,
+        pairs_text = await call_gms_api_async(
+            system_pairs,
+            user_pairs,
             model=request.model,
             timeout=request.timeout,
         )
@@ -1142,23 +1142,26 @@ async def analyze_facemesh_group(request: GroupFaceMeshRequest):
         member_names = [m["name"] for m in members_result]
 
         system_overall, user_overall = build_group_overall_prompt(members_data_for_llm)
-        overall_text = call_gms_api(
-            system_prompt=system_overall,
-            user_prompt=user_overall,
-            model=request.model,
-            timeout=request.timeout,
+        system_pairs, user_pairs = build_group_pairs_prompt(member_names, members_data_for_llm)
+
+        # 권장: overall / pairs LLM 호출을 동시에 수행 (병렬)
+        overall_text, pairs_text = await asyncio.gather(
+            call_gms_api_async(
+                system_overall,
+                user_overall,
+                model=request.model,
+                timeout=request.timeout,
+            ),
+            call_gms_api_async(
+                system_pairs,
+                user_pairs,
+                model=request.model,
+                timeout=request.timeout,
+            ),
         )
         overall = parse_group_overall_response(overall_text or "")
         if not overall:
             overall = _default_group_overall(member_names)
-
-        system_pairs, user_pairs = build_group_pairs_prompt(member_names, members_data_for_llm)
-        pairs_text = call_gms_api(
-            system_prompt=system_pairs,
-            user_prompt=user_pairs,
-            model=request.model,
-            timeout=request.timeout,
-        )
         pairs = parse_group_pairs_response(pairs_text or "", member_names)
         pairs = _ensure_all_pairs(member_names, pairs)
 
