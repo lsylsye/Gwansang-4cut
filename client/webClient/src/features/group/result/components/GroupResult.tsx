@@ -62,9 +62,11 @@ export type GroupAnalysisResultProp = {
             stabilityDetail: string;
         };
         maintenance: {
-            do: string[];
-            dont: string[];
+            do?: string[];
+            dont?: string[];
             maintenanceCards?: Array<{ label: string; title: string; description: string }>;
+            /** 문제아 한 명 + 선정 이유 한 줄 + 생존 전략 2~4가지 + 모임이 오래 가려면 고칠 점 3~4가지 */
+            problemChild?: { name: string; whySentence?: string; survivalStrategy?: string[]; guidelines: string[] };
         };
         members: Array<{
             name: string;
@@ -84,6 +86,8 @@ export type GroupAnalysisResultProp = {
         type: string;
         reason: string;
         summary: string;
+        /** 연애 궁합 3줄 (API: romanceLines 또는 romance_lines) */
+        romanceLines?: string[];
     }>;
 } | null;
 
@@ -91,6 +95,8 @@ interface GroupResultProps {
     groupMembers?: GroupMember[];
     /** 모임 궁합 API 응답 (members, groupCombination). 있으면 이 데이터로 렌더링 가능 */
     groupAnalysisResult?: GroupAnalysisResultProp;
+    /** 분석 진행 중 여부. true이고 overall 미도착 시 로딩 표시(더미 미사용) */
+    isAnalyzing?: boolean;
     onViewRanking?: (score: number, defaultName: string) => void;
     /** 이미 랭킹 등록된 상태에서 '랭킹 보기' 클릭 시 (등록 폼 없이 목록만) */
     onViewRankingViewOnly?: () => void;
@@ -105,6 +111,7 @@ interface GroupResultProps {
 export const GroupResult: React.FC<GroupResultProps> = ({
     groupMembers = [],
     groupAnalysisResult = null,
+    isAnalyzing = false,
     onViewRanking,
     onViewRankingViewOnly,
     hasRegisteredRanking = false,
@@ -116,6 +123,31 @@ export const GroupResult: React.FC<GroupResultProps> = ({
     const [selectedPairDetail, setSelectedPairDetail] = useState<RelationPairForDetail | null>(null);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const isMobile = useIsMobile();
+
+    const hasOverall = Boolean(
+        groupAnalysisResult?.overall &&
+        (groupAnalysisResult.overall as { personality?: unknown; compatibility?: unknown; teamwork?: unknown; maintenance?: unknown; members?: unknown[] }).personality &&
+        (groupAnalysisResult.overall as { members?: unknown[] }).members
+    );
+
+    if (!hasOverall && isAnalyzing) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4">
+                <Loader2 className="w-12 h-12 text-brand-orange animate-spin" aria-hidden />
+                <p className="text-base font-medium text-gray-700">모임 궁합 분석 중...</p>
+                <p className="text-sm text-gray-500">잠시만 기다려 주세요.</p>
+            </div>
+        );
+    }
+    if (!hasOverall) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4">
+                <AlertTriangle className="w-12 h-12 text-amber-500" aria-hidden />
+                <p className="text-base font-medium text-gray-700">결과가 아직 없어요.</p>
+                <p className="text-sm text-gray-500">모임 궁합 분석을 먼저 진행해 주세요.</p>
+            </div>
+        );
+    }
     /** 모임 궁합용 싸피네컷 저장 이미지 (photoBoothSets_group) */
     const [savedGroupFrameImage, setSavedGroupFrameImage] = useState<string | null>(null);
     /** 저장 중 로딩 상태 */
@@ -314,11 +346,11 @@ export const GroupResult: React.FC<GroupResultProps> = ({
     }, [mappedPairs]);
 
     // 관계맵용: 멤버 수에 맞춰 누락된 1:1 쌍 보강 (7명이면 선택 시 6명 모두 표시)
-    const completePairs = useMemo(() => {
+    const completePairs = useMemo((): RelationPairForDetail[] => {
         const names = membersWithRoles.map((m) => m.name);
         const pairKey = (a: string, b: string) => [a, b].sort().join("\0");
         const existingKeys = new Set(mappedPairs.map((p) => pairKey(p.member1, p.member2)));
-        const result = [...mappedPairs];
+        const result: RelationPairForDetail[] = [...mappedPairs];
         for (let i = 0; i < names.length; i++) {
             for (let j = i + 1; j < names.length; j++) {
                 const key = pairKey(names[i], names[j]);
@@ -571,20 +603,16 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                 <section className="section-flow">
                                     <h2 className="text-base font-bold text-gray-800 font-display flow-mb-block w-full">모임을 오래 가게 만드는 방법</h2>
                                     {(() => {
-                                        const cards = dataSource.maintenance.maintenanceCards;
-                                        const icons = [MessageSquare, ShieldCheck, Calendar];
-                                        const fallbacks = [
-                                            { label: "소통", title: "농담은 당사자 앞에서만", description: "분위기를 읽고 말할 때만 유쾌해요." },
-                                            { label: "리더십", title: "결정은 함께", description: "현실 감각과 책임감 있는 쪽이 방향을 잡아요." },
-                                            { label: "빈도", title: "만남은 월 1~2회", description: "피로 방지 · 오래 가는 비결" },
-                                        ];
-                                        const list = cards && cards.length >= 3 ? cards.slice(0, 3) : fallbacks;
+                                        const cards = dataSource.maintenance?.maintenanceCards ?? [];
+                                        const icons = [MessageSquare, ShieldCheck, Calendar, Sparkles];
+                                        const list = Array.isArray(cards) && cards.length > 0 ? cards : [];
                                         return (
-                                            <ul className="flow-col w-full max-w-full">
+                                            <>
+                                                <ul className="flow-col w-full max-w-full">
                                                 {list.map((card: { label: string; title: string; description: string }, i: number) => {
-                                                    const Icon = icons[i] ?? Calendar;
+                                                    const Icon = icons[i % icons.length];
                                                     return (
-                                                        <li key={card.label} className="flex gap-3 w-full max-w-full">
+                                                        <li key={`${card.label}-${i}`} className="flex gap-3 w-full max-w-full">
                                                             <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center shrink-0"><Icon className="w-4 h-4 text-orange-600" /></div>
                                                             <div className="min-w-0 flex-1">
                                                                 <p className="text-[10px] font-semibold text-orange-600 font-sans">{card.label}</p>
@@ -594,7 +622,36 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                         </li>
                                                     );
                                                 })}
-                                            </ul>
+                                                </ul>
+                                                {(() => {
+                                        const pc = dataSource.maintenance?.problemChild;
+                                        if (!pc?.name || !Array.isArray(pc.guidelines) || pc.guidelines.length === 0) return null;
+                                        return (
+                                            <div className="mt-4 p-3 bg-amber-50/80 rounded-xl border border-amber-200">
+                                                <p className="text-xs font-bold text-amber-800 font-display mb-2">이 모임의 문제아 · {pc.name}</p>
+                                                {pc.whySentence && pc.whySentence.trim() && (
+                                                    <p className="text-xs text-amber-900 font-sans mb-2 leading-relaxed"><span className="font-semibold">선정 이유</span> {pc.whySentence}</p>
+                                                )}
+                                                {Array.isArray(pc.survivalStrategy) && pc.survivalStrategy.length > 0 && (
+                                                    <>
+                                                        <p className="text-[10px] font-semibold text-amber-700 font-sans mb-1">그 사람의 생존 전략</p>
+                                                        <ul className="list-disc pl-5 space-y-1 text-xs text-gray-700 font-sans mb-2">
+                                                            {pc.survivalStrategy.slice(0, 4).map((s, i) => (
+                                                                <li key={i}>{s}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </>
+                                                )}
+                                                <p className="text-[10px] font-semibold text-amber-700 font-sans mb-1">그래서 이렇게 고치면 모임이 오래 가요</p>
+                                                <ul className="list-disc pl-5 space-y-1 text-xs text-gray-700 font-sans">
+                                                    {pc.guidelines.slice(0, 4).map((g, i) => (
+                                                        <li key={i}>{g}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        );
+                                    })()}
+                                            </>
                                         );
                                     })()}
                                 </section>
@@ -604,7 +661,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.5, ease: "easeOut" }}
-                            className="py-3 sm:py-4 space-y-4 sm:space-y-6 lg:space-y-8"
+                            className="py-3 sm:py-4 space-y-4 sm:space-y-8"
                         >
                             {/* 궁합 점수 및 랭킹 등록 - 컴팩트 가로형: [원형 점수] | [소제목+문구] | [버튼 우측 중앙] */}
                             <GlassCard className="border-2 sm:border-4 border-white rounded-2xl shadow-clay-md p-4 sm:p-5 bg-gradient-to-br from-orange-50/50 via-white to-orange-50/30">
@@ -1031,18 +1088,13 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 flex-1 min-h-0">
                                     {(() => {
-                                        const cards = dataSource.maintenance.maintenanceCards;
-                                        const icons = [MessageSquare, ShieldCheck, Calendar];
-                                        const fallbacks = [
-                                            { label: "소통", title: "농담은 당사자 앞에서만", description: "분위기를 읽고 말할 때만 유쾌해요." },
-                                            { label: "리더십", title: "결정은 함께", description: "현실 감각과 책임감 있는 쪽이 방향을 잡아요." },
-                                            { label: "빈도", title: "만남은 월 1~2회", description: "피로 방지 · 오래 가는 비결" },
-                                        ];
-                                        const list = cards && cards.length >= 3 ? cards.slice(0, 3) : fallbacks;
+                                        const cards = dataSource.maintenance?.maintenanceCards ?? [];
+                                        const icons = [MessageSquare, ShieldCheck, Calendar, Sparkles];
+                                        const list = Array.isArray(cards) && cards.length > 0 ? cards : [];
                                         return list.map((card: { label: string; title: string; description: string }, i: number) => {
-                                            const Icon = icons[i] ?? Calendar;
+                                            const Icon = icons[i % icons.length];
                                             return (
-                                                <section key={card.label} className="flex items-center gap-2.5 sm:gap-3 p-3 sm:p-4 min-h-[100px] sm:min-h-[120px] bg-white/50 rounded-xl sm:rounded-2xl border border-gray-200">
+                                                <section key={`${card.label}-${i}`} className="flex items-center gap-2.5 sm:gap-3 p-3 sm:p-4 min-h-[100px] sm:min-h-[120px] bg-white/50 rounded-xl sm:rounded-2xl border border-gray-200">
                                                     <div className="w-9 h-9 sm:w-10 sm:h-10 bg-orange-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
                                                         <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
                                                     </div>
@@ -1056,6 +1108,36 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                         });
                                     })()}
                                 </div>
+                                {(() => {
+                                    const pc = dataSource.maintenance?.problemChild;
+                                    if (!pc?.name || !Array.isArray(pc.guidelines) || pc.guidelines.length === 0) return null;
+                                    return (
+                                        <div className="mt-4 sm:mt-6">
+                                            <section className="p-3 sm:p-4 bg-amber-50/80 rounded-xl sm:rounded-2xl border border-amber-200">
+                                                <p className="text-sm font-bold text-amber-800 font-display mb-2">이 모임의 문제아 · {pc.name}</p>
+                                                {pc.whySentence && pc.whySentence.trim() && (
+                                                    <p className="text-xs sm:text-sm text-amber-900 font-sans mb-2 leading-relaxed"><span className="font-semibold">선정 이유</span> {pc.whySentence}</p>
+                                                )}
+                                                {Array.isArray(pc.survivalStrategy) && pc.survivalStrategy.length > 0 && (
+                                                    <>
+                                                        <p className="text-xs font-semibold text-amber-700 font-sans mb-1">그 사람의 생존 전략</p>
+                                                        <ul className="list-disc pl-5 space-y-1 text-xs sm:text-sm text-gray-700 font-sans mb-2">
+                                                            {pc.survivalStrategy.slice(0, 4).map((s, i) => (
+                                                                <li key={i}>{s}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </>
+                                                )}
+                                                <p className="text-xs font-semibold text-amber-700 font-sans mb-1">그래서 이렇게 고치면 모임이 오래 가요</p>
+                                                <ul className="list-disc pl-5 space-y-1 text-xs sm:text-sm text-gray-700 font-sans">
+                                                    {pc.guidelines.slice(0, 4).map((g, i) => (
+                                                        <li key={i}>{g}</li>
+                                                    ))}
+                                                </ul>
+                                            </section>
+                                        </div>
+                                    );
+                                })()}
                             </GlassCard>
             </motion.div>
                         )

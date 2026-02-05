@@ -13,6 +13,8 @@ interface GroupAnalysisSectionProps {
     groupMembers?: GroupMember[];
     /** 모임 궁합 API 응답. 연결 후 결과 화면에서 데이터 렌더링에 사용 */
     groupAnalysisResult?: GroupAnalysisResult;
+    /** 분석 진행 중 여부. true이면 결과 미도착 시 로딩 표시 */
+    isAnalyzing?: boolean;
     onViewRanking?: (score: number, defaultName: string) => void;
     /** 이미 랭킹 등록된 상태에서 '랭킹 보기' 클릭 시 (등록 폼 없이 목록만) */
     onViewRankingViewOnly?: () => void;
@@ -27,6 +29,7 @@ interface GroupAnalysisSectionProps {
 export const GroupAnalysisSection: React.FC<GroupAnalysisSectionProps> = ({
     groupMembers = [],
     groupAnalysisResult = null,
+    isAnalyzing = false,
     onViewRanking,
     onViewRankingViewOnly,
     hasRegisteredRanking = false,
@@ -38,6 +41,7 @@ export const GroupAnalysisSection: React.FC<GroupAnalysisSectionProps> = ({
             <GroupResult
                 groupMembers={groupMembers}
                 groupAnalysisResult={groupAnalysisResult}
+                isAnalyzing={isAnalyzing}
                 onViewRanking={onViewRanking}
                 onViewRankingViewOnly={onViewRankingViewOnly}
                 hasRegisteredRanking={hasRegisteredRanking}
