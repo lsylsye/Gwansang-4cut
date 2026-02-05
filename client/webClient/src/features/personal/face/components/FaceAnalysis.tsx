@@ -34,6 +34,13 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
     const [activeFeature, setActiveFeature] = useState<string | null>(null);
     const [highlightIndex, setHighlightIndex] = useState(0);
 
+    // 디버깅용 로그
+    useEffect(() => {
+        console.log("🎭 FaceAnalysis 렌더링");
+        console.log("  - features:", features);
+        console.log("  - totalReview:", totalReview);
+    }, [features, totalReview]);
+
     // 순차 하이라이트: 아무 것도 선택되지 않았을 때만 부위를 바꿔 가며 테두리 빛 표시
     useEffect(() => {
         if (activeFeature !== null) return;

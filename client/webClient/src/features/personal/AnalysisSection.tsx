@@ -12,6 +12,7 @@ import {
     FaceAnalysisResult,
     transformToFaceAnalysisFeatures 
 } from "@/shared/api/faceAnalysisApi";
+import { savePersonalAnalysis } from "@/shared/api/personalAnalysisApi";
 import html2canvas from "html2canvas";
 import { useHideTurtleGuide } from "@/shared/contexts/HideTurtleGuideContext";
 import { TabNavigation } from "@/shared/components/TabNavigation";
@@ -360,6 +361,8 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
 
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isSavingShare, setIsSavingShare] = useState(false);
+    const [savedUuid, setSavedUuid] = useState<string | null>(null);
     const [futureImage, setFutureImage] = useState<string | null>(null);
     const [savedFrameImage, setSavedFrameImage] = useState<string | null>(null);
 
@@ -404,12 +407,69 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
         }
     }, [fromPhotoBooth, frameImage, savedFrameImage]);
 
-    // Mock QR code URL
-    const shareUrl = `${window.location.origin}/result/abc123`;
+    // 공유 URL 생성 (UUID가 있으면 실제 URL, 없으면 임시)
+    const shareUrl = savedUuid 
+        ? `${window.location.origin}/personal/${savedUuid}` 
+        : `${window.location.origin}/result/temp`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`;
 
-    const handleShare = () => {
-        setIsShareModalOpen(true);
+    const handleShare = async () => {
+        // 이미 저장된 UUID가 있으면 바로 모달 열기
+        if (savedUuid) {
+            setIsShareModalOpen(true);
+            return;
+        }
+
+        // 저장할 데이터 준비
+        setIsSavingShare(true);
+        try {
+            // 관상 분석 데이터 준비
+            const faceAnalysisData: any = {};
+            
+            // totalReview에서 faceOverview, careerFortune 가져오기
+            if (totalReviewData?.faceOverview) {
+                faceAnalysisData.faceOverview = totalReviewData.faceOverview;
+            }
+            if (totalReviewData?.careerFortune) {
+                faceAnalysisData.careerFortune = totalReviewData.careerFortune;
+            }
+            
+            // featuresData에서 각 부위별 데이터 가져오기
+            if (featuresData) {
+                if (featuresData.common) faceAnalysisData.common = featuresData.common;
+                if (featuresData.faceShape) faceAnalysisData.faceShape = featuresData.faceShape;
+                if (featuresData.forehead) faceAnalysisData.forehead = featuresData.forehead;
+                if (featuresData.eyes) faceAnalysisData.eyes = featuresData.eyes;
+                if (featuresData.nose) faceAnalysisData.nose = featuresData.nose;
+                if (featuresData.mouth) faceAnalysisData.mouth = featuresData.mouth;
+                if (featuresData.chin) faceAnalysisData.chin = featuresData.chin;
+            }
+            
+            console.log("📦 저장할 관상 분석 데이터:", faceAnalysisData);
+
+            // 체질 분석 데이터 준비
+            const constitutionData: any = {
+                phase: constitutionPhase,
+                selectedMenuIdx: constitutionSelectedMenuIdx,
+            };
+
+            // API 호출하여 저장
+            const uuid = await savePersonalAnalysis({
+                faceAnalysis: faceAnalysisData,
+                constitutionAnalysis: constitutionData,
+            });
+
+            // UUID 저장
+            setSavedUuid(uuid);
+            
+            // 모달 열기
+            setIsShareModalOpen(true);
+        } catch (error) {
+            console.error('분석 결과 저장 실패:', error);
+            alert('분석 결과 저장에 실패했습니다. 다시 시도해주세요.');
+        } finally {
+            setIsSavingShare(false);
+        }
     };
 
     const handleDownload = async () => {
@@ -598,8 +658,21 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
 
             {/* Bottom Actions */}
             <div className="flex flex-wrap justify-center gap-4 mt-16 pb-10 no-capture">
-                <ActionButton variant="primary" onClick={handleShare} className="flex items-center gap-2">
-                    <Share2 size={20} /> 링크 공유하기
+                <ActionButton 
+                    variant="primary" 
+                    onClick={handleShare} 
+                    className="flex items-center gap-2"
+                    disabled={isSavingShare}
+                >
+                    {isSavingShare ? (
+                        <>
+                            <Loader2 size={20} className="animate-spin" /> 저장 중...
+                        </>
+                    ) : (
+                        <>
+                            <Share2 size={20} /> 링크 공유하기
+                        </>
+                    )}
                 </ActionButton>
             </div>
 

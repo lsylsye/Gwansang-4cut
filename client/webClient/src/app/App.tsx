@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import "../styles/fonts.css";
 import "../styles/theme.css";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams, Routes, Route } from "react-router-dom";
 import { Layout } from "./layout/Layout";
 import { LandingSection } from "@/features/landing/components/LandingSection";
 import { UploadSection } from "@/features/upload/components/UploadSection";
 import { AnalyzingSection } from "@/features/upload/components/AnalyzingSection";
 import { AnalysisSection } from "@/features/personal/AnalysisSection";
+import { SharedAnalysisSection } from "@/features/personal/SharedAnalysisSection";
 import { GroupAnalysisSection } from "@/features/group/GroupAnalysisSection";
 import { RankingSection } from "@/features/ranking/components/RankingSection";
 import { PhotoBoothSection } from "@/features/photo/components/PhotoBoothSection";
@@ -31,6 +32,7 @@ import {
   isPhotoBoothPath,
   isAnalyzingPath,
   isResultPath,
+  isPersonalSharePath,
 } from "@/shared/config/routes";
 import { 
   analyzeFace, 
@@ -297,6 +299,11 @@ export default function App() {
 
   const pathname = location.pathname;
   const getGuideMessage = () => {
+    // 공유 페이지인 경우
+    if (isPersonalSharePath(pathname)) {
+      return "허허, 누군가의 관상 분석 결과를 보러 왔구먼! \n자네도 한번 분석받아 보고 싶지 않은가?";
+    }
+    
     switch (pathname) {
       case ROUTES.HOME:
         return "허허, 어서 오시게! \n천기를 읽는 거북도사가 자네를 기다리고 있었다네. \n어떤 관상이 궁금하여 나를 찾아왔는가?";
@@ -481,6 +488,20 @@ export default function App() {
                   initialTeamName={userTeamName}
                   fromAnalysis={fromAnalysis}
                 />
+              </motion.div>
+            )}
+
+            {/* 개인 분석 공유 결과 페이지 */}
+            {isPersonalSharePath(pathname) && (
+              <motion.div
+                key="shared-result"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4 }}
+                className="w-full h-full"
+              >
+                <SharedAnalysisSection />
               </motion.div>
             )}
 
