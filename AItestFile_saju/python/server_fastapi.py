@@ -917,13 +917,12 @@ def _default_group_overall(member_names: List[str]) -> Dict[str, Any]:
             "stabilityDetail": "역할을 나누면 안정적입니다.",
         },
         "maintenance": {
-            "do": ["말로 소통하기", "결정은 함께", "만남 빈도 조절"],
-            "dont": ["감정을 쌓아두지 말 것", "일방적 결단 금지", "방치하지 말 것"],
             "maintenanceCards": [
                 {"label": "소통", "title": "말로 소통하기", "description": "마음을 표현하면 오해가 줄어듭니다."},
                 {"label": "리더십", "title": "결정은 함께", "description": "중요한 일은 함께 정하면 좋습니다."},
                 {"label": "빈도", "title": "만남 빈도 조절", "description": "적당한 간격이 관계를 오래 갑니다."},
             ],
+            "problemChild": {"name": "", "whySentence": "", "survivalStrategy": [], "guidelines": []},
         },
         "members": members_list,
     }

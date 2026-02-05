@@ -469,6 +469,7 @@ export default function App() {
                   <GroupAnalysisSection
                     groupMembers={groupMembers}
                     groupAnalysisResult={groupAnalysisResult}
+                    isAnalyzing={isAnalyzing}
                     onViewRanking={handleViewRanking}
                     onViewRankingViewOnly={handleViewRankingViewOnly}
                     hasRegisteredRanking={hasRegisteredRanking}
