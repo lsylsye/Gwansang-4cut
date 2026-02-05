@@ -46,24 +46,31 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({
   const detailRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // 1. Mystical Scanning Line
-    gsap.to(scanLineRef.current, {
-      top: "100%",
-      duration: 3,
-      ease: "sine.inOut",
-      repeat: -1,
-      yoyo: true,
-    });
+    const scanEl = scanLineRef.current;
+    const mirrorEl = mirrorRef.current;
+
+    // 1. Mystical Scanning Line (ref가 있을 때만 실행 — 에러 UI에서는 해당 DOM이 없음)
+    if (scanEl) {
+      gsap.to(scanEl, {
+        top: "100%",
+        duration: 3,
+        ease: "sine.inOut",
+        repeat: -1,
+        yoyo: true,
+      });
+    }
 
     // 2. Floating Mirror Animation
-    gsap.to(mirrorRef.current, {
-      y: -15,
-      rotateY: 10,
-      duration: 4,
-      repeat: -1,
-      yoyo: true,
-      ease: "power1.inOut",
-    });
+    if (mirrorEl) {
+      gsap.to(mirrorEl, {
+        y: -15,
+        rotateY: 10,
+        duration: 4,
+        repeat: -1,
+        yoyo: true,
+        ease: "power1.inOut",
+      });
+    }
 
     // 3. Step Transition (ANALYSIS_STEP_INTERVAL_MS에 맞춰 스텝 순환)
     const stepInterval = setInterval(() => {
@@ -72,19 +79,24 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({
 
     return () => {
       clearInterval(stepInterval);
-      gsap.killTweensOf([scanLineRef.current, mirrorRef.current]);
+      if (scanEl) gsap.killTweensOf(scanEl);
+      if (mirrorEl) gsap.killTweensOf(mirrorEl);
     };
   }, []);
 
   useEffect(() => {
+    const faceEl = faceContainerRef.current;
     const target = ZOOM_TARGETS[ANALYSIS_STEPS[currentStep].target];
-    gsap.to(faceContainerRef.current, {
-      x: target.x,
-      y: target.y,
-      scale: target.scale,
-      duration: 2,
-      ease: "expo.inOut",
-    });
+
+    if (faceEl) {
+      gsap.to(faceEl, {
+        x: target.x,
+        y: target.y,
+        scale: target.scale,
+        duration: 2,
+        ease: "expo.inOut",
+      });
+    }
 
     if (textRef.current) {
       gsap.fromTo(

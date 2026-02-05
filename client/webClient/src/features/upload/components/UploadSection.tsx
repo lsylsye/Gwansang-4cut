@@ -531,7 +531,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       }
     }
 
-    // 개인 관상과 동일: API는 App에서 /group/analyzing 이동 후 호출. 여기서는 payload만 전달.
+    // 개인 관상과 동일: API는 App에서 /analyzing 이동 후 호출. 여기서는 payload만 전달.
     const validImages = capturedImages.filter((img): img is string => img !== null);
     onAnalyze(
       validImages,
@@ -548,12 +548,21 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     );
   };
 
+  /** 그룹 멤버 한 명이 태어난 시간을 충족하는지 (모름 체크 시 OK, 아니면 시·분 모두 입력) */
+  const hasValidBirthTime = (m: { birthTimeUnknown?: boolean; birthTime?: string }) =>
+    m.birthTimeUnknown === true ||
+    (Boolean(m.birthTime?.trim()) && (m.birthTime?.split(":")[1] ?? "").trim() !== "");
+
   const isReady =
     mode === "personal"
       ? capturedImages[0] !== null && sajuData.birthDate !== ""
       : groupMembers.length >= 2 &&
       groupMembers.every(
-        (m) => m.name.trim() !== "" && m.avatar && m.birthDate !== "",
+        (m) =>
+          m.name.trim() !== "" &&
+          m.avatar &&
+          m.birthDate !== "" &&
+          hasValidBirthTime(m),
       );
 
   // --- Consent Modal ---

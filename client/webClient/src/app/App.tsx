@@ -56,6 +56,8 @@ export default function App() {
   const [userTeamName, setUserTeamName] = useState("");
   const [groupScore, setGroupScore] = useState(88);
   const [fromAnalysis, setFromAnalysis] = useState(false);
+  /** 모임 결과에서 랭킹 등록 완료 여부 (돌아왔을 때 '랭킹 보기' 버튼 표시용) */
+  const [hasRegisteredRanking, setHasRegisteredRanking] = useState(false);
   const [analysisDone, setAnalysisDone] = useState(false);
   const [frameImageState, setFrameImageState] = useState<string | null>(null);
   const [fromPhotoBoothState, setFromPhotoBoothState] = useState(false);
@@ -178,7 +180,7 @@ export default function App() {
 
     // 개인 모드: /analyzing 이동 후 API 호출 (기존과 동일)
     if (!isGroupFlow) {
-      navigate(ROUTES.PERSONAL_ANALYZING);
+      navigate(ROUTES.ANALYZING);
       setIsAnalyzing(true);
       try {
         if (metadata?.faces && metadata.faces.length > 0) {
@@ -226,7 +228,7 @@ export default function App() {
     }
 
     // 그룹 모드: 개인 관상과 동일하게 API 레이어 사용, 전체 궁합·1:1 궁합 병렬 호출
-    navigate(ROUTES.GROUP_ANALYZING);
+    navigate(ROUTES.ANALYZING);
     setIsAnalyzing(true);
     (async () => {
       if (!metadata || !metadata.groupMembers || (metadata.groupMembers as unknown[]).length < 2) {
@@ -292,6 +294,12 @@ export default function App() {
     navigate(ROUTES.RANKING);
   };
 
+  /** 이미 랭킹 등록된 상태에서 '랭킹 보기' 클릭 시 — 등록 폼 없이 목록만 표시 */
+  const handleViewRankingViewOnly = () => {
+    setFromAnalysis(false);
+    navigate(ROUTES.RANKING);
+  };
+
   const handleRestart = () => {
     setImages([]);
     setFeatures([]);
@@ -299,6 +307,7 @@ export default function App() {
     setGroupMembers([]);
     setGroupAnalysisResult(null);
     setAnalysisDone(false);
+    setHasRegisteredRanking(false);
     navigate(ROUTES.HOME);
   };
 
@@ -325,9 +334,7 @@ export default function App() {
         return "허허, 모임 궁합을 보러 왔구먼! \n사진을 주거나, 직접 한 자리에 모여 보게. \n자네들 사이의 기운을 내가 한 번 짚어보리다.";
       case ROUTES.GROUP_UPLOAD_MEMBERS:
         return "이제 각 멤버의 이름과 생년월일을 입력해 주게. \n태어난 시간을 안다면 더 정확한 궁합을 알 수 있을 걸세.";
-      case ROUTES.PERSONAL_ANALYZING:
-        return "기다리는 동안 심심하지 않게 작은 선물을 준비했소. \n아래 버튼으로 가 보시게.";
-      case ROUTES.GROUP_ANALYZING:
+      case ROUTES.ANALYZING:
         return "기다리는 동안 심심하지 않게 작은 선물을 준비했소. \n아래 버튼으로 가 보시게.";
       case ROUTES.PERSONAL_RESULT: {
         const tab = personalResultTab ?? "physiognomy";
@@ -427,7 +434,7 @@ export default function App() {
               </motion.div>
             )}
 
-            {(pathname === ROUTES.PERSONAL_ANALYZING || pathname === ROUTES.GROUP_ANALYZING) && (
+            {pathname === ROUTES.ANALYZING && (
               <motion.div
                 key="analyzing"
                 initial={{ opacity: 0 }}
@@ -463,6 +470,8 @@ export default function App() {
                     groupMembers={groupMembers}
                     groupAnalysisResult={groupAnalysisResult}
                     onViewRanking={handleViewRanking}
+                    onViewRankingViewOnly={handleViewRankingViewOnly}
+                    hasRegisteredRanking={hasRegisteredRanking}
                     onTabChange={setGroupResultTab}
                     onNavigateToPhotoBooth={() =>
                       navigate(ROUTES.PHOTO_BOOTH, { state: { from: "result", mode: "group" } })
@@ -501,6 +510,7 @@ export default function App() {
                   initialTeamName={userTeamName}
                   fromAnalysis={fromAnalysis}
                   memberNames={groupMembers.map((m) => m.name).filter(Boolean)}
+                  onRankingRegistered={() => setHasRegisteredRanking(true)}
                 />
               </motion.div>
             )}
@@ -594,15 +604,12 @@ export default function App() {
         getGuideMessage={getGuideMessage}
         isPhotoBooth={isPhotoBooth}
         photoBoothAction={
-          pathname === ROUTES.PERSONAL_ANALYZING || pathname === ROUTES.GROUP_ANALYZING
+          pathname === ROUTES.ANALYZING
             ? {
                 label: "네컷 사진 찍기",
                 onClick: () =>
                   navigate(ROUTES.PHOTO_BOOTH, {
-                    state: {
-                      from: "analyzing",
-                      mode: pathname === ROUTES.GROUP_ANALYZING ? "group" : mode,
-                    },
+                    state: { from: "analyzing", mode },
                   }),
               }
             : undefined
@@ -642,21 +649,21 @@ function TurtleGuideGate({
 }) {
   const { hideTurtleGuide } = useHideTurtleGuide();
   if (isPhotoBooth) return null;
-  // /personal/analyzing에서는 토글 닫아둔 상태여도 무조건 TurtleGuide 표시
-  if (hideTurtleGuide && pathname !== ROUTES.PERSONAL_ANALYZING && pathname !== ROUTES.GROUP_ANALYZING) return null;
+  // /analyzing에서는 토글 닫아둔 상태여도 무조건 TurtleGuide 표시
+  if (hideTurtleGuide && pathname !== ROUTES.ANALYZING) return null;
   return (
     <TurtleGuide
       pathname={pathname}
       message={getGuideMessage()}
       isThinking={isAnalyzingPath(pathname)}
       thinkingMessage={
-        pathname === ROUTES.PERSONAL_ANALYZING || pathname === ROUTES.GROUP_ANALYZING
+        pathname === ROUTES.ANALYZING
           ? "기다리는 동안 심심하지 않게 작은 선물을 준비했소.\n아래 버튼으로 가 보시게."
           : undefined
       }
       actionLabel={photoBoothAction?.label}
       onAction={photoBoothAction?.onClick}
-      disableAutoClose={pathname === ROUTES.PERSONAL_ANALYZING || pathname === ROUTES.GROUP_ANALYZING}
+      disableAutoClose={pathname === ROUTES.ANALYZING}
     />
   );
 }
