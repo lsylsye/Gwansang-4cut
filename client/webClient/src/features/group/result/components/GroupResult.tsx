@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
-import { Trophy, Users, UserCheck, AlertTriangle, Sparkles, Award, MessageSquare, ShieldCheck, Calendar, ScrollText, MousePointerClick, Share2, Download, Loader2 } from "lucide-react";
+import { Trophy, Users, UserCheck, AlertTriangle, Sparkles, Award, MessageSquare, ShieldCheck, Calendar, ScrollText, MousePointerClick, Share2, Download, Loader2, Images } from "lucide-react";
 import { GroupMember } from "@/shared/types";
 import { CardTitle } from "@/shared/ui/core/card";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
@@ -198,7 +198,9 @@ interface GroupResultProps {
     groupAnalysisResult?: GroupAnalysisResultProp;
     onViewRanking?: (score: number, defaultName: string) => void;
     /** 탭 변경 시 TurtleGuide 멘트용 (App에서 구독) */
-    onTabChange?: (tab: "overall" | "pairs") => void;
+    onTabChange?: (tab: "overall" | "pairs" | "ssafy-cut") => void;
+    /** 싸피네컷(네컷) 페이지로 이동 (개인 결과처럼 결과 페이지에서 진입용) */
+    onNavigateToPhotoBooth?: () => void;
 }
 
 export const GroupResult: React.FC<GroupResultProps> = ({
@@ -206,12 +208,30 @@ export const GroupResult: React.FC<GroupResultProps> = ({
     groupAnalysisResult = null,
     onViewRanking,
     onTabChange,
+    onNavigateToPhotoBooth,
 }) => {
-    const [currentTab, setCurrentTab] = useState<"overall" | "pairs">("overall");
+    const [currentTab, setCurrentTab] = useState<"overall" | "pairs" | "ssafy-cut">("overall");
     const [selectedMemberForRelation, setSelectedMemberForRelation] = useState<string | null>(null);
     const [selectedPairDetail, setSelectedPairDetail] = useState<RelationPairForDetail | null>(null);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-    
+    /** 모임 궁합용 싸피네컷 저장 이미지 (photoBoothSets_group) */
+    const [savedGroupFrameImage, setSavedGroupFrameImage] = useState<string | null>(null);
+
+    // 모임용 싸피네컷 저장 이미지 로드
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem("photoBoothSets_group");
+            if (saved) {
+                const sets = JSON.parse(saved);
+                if (sets.length > 0 && sets[0].frameImage) {
+                    setSavedGroupFrameImage(sets[0].frameImage);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to load group frame image:", error);
+        }
+    }, [currentTab]);
+
     // 멤버 선택 해제 시 상세창도 닫기
     useEffect(() => {
         if (!selectedMemberForRelation) {
@@ -406,9 +426,10 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                 tabs={[
                     { id: "overall", label: "전체 궁합", icon: Users },
                     { id: "pairs", label: "1:1 궁합", icon: UserCheck },
+                    { id: "ssafy-cut", label: "싸피네컷", icon: Images },
                 ]}
                 activeTab={currentTab}
-                onTabChange={(tabId) => setCurrentTab(tabId as "overall" | "pairs")}
+                onTabChange={(tabId) => setCurrentTab(tabId as "overall" | "pairs" | "ssafy-cut")}
                 activeColor="orange"
             />
 
@@ -1091,6 +1112,71 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                             </div>
 
                         </>
+                            )}
+                        </motion.div>
+                    )}
+
+                    {/* 싸피네컷 탭 — 모임용 저장 이미지 표시 또는 네컷 페이지 진입 */}
+                    {currentTab === "ssafy-cut" && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1, duration: 0.4 }}
+                            className="py-4"
+                        >
+                            {savedGroupFrameImage ? (
+                                <div className="w-full max-w-4xl space-y-8 mx-auto">
+                                    <div className="flex justify-center">
+                                        <div className="relative w-full max-w-2xl">
+                                            <img
+                                                src={savedGroupFrameImage}
+                                                alt="싸피네컷"
+                                                className="w-full h-auto rounded-2xl shadow-2xl border-4 border-white"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-center gap-4">
+                                        <ActionButton
+                                            variant="orange-primary"
+                                            onClick={() => {
+                                                const link = document.createElement("a");
+                                                link.download = "싸피네컷.png";
+                                                link.href = savedGroupFrameImage;
+                                                link.click();
+                                            }}
+                                        >
+                                            <Download size={20} className="mr-2" />
+                                            이미지 다운로드
+                                        </ActionButton>
+                                        {onNavigateToPhotoBooth && (
+                                            <ActionButton
+                                                variant="orange-secondary"
+                                                onClick={onNavigateToPhotoBooth}
+                                            >
+                                                <Images size={20} className="mr-2" />
+                                                다시 찍기
+                                            </ActionButton>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <GlassCard className="w-full max-w-2xl mx-auto p-10 sm:p-12 border-4 border-white rounded-[32px] shadow-clay-lg bg-white/70 flex flex-col items-center justify-center text-center">
+                                    <div className="w-20 h-20 rounded-full bg-orange-50 flex items-center justify-center mb-6">
+                                        <Images className="w-10 h-10 text-orange-500" strokeWidth={1.5} />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-800 font-display mb-2">싸피네컷</h3>
+                                    <p className="text-gray-600 text-base font-sans mb-8">모임과 함께 네컷 사진을 찍어 보세요.</p>
+                                    {onNavigateToPhotoBooth && (
+                                        <ActionButton
+                                            variant="orange-primary"
+                                            onClick={onNavigateToPhotoBooth}
+                                            className="flex items-center gap-2"
+                                        >
+                                            <Images size={20} />
+                                            싸피네컷 찍으러 가기
+                                        </ActionButton>
+                                    )}
+                                </GlassCard>
                             )}
                         </motion.div>
                     )}

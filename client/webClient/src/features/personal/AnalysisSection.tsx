@@ -370,11 +370,12 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
     const [constitutionPhase, setConstitutionPhase] = useState<ConstitutionPhase>("intro");
     const [constitutionSelectedMenuIdx, setConstitutionSelectedMenuIdx] = useState<number | null>(null);
 
-    // localStorage에서 프레임 이미지 로드
+    // localStorage에서 프레임 이미지 로드 (개인 관상용 키만 사용)
     useEffect(() => {
         const loadFrameImage = () => {
             try {
-                const saved = localStorage.getItem("photoBoothSets");
+                const saved = localStorage.getItem("photoBoothSets_personal")
+                    || localStorage.getItem("photoBoothSets");
                 if (saved) {
                     const sets = JSON.parse(saved);
                     if (sets.length > 0 && sets[0].frameImage) {
