@@ -15,10 +15,10 @@ interface LandingSectionProps {
 
 export const LandingSection: React.FC<LandingSectionProps> = ({ onStart }) => {
     return (
-        <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 w-full max-w-6xl mx-auto min-h-[70vh]">
+        <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-16 w-full max-w-6xl mx-auto min-h-[70vh]">
 
-            {/* Left Content Area */}
-            <div className="flex-1 text-center md:text-left space-y-6 z-10 w-full md:w-auto">
+            {/* Left: 타이틀·부제·기능 바 — 1024px 이상에서만 오른쪽 카드와 나란히 */}
+            <div className="flex-1 text-center lg:text-left space-y-6 z-10 w-full lg:w-auto min-w-0">
 
 
                 <div className="space-y-2">
@@ -29,7 +29,7 @@ export const LandingSection: React.FC<LandingSectionProps> = ({ onStart }) => {
                         className="text-5xl md:text-7xl font-extrabold text-gray-900 leading-tight tracking-tight drop-shadow-sm font-display"
                     >
                         <span className="block text-gray-800 mb-1">나의 운명,</span>
-                        <span className="text-brand-green flex items-center justify-center md:justify-start gap-3">
+                        <span className="text-brand-green flex items-center justify-center lg:justify-start gap-3">
                             관상네컷
                             <img
                                 src={logoImage}
@@ -54,7 +54,7 @@ export const LandingSection: React.FC<LandingSectionProps> = ({ onStart }) => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="hidden md:flex items-center w-full max-w-[540px] mt-10 bg-white/40 border border-white/50 rounded-2xl p-1.5 backdrop-blur-sm shadow-sm"
+                    className="hidden lg:flex items-center w-full max-w-[540px] mt-10 bg-white/40 border border-white/50 rounded-2xl p-1.5 backdrop-blur-sm shadow-sm"
                 >
                     {/* Label Area */}
                     <div className="shrink-0 px-4 py-2 flex items-center gap-2 border-r border-gray-400/20 mr-1">
@@ -136,12 +136,12 @@ export const LandingSection: React.FC<LandingSectionProps> = ({ onStart }) => {
                 </motion.div>
             </div>
 
-            {/* Right Content Area - Selection Cards */}
+            {/* Right: 안내 + 개인관상·모임궁합 카드 — 1024px 이상에서만 고정 너비로 나란히 */}
             <motion.div
                 initial={{ x: 50, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
-                className="w-full md:w-[480px] z-10 flex flex-col gap-4"
+                className="w-full lg:w-[480px] lg:shrink-0 z-10 flex flex-col gap-4"
             >
                 {/* Security Disclaimer (Moved to top) */}
                 <div className="mb-1 text-center">

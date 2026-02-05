@@ -180,6 +180,10 @@ export default function App() {
       setIsAnalyzing(true);
       try {
         if (metadata?.faces && metadata.faces.length > 0) {
+          const birthTime =
+            sajuData.birthTimeUnknown
+              ? ""
+              : (sajuData.birthTime && String(sajuData.birthTime).trim()) || "00:00";
           const requestData = {
             timestamp: new Date().toISOString(),
             faces: metadata.faces,
@@ -187,7 +191,7 @@ export default function App() {
               gender: sajuData.gender as "male" | "female",
               calendarType: sajuData.calendarType as "solar" | "lunar",
               birthDate: sajuData.birthDate,
-              birthTime: sajuData.birthTime,
+              birthTime,
               birthTimeUnknown: sajuData.birthTimeUnknown,
             },
           };
@@ -381,7 +385,9 @@ export default function App() {
       )}
 
       <main className="flex-grow w-full relative">
-        <div className="container mx-auto px-4 py-8 min-h-[calc(100vh-64px)]">
+        <div
+          className={`container mx-auto py-8 min-h-[calc(100vh-64px)] ${pathname === ROUTES.GROUP_RESULT ? "px-0" : "px-4"}`}
+        >
           <AnimatePresence mode="wait">
             {pathname === ROUTES.HOME && (
               <motion.div
