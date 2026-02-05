@@ -13,6 +13,8 @@ export const ROUTES = {
   PERSONAL_PHOTO_BOOTH: "/personal/photo-booth",
   GROUP_PHOTO_BOOTH: "/group/photo-booth",
   RANKING: "/ranking",
+  /** 개인 분석 공유 결과 페이지 */
+  PERSONAL_SHARE: "/personal/:uuid",
 } as const;
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];
@@ -37,3 +39,7 @@ export const isAnalyzingPath = (pathname: string) =>
 
 export const isResultPath = (pathname: string) =>
   pathname === ROUTES.PERSONAL_RESULT || pathname === ROUTES.GROUP_RESULT;
+
+/** 개인 분석 공유 페이지 여부 체크 (/personal/:uuid 형식) */
+export const isPersonalSharePath = (pathname: string) =>
+  /^\/personal\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname);
