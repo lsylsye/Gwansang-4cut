@@ -271,6 +271,88 @@ export async function analyzeFace(
   }
 }
 
+/** 모임 전체 궁합 API 응답 */
+export type GroupOverallApiResponse = {
+  success: boolean;
+  timestamp?: string;
+  members: Array<{ id?: number; name: string; sajuInfo?: unknown }>;
+  overall: unknown;
+};
+
+/** 모임 1:1 궁합 API 응답 */
+export type GroupPairsApiResponse = {
+  success: boolean;
+  timestamp?: string;
+  members: Array<{ id?: number; name: string; sajuInfo?: unknown }>;
+  pairs: unknown[];
+};
+
+/**
+ * 모임 전체 궁합 API 호출 (개인 관상 analyzeFace와 동일한 패턴, 단일 호출)
+ */
+export async function analyzeGroupOverall(payload: {
+  timestamp?: string;
+  groupMembers: unknown[];
+  [key: string]: unknown;
+}): Promise<GroupOverallApiResponse | { success: false; error: string }> {
+  try {
+    const res = await fetch(API_ENDPOINTS.FACEMESH_GROUP_OVERALL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.success) {
+      return { success: false, error: data?.detail ?? '전체 궁합 분석에 실패했습니다.' };
+    }
+    return {
+      success: true,
+      timestamp: data.timestamp ?? payload.timestamp ?? '',
+      members: data.members ?? [],
+      overall: data.overall,
+    };
+  } catch (error) {
+    console.error('❌ 모임 전체 궁합 API 오류:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '알 수 없는 오류',
+    };
+  }
+}
+
+/**
+ * 모임 1:1 궁합 API 호출 (전체 궁합과 병렬 호출용)
+ */
+export async function analyzeGroupPairs(payload: {
+  timestamp?: string;
+  groupMembers: unknown[];
+  [key: string]: unknown;
+}): Promise<GroupPairsApiResponse | { success: false; error: string }> {
+  try {
+    const res = await fetch(API_ENDPOINTS.FACEMESH_GROUP_PAIRS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.success) {
+      return { success: false, error: data?.detail ?? '1:1 궁합 분석에 실패했습니다.' };
+    }
+    return {
+      success: true,
+      timestamp: data.timestamp ?? payload.timestamp ?? '',
+      members: data.members ?? [],
+      pairs: Array.isArray(data.pairs) ? data.pairs : [],
+    };
+  } catch (error) {
+    console.error('❌ 모임 1:1 궁합 API 오류:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '알 수 없는 오류',
+    };
+  }
+}
+
 /**
  * FaceAnalysis 컴포넌트용 features 객체로 변환
  * 

@@ -10,9 +10,11 @@ export const ROUTES = {
   GROUP_ANALYZING: "/group/analyzing",
   PERSONAL_RESULT: "/personal/result",
   GROUP_RESULT: "/group/result",
-  PERSONAL_PHOTO_BOOTH: "/personal/photo-booth",
-  GROUP_PHOTO_BOOTH: "/group/photo-booth",
+  /** 싸피네컷(네컷) — 개인/모임 공통, mode는 location.state로 전달 */
+  PHOTO_BOOTH: "/photo-booth",
   RANKING: "/ranking",
+  /** 개인 분석 공유 결과 페이지 */
+  PERSONAL_SHARE: "/personal/:uuid",
 } as const;
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];
@@ -26,14 +28,18 @@ export const getAnalyzingPath = (mode: AnalyzeMode) =>
 export const getResultPath = (mode: AnalyzeMode) =>
   mode === "personal" ? ROUTES.PERSONAL_RESULT : ROUTES.GROUP_RESULT;
 
-export const getPhotoBoothPath = (mode: AnalyzeMode) =>
-  mode === "personal" ? ROUTES.PERSONAL_PHOTO_BOOTH : ROUTES.GROUP_PHOTO_BOOTH;
+/** 네컷 페이지 경로 (개인/모임 동일). mode는 navigate 시 state로 전달 */
+export const getPhotoBoothPath = (_mode?: AnalyzeMode) => ROUTES.PHOTO_BOOTH;
 
 export const isPhotoBoothPath = (pathname: string) =>
-  pathname === ROUTES.PERSONAL_PHOTO_BOOTH || pathname === ROUTES.GROUP_PHOTO_BOOTH;
+  pathname === ROUTES.PHOTO_BOOTH;
 
 export const isAnalyzingPath = (pathname: string) =>
   pathname === ROUTES.PERSONAL_ANALYZING || pathname === ROUTES.GROUP_ANALYZING;
 
 export const isResultPath = (pathname: string) =>
   pathname === ROUTES.PERSONAL_RESULT || pathname === ROUTES.GROUP_RESULT;
+
+/** 개인 분석 공유 페이지 여부 체크 (/personal/:uuid 형식) */
+export const isPersonalSharePath = (pathname: string) =>
+  /^\/personal\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname);

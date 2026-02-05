@@ -20,6 +20,7 @@ import {
   Clock,
   CheckCircle2,
   X,
+  Pencil,
 } from "lucide-react";
 import { Checkbox } from "@/shared/ui/forms/checkbox";
 import { Label } from "@/shared/ui/forms/label";
@@ -57,10 +58,18 @@ interface UploadSectionProps {
     groupMembers?: GroupMember[],
     faceMeshMetadata?: any,
   ) => void;
-  /** 그룹 모드: 사진 등록 후 인적사항 등록 페이지로 이동 */
-  onNavigateToMembers?: () => void;
+  /** 그룹 모드: 사진 등록/촬영 후 인적사항 등록 페이지로 이동 (state.initialGroupMembers 있으면 촬영 플로우) */
+  onNavigateToMembers?: (state?: { initialGroupMembers?: GroupMember[] }) => void;
   /** 그룹 모드: 인적사항 페이지에서 업로드 페이지로 돌아가기 */
   onNavigateToUpload?: () => void;
+  /** 개인 모드: 사주 정보 입력 단계 표시 여부 (TurtleGuide 멘트용) */
+  onSajuInputVisible?: (visible: boolean) => void;
+  /** 개인 모드: 사진 촬영 후 확인 단계 표시 여부 (TurtleGuide 멘트용) */
+  onPersonalConfirmStepVisible?: (visible: boolean) => void;
+  /** 개인 모드: 카메라 촬영 뷰 표시 여부 (TurtleGuide 멘트용, 촬영할 때만 삼라만상 멘트) */
+  onPersonalCameraVisible?: (visible: boolean) => void;
+  /** 모임 모드: 실시간 촬영 뷰 표시 여부 (TurtleGuide 멘트용, 최대 7명 안내) */
+  onGroupCameraVisible?: (visible: boolean) => void;
 }
 
 const CAPTURE_STEPS = [
@@ -111,11 +120,17 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   onAnalyze,
   onNavigateToMembers,
   onNavigateToUpload,
+  onSajuInputVisible,
+  onPersonalConfirmStepVisible,
+  onPersonalCameraVisible,
+  onGroupCameraVisible,
 }) => {
   const location = useLocation();
   const pathname = pathnameProp || location.pathname;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const groupFileInputRef = useRef<HTMLInputElement>(null);
+  /** 촬영 → 멤버 페이지 이동 시 state.initialGroupMembers 한 번만 적용용 */
+  const appliedInitialGroupMembersRef = useRef(false);
 
   const [capturedImages, setCapturedImages] = useState<
     (string | null)[]
@@ -203,7 +218,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       const members: GroupMember[] = Array.from({ length: count }).map(
         (_, i) => ({
           id: Date.now() + i,
-          name: `멤버 ${i + 1}`,
+          name: `멤버${i + 1}`,
           birthDate: getTodayDateString(),
           birthTime: "",
           gender: "male",
@@ -213,7 +228,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       );
       setGroupMembers(members);
       setIsSegmenting(false);
-      if (onNavigateToMembers) onNavigateToMembers();
+      if (onNavigateToMembers) onNavigateToMembers({ initialGroupMembers: members });
       else setCurrentStep(3);
       analyzeGroupPhotoForApi(photo).then(setGroupUploadFaceMetadata).catch(() => {});
     } catch {
@@ -288,9 +303,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         setShowSajuInput(true);
       } else if (showSajuInput) {
         // 사주 정보 입력 완료 후 분석 시작
-        // 이전 싸피네컷 사진 캐시 삭제 (백엔드 POST 전에 삭제)
+        // 이전 싸피네컷 사진 캐시 삭제 (개인용만)
         try {
-          localStorage.removeItem("photoBoothSets");
+          localStorage.removeItem("photoBoothSets_personal");
         } catch (error) {
           console.error("이전 촬영 데이터 삭제 실패:", error);
         }
@@ -324,12 +339,57 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     faceMeshMetadata,
   ]);
 
-  // 인적사항 URL(/group/upload/members)로 직접 왔는데 멤버가 없으면 업로드 페이지로
+  // 촬영 플로우: 멤버 페이지로 이동 시 state로 전달된 initialGroupMembers 한 번만 적용 (업로드와 동일 구조)
   useEffect(() => {
-    if (pathname === ROUTES.GROUP_UPLOAD_MEMBERS && mode === "group" && groupMembers.length < 2 && onNavigateToUpload) {
-      onNavigateToUpload();
+    if (pathname !== ROUTES.GROUP_UPLOAD_MEMBERS) {
+      appliedInitialGroupMembersRef.current = false;
+      return;
     }
-  }, [pathname, mode, groupMembers.length, onNavigateToUpload]);
+    const initial = location.state?.initialGroupMembers;
+    if (Array.isArray(initial) && initial.length >= 2 && !appliedInitialGroupMembersRef.current) {
+      setGroupMembers(initial);
+      appliedInitialGroupMembersRef.current = true;
+    }
+  }, [pathname, location.state]);
+
+  // 인적사항 URL로 직접 왔는데 멤버가 없으면 업로드 페이지로 (촬영에서 state로 넘어온 경우는 제외)
+  useEffect(() => {
+    if (pathname !== ROUTES.GROUP_UPLOAD_MEMBERS || mode !== "group" || groupMembers.length >= 2) return;
+    if (location.state?.initialGroupMembers?.length >= 2) return;
+    if (onNavigateToUpload) onNavigateToUpload();
+  }, [pathname, mode, groupMembers.length, onNavigateToUpload, location.state?.initialGroupMembers]);
+
+  // 개인 모드에서 사주 입력 단계 표시 여부를 상위에 알림 (TurtleGuide 멘트용)
+  useEffect(() => {
+    if (mode === "personal") {
+      onSajuInputVisible?.(showSajuInput);
+    } else {
+      onSajuInputVisible?.(false);
+    }
+  }, [mode, showSajuInput, onSajuInputVisible]);
+
+  // 개인 모드: "개인 관상 확인하기" 화면 = 사진 촬영/업로드 후 확인 단계일 때만 (TurtleGuide 멘트용)
+  useEffect(() => {
+    const isConfirmStep =
+      mode === "personal" && !showSajuInput && !!capturedImages[0];
+    onPersonalConfirmStepVisible?.(isConfirmStep);
+  }, [mode, capturedImages, showSajuInput, onPersonalConfirmStepVisible]);
+
+  // 개인 모드: 카메라 촬영 뷰가 보일 때만 true (TurtleGuide: 이때만 "삼라만상" 멘트)
+  useEffect(() => {
+    const cameraVisible =
+      mode === "personal" &&
+      currentStep === 0 &&
+      !showSajuInput &&
+      isCapturing;
+    onPersonalCameraVisible?.(cameraVisible);
+  }, [mode, currentStep, showSajuInput, isCapturing, onPersonalCameraVisible]);
+
+  // 모임 모드: 실시간 촬영 뷰가 보일 때 true (TurtleGuide: 최대 7명 안내 멘트)
+  useEffect(() => {
+    const groupCameraVisible = mode === "group" && isCameraActive;
+    onGroupCameraVisible?.(groupCameraVisible);
+  }, [mode, isCameraActive, onGroupCameraVisible]);
 
   const handleRetake = () => {
     if (mode === "personal") {
@@ -383,7 +443,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     }
     const newMember: GroupMember = {
       id: Date.now(),
-      name: "",
+      name: `멤버${groupMembers.length + 1}`,
       birthDate: getTodayDateString(),
       birthTime: "",
       gender: "male",
@@ -429,9 +489,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   };
 
   const handleGroupAnalyze = async () => {
-    // 이전 싸피네컷 사진 캐시 삭제 (백엔드 POST 전에 삭제)
+    // 이전 싸피네컷 사진 캐시 삭제 (모임용만)
     try {
-      localStorage.removeItem("photoBoothSets");
+      localStorage.removeItem("photoBoothSets_group");
     } catch (error) {
       console.error("이전 촬영 데이터 삭제 실패:", error);
     }
@@ -471,25 +531,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       }
     }
 
-    let groupApiResponse: { success: boolean; members?: unknown[]; groupCombination?: string } | null = null;
-    if (finalPayload) {
-      try {
-        const res = await fetch(API_ENDPOINTS.FACEMESH_GROUP, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(finalPayload),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && data?.success) {
-          groupApiResponse = data;
-        } else {
-          console.error("모임 API 응답 오류:", data?.detail ?? data);
-        }
-      } catch (err) {
-        console.error("모임 데이터 전송 실패:", err);
-      }
-    }
-
+    // 개인 관상과 동일: API는 App에서 /group/analyzing 이동 후 호출. 여기서는 payload만 전달.
     const validImages = capturedImages.filter((img): img is string => img !== null);
     onAnalyze(
       validImages,
@@ -502,7 +544,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         birthTimeUnknown: false,
       },
       groupMembers,
-      groupApiResponse ?? undefined,
+      finalPayload ?? undefined,
     );
   };
 
@@ -1257,7 +1299,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                     setGroupMembers([
                       {
                         id: Date.now(),
-                        name: "",
+                        name: "멤버1",
                         birthDate: getTodayDateString(),
                         birthTime: "",
                         gender: "male",
@@ -1266,7 +1308,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       },
                       {
                         id: Date.now() + 1,
-                        name: "",
+                        name: "멤버2",
                         birthDate: getTodayDateString(),
                         birthTime: "",
                         gender: "male",
@@ -1341,7 +1383,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     (mode === "group" &&
       isGroupPhotoConfirming &&
       capturedImages[0] !== null &&
-      currentStep !== 3) ||
+      currentStep !== 3 &&
+      pathname !== ROUTES.GROUP_UPLOAD_MEMBERS) ||
     isPersonalConfirming
   ) {
     const accentColor = mode === "personal" ? "bg-brand-green" : "bg-brand-orange";
@@ -1417,9 +1460,10 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
   // --- Camera View ---
   // 개인 모드에서 사주 정보 입력 화면이 아니고, 촬영 중일 때만 카메라 뷰 표시
+  // 모임: 멤버 입력 페이지(pathname === GROUP_UPLOAD_MEMBERS)면 카메라 숨기고 사주 입력 보여줌
   if (
     (mode === "personal" && currentStep === 0 && !showSajuInput && isCapturing) ||
-    (mode === "group" && isCameraActive)
+    (mode === "group" && isCameraActive && pathname !== ROUTES.GROUP_UPLOAD_MEMBERS)
   ) {
     const stepInfo =
       mode === "personal"
@@ -1654,18 +1698,23 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                       </div>
 
                       <div className="flex-1 flex flex-col gap-3 min-w-0 w-full">
-                        <div className="w-full">
+                        <div className="w-full relative">
                           <Input
-                            placeholder="성함을 입력하세요."
-                            className="h-10 w-full text-sm bg-white/90 border-2 border-gray-200 focus:bg-white focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 transition-all rounded-xl font-semibold px-3 placeholder:text-gray-400 shadow-sm"
-                            value={member.name && !member.name.startsWith('멤버 ') ? member.name : ''}
-                            onChange={(e) =>
-                              updateGroupMember(
-                                member.id,
-                                "name",
-                                e.target.value,
-                              )
+                            placeholder="이름을 입력하세요. (최대 6글자)"
+                            maxLength={6}
+                            className="h-10 w-full text-sm bg-white/90 border-2 border-gray-200 focus:bg-white focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 transition-all rounded-xl font-semibold pl-3 pr-10 placeholder:text-gray-400 shadow-sm"
+                            value={member.name ?? ''}
+                            onFocus={() =>
+                              updateGroupMember(member.id, "name", "")
                             }
+                            onChange={(e) => {
+                              const v = e.target.value.slice(0, 6);
+                              updateGroupMember(member.id, "name", v);
+                            }}
+                          />
+                          <Pencil
+                            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                            strokeWidth={2}
                           />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start w-full min-w-0">
@@ -1797,21 +1846,31 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                                     const v = e.target.value.replace(/\D/g, "").slice(0, 2);
                                     const currentTime = member.birthTime || "00:00";
                                     const [hours] = currentTime.split(":");
-                                    const num = v === "" ? 0 : parseInt(v, 10);
-                                    const clamped = num > 59 ? "59" : v === "" ? "00" : v;
-                                    updateGroupMember(
-                                      member.id,
-                                      "birthTime",
-                                      `${hours}:${clamped}`
-                                    );
+                                    if (v === "") {
+                                      // 빈 값일 때는 분만 비움 (지울 수 있도록)
+                                      updateGroupMember(member.id, "birthTime", hours ? `${hours}:` : "");
+                                    } else {
+                                      const num = parseInt(v, 10);
+                                      const clamped = num > 59 ? "59" : v;
+                                      updateGroupMember(
+                                        member.id,
+                                        "birthTime",
+                                        `${hours}:${clamped}`
+                                      );
+                                    }
                                   }}
                                   onBlur={() => {
                                     const currentTime = member.birthTime || "00:00";
                                     const [hours, min] = currentTime.split(":");
-                                    const parsed = parseInt(min || "0", 10);
-                                    const clamped = Math.min(59, Math.max(0, isNaN(parsed) ? 0 : parsed)).toString().padStart(2, "0");
-                                    if (min !== clamped) {
-                                      updateGroupMember(member.id, "birthTime", `${hours}:${clamped}`);
+                                    if (min === undefined || min === "") {
+                                      // 분이 비어 있으면 포커스 나갈 때 "00"으로 채움
+                                      updateGroupMember(member.id, "birthTime", `${hours || "00"}:00`);
+                                    } else {
+                                      const parsed = parseInt(min || "0", 10);
+                                      const clamped = Math.min(59, Math.max(0, isNaN(parsed) ? 0 : parsed)).toString().padStart(2, "0");
+                                      if (min !== clamped) {
+                                        updateGroupMember(member.id, "birthTime", `${hours}:${clamped}`);
+                                      }
                                     }
                                   }}
                                   className="bg-white/50 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-9 rounded-lg transition-all w-full min-w-0 text-sm pl-3 pr-9"

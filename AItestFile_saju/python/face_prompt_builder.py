@@ -137,10 +137,20 @@ def build_total_review_prompt(
 마커 뒤에는 줄바꿈 후 내용을 작성하세요.
 
 ###[전체 관상 종합]
-관상 각 부위(얼굴형, 이마, 눈, 코, 입, 턱)를 종합한 전체적인 분석. 제시된 관상 결과의 유형·coreMeaning를 구체적으로 문장에 녹여, 다른 사람과 바꿔 쓸 수 없게 6-8문장으로 작성. (관상 데이터만 사용, 사주 정보는 사용하지 마시오)
+관상 각 부위(얼굴형, 이마, 눈, 코, 입, 턱)를 종합한 전체적인 분석. 제시된 관상 결과의 유형·coreMeaning를 구체적으로 문장에 녹여, 다른 사람과 바꿔 쓸 수 없게 작성. (관상 데이터만 사용, 사주 정보는 사용하지 마시오)
+
+**전체 관상 종합 출력 형식 (필수 준수)**
+- 소제목으로 구분하여 작성하시오. 반드시 아래 7개 소제목을 마크다운 굵게(예: **얼굴형과 골격**)로 쓰고, 그 아래에 해당 내용을 자연스러운 산문으로 1~3문장씩 쓰시오.
+  **얼굴형과 골격**, **이마와 사고**, **눈과 인지**, **코와 재물운**, **입과 대인관계**, **턱과 성향**, **종합**
+- 각 소제목을 쓴 뒤 반드시 빈 줄(줄바꿈 한 번)을 넣고, 그 다음 줄에 본문을 작성하시오. 한 주제(소제목+본문)가 끝나면 빈 줄을 넣어 다음 주제와 구분하시오.
+- 이모지(✅, 🔹, →, • 등)를 사용하지 말고, "해석:" 같은 접두어 없이 무조건 텍스트(산문)만 사용하시오. 소제목 아래 본문은 자연스러운 문장으로만 작성하시오. 전체·취업·체질 모든 섹션에서 소제목은 마크다운 **굵게** 형식으로 작성하시오.
 
 ###[취업운]
-{current_year}년 올해의 취업운을 이 사람의 관상과 사주에 맞춰 구체적으로 분석. 시기(월)·직무는 오행·일간·관상에 따라 달리하여 동일 문구가 반복되지 않게 6-8문장으로 작성. 포함할 내용: 올해 취업운 핵심, 합격 요소, 구체적 시기(월), 재기회 시기, 잘 맞는 직무 3~5개, 맞지 않는 직무, 한 줄 전략. 구체적인 월과 직무명 필수.
+{current_year}년 올해의 취업운을 이 사람의 관상과 사주에 맞춰 구체적으로 분석. 시기(월)·직무는 오행·일간·관상에 따라 달리하여 동일 문구가 반복되지 않게 6-8문장으로 작성.
+
+**취업운 출력 형식 (필수 준수)**
+- 소제목을 마크다운 굵게(예: **올해 취업운 흐름**)로 쓰고, 소제목 다음에 빈 줄을 넣은 뒤 그 다음 줄에 본문을 1~3문장으로 쓰시오. 한 주제가 끝나면 빈 줄을 넣어 다음 주제와 구분하시오. **올해 취업운 흐름**, **합격을 가르는 요소**, **기운이 살아나는 시기**, **잘 맞는 직무**, **맞지 않는 직무**, **한 줄 전략** 등 (표현은 자유).
+- 이모지 및 "해석:", "→", "•" 형식을 쓰지 말고 무조건 텍스트만 사용하시오. 구체적인 월과 직무명 필수.
 
 ###[전체적인 체질 특성]
 사주 오행 분포를 바탕으로 건강 관점의 체질 풀이 작성.
@@ -160,6 +170,9 @@ def build_total_review_prompt(
 
 **건강 관리를 위해 꼭 챙기면 좋은 것들**
 물, 음식, 수면, 운동 등 구체적 실천 방안 3~4문장.
+
+**체질 특성 출력 형식 (필수 준수)**
+- 위 5개 소제목(**전체적인 체질 특성** 등)을 마크다운 굵게로 반드시 사용하시오. 각 소제목을 쓴 뒤 빈 줄을 넣고 그 다음 줄에 본문을 작성하시오. 한 주제가 끝나면 빈 줄을 넣어 다음 주제와 구분하시오. 이모지 및 "해석:", "→", "•" 형식 없이 무조건 텍스트(산문)만 작성하시오.
 """
 
     # 분석 결과 요약
@@ -325,14 +338,19 @@ def build_face_overview_prompt(
 ## 중요: 개인별 차별화
 - 반드시 아래 "관상 분석 결과"에만 기반하여 작성하시오. 이 사람의 얼굴형·이마·눈·코·입·턱 유형과 coreMeaning를 문장에 구체적으로 녹여, 다른 사람과 바꿔 쓸 수 없는 내용이 되게 하시오.
 - 일반론·템플릿 문장(예: "전반적으로 ~형의", "리더십이 있다"만 반복)을 사용하지 말고, 위 분석에 나온 유형명·특징을 그대로 활용하시오.
-- 사주 정보(오행, 일간 등)는 절대 언급하지 마시오. 오직 관상 데이터만 사용하세요."""
+- 사주 정보(오행, 일간 등)는 절대 언급하지 마시오. 오직 관상 데이터만 사용하세요.
+
+## 출력 형식 (필수 준수)
+- 소제목으로 구분하여 작성하시오. 아래 7개 소제목을 마크다운 굵게(예: **얼굴형과 골격**)로 쓰고, 소제목 다음에 빈 줄을 넣은 뒤 그 다음 줄에 본문을 1~3문장씩 쓰시오. 한 주제가 끝나면 빈 줄을 넣어 다음 주제와 구분하시오.
+  **얼굴형과 골격**, **이마와 사고**, **눈과 인지**, **코와 재물운**, **입과 대인관계**, **턱과 성향**, **종합**
+- 이모지 및 "해석:", "→", "•" 형식을 쓰지 말고 무조건 텍스트(산문)만 사용하시오."""
 
     user_prompt = f"""다음 관상 분석 결과를 종합해주세요.
 
 ## 관상 분석 결과
 {chr(10).join(analysis_summary) if analysis_summary else "관상 분석 데이터 없음"}
 
-위 관상 분석 결과만 사용하여, 이 사람에게만 해당하는 6-8문장의 전체 관상 분석을 작성해주세요. 각 부위의 유형과 의미를 구체적으로 언급하고, 사주 정보는 넣지 마세요."""
+위 관상 분석 결과만 사용하여, 이 사람에게만 해당하는 전체 관상 분석을 작성해주세요. **얼굴형과 골격**, **이마와 사고**, **눈과 인지**, **코와 재물운**, **입과 대인관계**, **턱과 성향**, **종합** 7개 소제목을 마크다운 굵게로 쓰고, 각 소제목 아래에 자연스러운 문단만 적어주세요. 사주 정보는 넣지 마세요."""
 
     return system_prompt, user_prompt
 
@@ -393,7 +411,8 @@ def build_career_fortune_prompt(
   뜬구름 잡는 말은 피하고 현실적인 조언을 곁들이시오.
 - 전체 분량은 6~8문장으로, 짧지만 밀도 있게 쓰시오.
 
-## 반드시 포함할 내용 (형식은 자유)
+## 반드시 포함할 내용 (소제목으로 구분)
+아래 항목을 **소제목**으로 구분하여 작성하시오. (예: **올해 취업운 흐름**, **합격을 가르는 요소**, **기운이 살아나는 시기**, **잘 맞는 직무**, **맞지 않는 직무**, **한 줄 전략** 등)
 1. 올해 이 사람의 **취업운 핵심 흐름** (닫힘/열림/변곡 중 무엇인지)
 2. 합격 여부를 가르는 **결정적 요소 1~2가지** (성향·태도·타이밍 등)
 3. 이 사주와 관상에 **특히 기운이 살아나는 구체적 월(월 단위)**
@@ -401,6 +420,9 @@ def build_career_fortune_prompt(
 5. 오행·관상에 맞는 **잘 맞는 직무 3~5개**
 6. 이 사람과 **기운이 맞지 않는 직무 유형**
 7. 마지막에 한 줄로 정리하는 **거북 도사의 취업 전략 조언**
+
+## 출력 형식 (필수 준수)
+- 소제목은 마크다운 굵게(예: **올해 취업운 흐름**)로 작성하시오. 소제목 다음에 빈 줄을 넣고 그 다음 줄에 본문을 쓰시오. 한 주제가 끝나면 빈 줄을 넣어 구분하시오. 이모지 및 "해석:", "→", "•" 형식 없이 무조건 텍스트만 작성하시오.
 
 ## 중요 규칙
 - 직무도 획일적으로 쓰지 말고,
@@ -424,7 +446,9 @@ def build_career_fortune_prompt(
 - 오행 분포: 목(木) {five.get('목', 0)}개, 화(火) {five.get('화', 0)}개, 토(土) {five.get('토', 0)}개, 금(金) {five.get('금', 0)}개, 수(水) {five.get('수', 0)}개
 - 가장 많은 오행: {max_element}({elements.get(max_element, 0)}개)
 - 가장 적은 오행: {min_element}({elements.get(min_element, 0)}개)
-- 현재 연도: {current_year}년"""
+- 현재 연도: {current_year}년
+
+소제목으로 구분하여 작성하고, 이모지 및 "해석:", "→" 형식 없이 무조건 텍스트만 써주세요."""
 
     return system_prompt, user_prompt
 
@@ -478,7 +502,10 @@ def build_constitution_prompt(
 가장 적은 오행이 담당하는 신체 부위와 회복력 3~4문장.
 
 **건강 관리를 위해 꼭 챙기면 좋은 것들**
-물, 음식, 수면, 운동 등 구체적 실천 방안 3~4문장."""
+물, 음식, 수면, 운동 등 구체적 실천 방안 3~4문장.
+
+## 출력 형식 (필수 준수)
+- 위 5개 소제목을 마크다운 굵게(예: **전체적인 체질 특성**)로 반드시 사용하시오. 소제목 다음에 빈 줄을 넣고 그 다음 줄에 본문을 쓰시오. 한 주제가 끝나면 빈 줄을 넣어 구분하시오. 이모지 및 "해석:", "→", "•" 형식 없이 무조건 텍스트만 작성하시오."""
 
     user_prompt = f"""다음 사주 정보를 바탕으로 체질 특성을 분석해주세요.
 
@@ -492,7 +519,7 @@ def build_constitution_prompt(
 - 가장 많은 오행: {max_element}({elements.get(max_element, 0)}개)
 - 가장 적은 오행: {min_element}({elements.get(min_element, 0)}개)
 
-위 5개 소제목을 순서대로 포함하여 체질 특성을 작성해주세요."""
+위 5개 소제목을 순서대로 포함하여 체질 특성을 작성해주세요. 이모지 및 "해석:", "→" 형식 없이 무조건 텍스트만 써주세요."""
 
     return system_prompt, user_prompt
 
@@ -983,11 +1010,11 @@ def build_group_overall_prompt(members_data: List[Dict[str, Any]]) -> tuple:
     JSON 하나로 생성한다. 관상 미사용, 사주만 사용.
     """
     if not members_data:
-        raise ValueError("members_data는 1명 이상 필요합니다.")
+        raise ValueError("members_data는 2명 이상 필요합니다.")
     member_names = [m.get("name", f"멤버{i}") for i, m in enumerate(members_data, 1)]
     names_ordered = ", ".join(member_names)
 
-    system_prompt = """당신은 한국 전통 사주명리학에 정통한 명리학자 '거북 도사'입니다.
+    system_prompt = """당신은 한국 전통 사주명리학에 정통한 명리학자 '거북 도사'입니다. 특유의 성격이 재치가 넘치고 유머가 가득해서 말을 재미있게 합니다.
 여러 명의 사주(연월일시주, 일간, 오행)만을 바탕으로, **모임 전체 궁합**을 분석하여 아래 JSON 형식으로만 출력하시오.
 관상·얼굴은 사용하지 마시오. 도사 어투("~이오", "~하시오", "~구먼")를 사용하시오.
 
@@ -995,9 +1022,19 @@ def build_group_overall_prompt(members_data: List[Dict[str, Any]]) -> tuple:
 1. 응답은 반드시 아래 JSON만 출력하시오. 다른 설명이나 마크다운 없이 JSON만.
 2. "personality", "compatibility", "teamwork", "maintenance", "members" 키를 모두 포함하시오.
 3. members 배열은 반드시 입력된 멤버 **순서와 이름** 그대로, 같은 인원수로 작성하시오.
-4. compatibility.score는 0~100 정수. teamwork의 communication, speed, stability도 각 0~100 정수.
+4. compatibility.score는 **1000점 만점**이므로 0 이상 1000 이하 정수 하나만 출력하시오. 아래 기준에 따라 327, 518, 891 등 **다양한 값**을 부여할 것. 100점 만점이 아니며, 100 미만이 나와도 ×10 하지 말고 그대로 둠.
+   - 900~1000: 최고 궁합(오행 균형·상생 많음, 역할 분담 명확, 갈등 최소)
+   - 750~899: 좋은 궁합(전반적 조화, 일부 보완 필요)
+   - 600~749: 보통(균형 있으나 특정 조합에서 주의)
+   - 500~599: 주의(오행 편중·상극 있어 조율 필요)
+   - 0~499: 신중(상극·갈등 요소 많음, 관계 관리 필요)
+   teamwork의 communication, speed, stability는 각 0~100 정수.
 5. maintenance.maintenanceCards는 반드시 3개: label은 순서대로 "소통", "리더십", "빈도". 각각 title(짧은 제목), description(1~2문장) 포함.
-6. roleBadge는 이모지 하나(예: 🌿 🔥 🪨 🌊 ⚡ 등)로 각 멤버 역할을 상징하시오."""
+6. personality.title은 **재미있고 말맛 나는 한마디**로 25자 정도로 짧고고 재치 있게 짓되, 말장난·감탄·도사 느낌을 살리시오. 오행은 언급하지 말고 누가 봐도 이해할 만한 문장으로. 예: "완벽하게 맞지는 않는데, 이상하게 끊어지지도 않는 모임", "서로 말 안 해도 눈치만으로 돌아가는, 그런 편한 모임".
+7. **문장 형식 금지**: personality.harmony, comprehensive, improvement, teamwork의 *Detail, maintenance의 do/dont/maintenanceCards, members의 description/strengths/warnings 등 **모든 문자열 필드**에서 다음을 절대 사용하지 마시오.
+   - 이모지(✅, 🔹, →, • 등)
+   - "해석:", "✅ 해석:", "→" 같은 접두어·라벨
+   - 불릿·화살표로 시작하는 리스트형 문장(본문만 산문으로 연속 작성할 것)."""
 
     user_prompt = f"""아래 {len(members_data)}명의 사주 정보를 바탕으로, 모임 전체 궁합을 분석하여 아래 JSON 형식으로만 응답하시오.
 멤버 이름(순서 유지): {names_ordered}
@@ -1007,19 +1044,19 @@ def build_group_overall_prompt(members_data: List[Dict[str, Any]]) -> tuple:
 ## 출력할 JSON 형식 (따옴표·쉼표·괄호 정확히 지킬 것)
 {{
   "personality": {{
-    "title": "이 모임을 한마디로 정리한 제목 (20자 내외)",
-    "harmony": "모임의 조화 및 균형 해석 (3~5문장, 도사 어투)",
-    "comprehensive": "종합 궁합 해석. 각 멤버 역할과 구조 설명 (4~6문장)",
-    "improvement": "모임이 오래 가기 위한 조언 3가지 이상 (4~6문장)"
+    "title": "재미있고 짧게 한마디 25자 이내 (예: 완벽하게 맞지는 않는데, 이상하게 끊어지지도 않는 모임 / 불꽃 한 스푼 넣은 냄비 같은, 살짝 톡 쏘는 재미가 있는 조합)",
+    "harmony": "모임의 조화 및 균형 (3~5문장, 도사 어투, 이모지·해석: 접두어 없이 산문만)",
+    "comprehensive": "종합 궁합. 각 멤버 역할과 구조 (4~6문장, 산문만)",
+    "improvement": "모임이 오래 가기 위한 조언 3가지 이상 (4~6문장, 산문만)"
   }},
-  "compatibility": {{ "score": 75 }},
+  "compatibility": {{ "score": 718 }},
   "teamwork": {{
-    "communication": 75,
-    "speed": 80,
-    "stability": 85,
-    "communicationDetail": "커뮤니케이션 특성 설명 2~4문장",
-    "speedDetail": "갈등/대응력 설명 2~4문장",
-    "stabilityDetail": "의사결정·안정도 설명 2~4문장"
+    "communication": 0~100 정수,
+    "speed": 0~100 정수,
+    "stability": 0~100 정수,
+    "communicationDetail": "커뮤니케이션 특성 2~4문장 (이모지·해석: 없이 산문만)",
+    "speedDetail": "갈등/대응력 2~4문장 (산문만)",
+    "stabilityDetail": "의사결정·안정도 2~4문장 (산문만)"
   }},
   "maintenance": {{
     "do": ["할 것 1", "할 것 2", "할 것 3"],
@@ -1035,7 +1072,6 @@ def build_group_overall_prompt(members_data: List[Dict[str, Any]]) -> tuple:
       "name": "멤버이름(입력과 동일)",
       "role": "역할 한 줄",
       "keywords": ["키워드1", "키워드2", "키워드3"],
-      "roleBadge": "🌿",
       "description": "이 멤버의 모임 내 포지션 1~2문장",
       "strengths": ["장점1"],
       "warnings": ["주의점1"]
@@ -1043,13 +1079,31 @@ def build_group_overall_prompt(members_data: List[Dict[str, Any]]) -> tuple:
   ]
 }}
 
-members 배열은 반드시 {len(members_data)}명, 위 이름 순서대로 작성하시오. JSON만 출력하시오."""
+members 배열은 반드시 {len(members_data)}명, 위 이름 순서대로 작성하시오. compatibility.score는 0~1000 사이 정수(예: 327, 518, 891) 하나만 출력하시오. JSON만 출력하시오.
+**문장 규칙**: harmony, comprehensive, improvement, *Detail, description 등 모든 텍스트 필드에는 "✅ 해석:"·"→"·이모지·접두어를 넣지 말고, 곧바로 본문 산문만 작성하시오."""
 
     return system_prompt, user_prompt
 
 
+def _normalize_compatibility_score(data: Dict[str, Any]) -> None:
+    """compatibility.score를 0~1000 정수로 보정. 범위 밖이면 0~1000으로 클램프. ×10 환산하지 않음."""
+    if not data or "compatibility" not in data:
+        return
+    comp = data.get("compatibility") or {}
+    raw = comp.get("score")
+    try:
+        score = int(float(raw)) if raw is not None else 500
+    except (TypeError, ValueError):
+        score = 500
+    score = max(0, min(1000, score))
+    if isinstance(data["compatibility"], dict):
+        data["compatibility"]["score"] = score
+    else:
+        data["compatibility"] = {"score": score}
+
+
 def parse_group_overall_response(response: str) -> Optional[Dict[str, Any]]:
-    """전체 궁합 LLM 응답에서 JSON 추출."""
+    """전체 궁합 LLM 응답에서 JSON 추출. compatibility.score는 0~1000으로 정규화(×10 환산 없음)."""
     if not response or not response.strip():
         return None
     text = response.strip()
@@ -1058,6 +1112,7 @@ def parse_group_overall_response(response: str) -> Optional[Dict[str, Any]]:
         try:
             data = json.loads(json_match.group(0))
             if "personality" in data and "members" in data:
+                _normalize_compatibility_score(data)
                 return data
         except json.JSONDecodeError:
             pass
@@ -1075,9 +1130,15 @@ def build_group_pairs_prompt(member_names: List[str], members_data: List[Dict[st
     pair_count = n * (n - 1) // 2
     names_ordered = ", ".join(member_names)
 
-    system_prompt = """당신은 한국 전통 사주명리학에 정통한 명리학자입니다.
-주어진 멤버들 간의 **1대1 사주 궁합**을 분석하여, 모든 쌍에 대해 순위(rank), 점수(score), 유형(type), 이유(reason), 요약(summary)을 JSON으로 출력하시오.
-관상은 사용하지 마시오. 사주(일간·오행 등)만으로 판단하시오.
+    system_prompt = """당신은 두 사람 간 관계를 쉽고 친근한 말로 설명하는 전문가입니다.
+주어진 멤버들 간의 **1대1 궁합**을 분석하여, 모든 쌍에 대해 순위(rank), 점수(score), 유형(type), 이유(reason), 요약(summary)을 JSON으로 출력하시오.
+내부적으로는 사주(일간·오행 등)를 참고하되, **출력 문장에는 사주·명리 용어를 절대 쓰지 마시오.**
+
+## 표현 규칙 (필수)
+- 일간, 오행, 목·화·토·금·수, 상생·상극, 식신·편인 등 전문 용어 금지.
+- "조율자 × 직설가", "안정형 × 불꽃형", "참는 사람 × 말하는 사람", "말 없어도 신뢰", "감정 상한 상태에선 말투 충돌 주의"처럼 **누가 봐도 이해할 수 있는 일상어**로만 작성하시오.
+- reason: 2~3문장. 첫째는 두 사람 성향을 한 줄로(예: 둘 다 안정·유지형 / 조율자×직설가), 둘째는 장점·시너지, 셋째는 주의점(단, ~주의) 형식을 권장.
+- summary: 한 줄 요약. 역시 일상어로.
 
 ## 규칙
 1. 응답은 반드시 아래 형식의 JSON만 출력하시오. 다른 텍스트 없이.
@@ -1086,7 +1147,7 @@ def build_group_pairs_prompt(member_names: List[str], members_data: List[Dict[st
 4. rank는 1부터 순서대로. 1위가 가장 궁합 좋은 쌍.
 5. score는 0~100 정수. 90 이상 best, 75~89 good, 60~74 normal, 50~59 unstable, 50 미만 worst 권장.
 6. type은 반드시 "best" | "normal" | "unstable" | "worst" 중 하나.
-7. reason, summary는 각 1~3문장."""
+7. reason, summary는 각 1~3문장이며 반드시 일상어(비사주)로만 작성."""
 
     members_block = _members_block_for_json(members_data)
     user_prompt = f"""멤버(이름 그대로 사용): {names_ordered}
@@ -1094,7 +1155,7 @@ def build_group_pairs_prompt(member_names: List[str], members_data: List[Dict[st
 
 {members_block}
 
-## 출력 JSON 형식
+## 출력 JSON 형식 (reason·summary는 반드시 일상어, 사주 용어 금지)
 {{
   "pairs": [
     {{
@@ -1103,13 +1164,13 @@ def build_group_pairs_prompt(member_names: List[str], members_data: List[Dict[st
       "rank": 1,
       "score": 95,
       "type": "best",
-      "reason": "궁합 이유 1~3문장",
-      "summary": "한 줄 요약"
+      "reason": "둘 다 안정·유지형이라 오래 가는 조합. 말은 적지만 신뢰가 쌓이면 끈끈함. 단, 둘 다 참고 넘기면 오해가 길어질 수 있음.",
+      "summary": "말 없어도 서로 신뢰하는 조합"
     }}
   ]
 }}
 
-pairs 배열은 반드시 {pair_count}개, rank 1~{pair_count}까지 모두 포함하시오. member1/member2는 위 목록의 이름을 정확히 쓰시오. JSON만 출력하시오."""
+pairs 배열은 반드시 {pair_count}개, rank 1~{pair_count}까지 모두 포함하시오. member1/member2는 위 목록의 이름을 정확히 쓰시오. reason·summary는 위 예시처럼 일상어로만 작성하시오. JSON만 출력하시오."""
 
     return system_prompt, user_prompt
 

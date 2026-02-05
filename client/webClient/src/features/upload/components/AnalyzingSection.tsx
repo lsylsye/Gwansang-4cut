@@ -1,20 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { motion, AnimatePresence } from "motion/react";
-import { Sparkles, Search, Brain, Loader2, Camera, AlertCircle, CheckCircle2, RefreshCcw } from "lucide-react";
+import { Sparkles, Search, Brain, Loader2, AlertCircle, CheckCircle2, RefreshCcw } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { ANALYSIS_STEP_INTERVAL_MS } from "@/shared/config/analysis";
 
 interface AnalyzingSectionProps {
-  ragData?: {
-    eyes?: string;
-    nose?: string;
-    mouth?: string;
-    faceShape?: string;
-    chin?: string;
-    combination?: string;
-  };
-  onNavigateToPhotoBooth?: () => void;
   isAnalyzing?: boolean;
   analysisError?: string | null;
   analysisComplete?: boolean;
@@ -32,18 +23,16 @@ const ZOOM_TARGETS = [
 ];
 
 const ANALYSIS_STEPS = [
-  { text: "천정(이마)의 기운을 살피는 중...", icon: <Sparkles className="w-5 h-5" />, target: 0, label: "얼굴형" },
-  { text: "용안(눈매)의 깊이를 투시하는 중...", icon: <Search className="w-5 h-5" />, target: 1, label: "눈" },
-  { text: "준두(코)의 재복을 읽는 중...", icon: <Brain className="w-5 h-5" />, target: 2, label: "코" },
-  { text: "수성(입술)의 복록을 확인하는 중...", icon: <Sparkles className="w-5 h-5" />, target: 3, label: "입" },
-  { text: "지각(턱)의 말년운을 감정하는 중...", icon: <Search className="w-5 h-5" />, target: 4, label: "턱" },
-  { text: "삼라만상의 조화를 갈무리하는 중...", icon: <Brain className="w-5 h-5" />, target: 5, label: "조합" },
+  { text: "이마의 기운을 살피는 중...", detailText: "이마는 타고난 기운과 삶의 초반 흐름을 살필 수 있는 부위라 하오.\n생각의 방향과 기본 성향이 이마에 자연스레 드러난다 보오.", icon: <Sparkles className="w-5 h-5" />, target: 0, label: "얼굴형" },
+  { text: "눈매의 인상을 분석하는 중...", detailText: "눈은 사람의 감정과 성격이 가장 솔직하게 나타나는 곳이라 하오.\n대인관계에서의 태도와 내면의 기운을 읽는 데 중요하다 보오.", icon: <Search className="w-5 h-5" />, target: 1, label: "눈" },
+  { text: "코의 균형과 특징을 살펴보는 중...", detailText: "코는 얼굴의 중심으로, 삶을 이끄는 힘과 균형을 상징한다 하오.\n코를 통해 내면의 안정감과 일의 추진력을 살피고 있소.", icon: <Brain className="w-5 h-5" />, target: 2, label: "코" },
+  { text: "입매의 느낌을 확인하는 중...", detailText: "입은 말과 표정, 인간관계를 보여주는 중요한 부위라 하오.\n어떤 인상을 주는 사람인지 판단하는 데 기준이 된다오.", icon: <Sparkles className="w-5 h-5" />, target: 3, label: "입" },
+  { text: "턱의 안정감을 분석하는 중...", detailText: "턱은 삶의 후반과 생활의 안정감을 살피는 부위라 하오.\n책임감과 버티는 힘이 턱의 인상에 담기게 되오.", icon: <Search className="w-5 h-5" />, target: 4, label: "턱" },
+  { text: "얼굴 전체의 조화를 종합하는 중...", detailText: "관상은 개별 요소보다 얼굴 전체의 조화를 중히 여기고 있소.\n얼굴 전체의 조화를 종합하는 중이니 잠시만 기다려 주시게나.", icon: <Brain className="w-5 h-5" />, target: 5, label: "조합" },
 ];
 
 export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({ 
-  ragData, 
-  onNavigateToPhotoBooth,
-  isAnalyzing = true,
+  isAnalyzing: _isAnalyzing = true,
   analysisError = null,
   analysisComplete = false,
   onRetry
@@ -114,23 +103,6 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({
     }
   }, [currentStep]);
 
-  // RAG 데이터 매핑 함수
-  const getRagContent = () => {
-    if (!ragData) return null;
-    const step = ANALYSIS_STEPS[currentStep];
-    switch (step.label) {
-      case "얼굴형": return ragData.faceShape;
-      case "눈": return ragData.eyes;
-      case "코": return ragData.nose;
-      case "입": return ragData.mouth;
-      case "턱": return ragData.chin;
-      case "조합": return ragData.combination;
-      default: return null;
-    }
-  };
-
-  const currentRagContent = getRagContent();
-
   // 에러 상태일 때 표시할 UI
   if (analysisError) {
     return (
@@ -163,7 +135,6 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({
           {onRetry && (
             <ActionButton
               variant="primary"
-              size="md"
               onClick={onRetry}
               className="mt-4"
             >
@@ -191,8 +162,8 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({
 
       <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-20 w-full max-w-6xl z-30">
         
-        {/* Left: The Turtle Master Character - 3D Hand Mirror */}
-        <div ref={mirrorRef} className="relative w-80 h-[500px] md:w-[400px] md:h-[600px] flex flex-col items-center justify-center">
+        {/* Right: The Turtle Master Character - 3D Hand Mirror (order-2로 우측 배치) */}
+        <div ref={mirrorRef} className="relative w-80 h-[500px] md:w-[400px] md:h-[600px] flex flex-col items-center justify-center order-2 lg:order-2">
           
           {/* Hand Mirror SVG Frame (3D Morphism Style) */}
           <div className="absolute inset-0 z-0 pointer-events-none drop-shadow-[0_20px_50px_rgba(0,0,0,0.15)]">
@@ -375,8 +346,8 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({
           </div>
         </div>
 
-        {/* Right: Analysis Info - Traditional Slate Design */}
-        <div className="flex-1 max-w-xl text-center lg:text-left space-y-8">
+        {/* Left: Analysis Info - Traditional Slate Design (order-1로 좌측 배치) */}
+        <div className="flex-1 max-w-xl text-center lg:text-left space-y-8 order-1 lg:order-1">
           <div className="inline-flex items-center gap-3 bg-brand-green/10 border border-brand-green/30 px-4 py-2 rounded-full shadow-[0_0_15px_rgba(0,137,123,0.2)]">
             {analysisError ? (
               <AlertCircle className="w-5 h-5 text-red-500" />
@@ -406,90 +377,63 @@ export const AnalyzingSection: React.FC<AnalyzingSectionProps> = ({
             <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-brand-green/40 rounded-tl-2xl" />
             <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-brand-green/40 rounded-br-2xl" />
             
-            {!ragData ? (
-              <div className="flex flex-col items-center lg:items-start gap-4">
-                {analysisError ? (
-                  <>
-                    <AlertCircle className="w-6 h-6 text-red-500" />
-                    <p className="text-red-500 font-hand text-lg md:text-xl leading-relaxed">
-                      "허허, 천기를 읽는 데 어려움이 있구먼... 잠시 후 다시 시도해보게나."
-                    </p>
-                    <p className="text-gray-400 text-sm mt-2">{analysisError}</p>
-                  </>
-                ) : analysisComplete ? (
-                  <>
-                    <CheckCircle2 className="w-6 h-6 text-green-500" />
-                    <p className="text-green-600 font-hand text-lg md:text-xl leading-relaxed">
-                      "허허, 관상을 다 읽었네! 곧 결과를 보여주리다..."
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex gap-2">
-                      {[0, 1, 2].map(i => (
-                        <motion.div key={i} animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} className="w-2 h-2 bg-brand-green rounded-full" />
-                      ))}
-                    </div>
-                    <p className="text-gray-500 font-hand text-lg md:text-xl italic leading-relaxed">
-                      "천기를 읽는 중이니 잠시만 정적을 유지하게나..."
-                    </p>
-                  </>
-                )}
-              </div>
-            ) : currentRagContent ? (
-              <div className="space-y-4">
-                <p className="text-gray-800 font-hand text-2xl md:text-3xl tracking-wide leading-relaxed drop-shadow-sm">
-                  "{currentRagContent}"
-                </p>
-                <div className="flex justify-end opacity-40">
-                  <Sparkles className="w-6 h-6 text-brand-orange" />
-                </div>
-              </div>
-            ) : (
-              <p className="text-gray-500 font-hand text-xl md:text-2xl italic">
-                {ANALYSIS_STEPS[currentStep].label}의 조화를 살피고 있네.
-              </p>
-            )}
+            <div className="flex flex-col items-center lg:items-start gap-4">
+              {analysisError ? (
+                <>
+                  <AlertCircle className="w-6 h-6 text-red-500" />
+                  <p className="text-red-500 font-hand text-lg md:text-xl leading-relaxed">
+                    "허허, 천기를 읽는 데 어려움이 있구먼... 잠시 후 다시 시도해보게나."
+                  </p>
+                  <p className="text-gray-400 text-sm mt-2">{analysisError}</p>
+                </>
+              ) : analysisComplete ? (
+                <>
+                  <CheckCircle2 className="w-6 h-6 text-green-500" />
+                  <p className="text-green-600 font-hand text-lg md:text-xl leading-relaxed">
+                    "허허, 관상을 다 읽었네! 곧 결과를 보여주리다..."
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="flex gap-2">
+                    {[0, 1, 2].map(i => (
+                      <motion.div key={i} animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} className="w-2 h-2 bg-brand-green rounded-full" />
+                    ))}
+                  </div>
+                  <p className="text-gray-500 font-hand text-lg md:text-xl italic leading-relaxed whitespace-pre-line">
+                    "{ANALYSIS_STEPS[currentStep].detailText}"
+                  </p>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Progress Section - Nature Inspired */}
           <div className="space-y-4 pt-4">
-            <div className="flex justify-between items-center px-2">
-              <span className="text-[10px] font-mono text-gray-400 tracking-widest uppercase">Spirit_Synchronization</span>
-              <span className="text-gray-900 font-bold font-display text-xl tabular-nums">
-                {Math.round((currentStep / (ANALYSIS_STEPS.length - 1)) * 100)}%
-              </span>
+            <div className="px-2">
+              <span className="text-[12px] font-sans text-gray-400 tracking-wide">도사의 기운이 모이는 중...</span>
             </div>
-            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden border border-gray-200 relative">
+            <div className="w-full h-4 bg-gray-100 rounded-full overflow-hidden border border-gray-200 relative">
               {/* 개발용: duration 0초 (운영 시 28초로 변경) */}
               <motion.div 
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
                 transition={{ duration: 0, ease: "linear" }}
-                className="h-full bg-gradient-to-r from-brand-green via-brand-orange to-brand-green bg-[length:200%_100%] animate-[gradient_5s_linear_infinite] shadow-[0_0_20px_rgba(0,137,123,0.3)]"
-              />
-            </div>
-          </div>
-
-          {/* Photo Booth Button - Only shown during analyzing */}
-          {onNavigateToPhotoBooth && (
-            <div className="flex justify-center mb-10 no-capture">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1 }}
+                className="h-full rounded-full bg-gradient-to-r from-brand-green via-brand-orange to-brand-green bg-[length:200%_100%] animate-[gradient_2.5s_linear_infinite] shadow-[0_0_20px_rgba(0,137,123,0.3)] relative"
               >
-                <ActionButton
-                  variant="secondary"
-                  onClick={onNavigateToPhotoBooth}
-                  className="flex items-center gap-3 px-6 py-4"
-                >
-                  <Camera size={20} />
-                  사진 네컷 찍기
-                </ActionButton>
+                {/* 로딩 중 shimmer */}
+                <motion.div
+                  className="absolute inset-0 rounded-full pointer-events-none"
+                  style={{
+                    background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)",
+                    backgroundSize: "50% 100%",
+                  }}
+                  animate={{ x: ["-100%", "200%"] }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                />
               </motion.div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

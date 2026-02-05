@@ -5,6 +5,13 @@ import { Camera, ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { Card } from "@/shared/ui/core/card";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/forms/select";
 import { AnalyzeMode } from "@/shared/types";
 import { getResultPath } from "@/shared/config/routes";
 import film01 from "@/assets/film_01.png";
@@ -28,7 +35,7 @@ type FrameType = "vertical" | "horizontal";
 
 const TOTAL_PHOTOS = 8; // 총 8장 촬영
 const FINAL_PHOTO_COUNT = 4; // 최종 4컷 선택
-const TIMER_SECONDS = 1; // 촬영 타이머 초기값 (초)
+const TIMER_SECONDS = 5; // 촬영 타이머 초기값 (초) — 셔터 간격
 
 export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
   onBack,
@@ -73,7 +80,9 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
   const PRESET_TEXTS = [
     "아자스",
     "부울경 이즈굿",
-    "14기 화이팅!",
+    "14기 화이팅♡",
+    "15기 화이팅♡",
+    "운동 많이 된다",
     "두쫀쿠 먹고싶다",
     "직접입력"
   ];
@@ -89,15 +98,15 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
     { name: "Black", value: "#010C13" },
   ];
 
-  // 컴포넌트 마운트 시 이전 촬영 사진 캐시 삭제
+  // 컴포넌트 마운트 시 현재 모드의 이전 촬영 캐시만 삭제 (개인/모임 분리)
+  const storageKey = isPersonal ? "photoBoothSets_personal" : "photoBoothSets_group";
   useEffect(() => {
-    // 이전 localStorage 데이터 삭제
     try {
-      localStorage.removeItem("photoBoothSets");
+      localStorage.removeItem(storageKey);
     } catch (error) {
       console.error("이전 촬영 데이터 삭제 실패:", error);
     }
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     if (frameType === "vertical") setFrameColor("#BFE7FF");
@@ -114,32 +123,22 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
     return () => window.removeEventListener("resize", checkDesktop);
   }, []);
 
-  // 스크롤 따라오는 플로팅 사이드바 효과 (퀵메뉴 스타일)
+  // 스크롤 따라오는 플로팅 사이드바 효과 (뷰포트 기준으로 스크롤 내릴 때 함께 내려가도록)
   useEffect(() => {
     if (!showCustomization || !isDesktop) return;
 
     const handleScroll = () => {
       if (!containerRef.current || !sidebarRef.current) return;
 
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const containerHeight = containerRef.current.offsetHeight;
-      const containerOffsetTop = containerRef.current.offsetTop;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const containerHeight = containerRect.height;
       const sidebarHeight = sidebarRef.current.offsetHeight;
-      const topOffset = 186; // 상단 여백
-      
-      const endPoint = containerHeight - sidebarHeight - topOffset;
-      let point = topOffset;
+      const topOffset = 186; // 상단에서 유지할 거리 (px)
 
-      if (scrollTop < containerOffsetTop) {
-        // 컨테이너 시작 전: 상단 고정 (여백 포함)
-        point = topOffset;
-      } else if (scrollTop > containerOffsetTop + endPoint) {
-        // 컨테이너 끝 이후: 하단 고정
-        point = endPoint;
-      } else {
-        // 컨테이너 내부: 스크롤에 따라 이동
-        point = scrollTop - containerOffsetTop + topOffset;
-      }
+      // 뷰포트 기준: 사이드바를 topOffset 위치에 두려면 컨테이너 내부 top = topOffset - containerRect.top
+      let point = topOffset - containerRect.top;
+      // 컨테이너 범위 안으로 클램프 (위로 넘어가면 0, 아래로 넘어가면 하단에 맞춤)
+      point = Math.max(0, Math.min(containerHeight - sidebarHeight, point));
 
       setSidebarTop(point);
     };
@@ -148,12 +147,11 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
       handleScroll();
     };
 
-    // 초기 위치 설정
     handleScroll();
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("resize", handleResize);
-    
+
     return () => {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", handleResize);
@@ -337,8 +335,8 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         
-        const textX = targetWidth * 0.89; // right: 7.5% = 92.5%
-        const textY = targetHeight * 0.415; // top: 37% + height: 9% / 2 = 41.5%
+        const textX = targetWidth * 0.883; // right: 7.5% = 92.5%
+        const textY = targetHeight * 0.428; // top: 37% + height: 9% / 2 = 41.5%
         const textWidth = targetWidth * 0.065; // 7.5%
         
         // 텍스트 줄바꿈 처리
@@ -551,8 +549,9 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
         // Data URL로 변환하여 localStorage에 저장
         const frameImage = canvas.toDataURL("image/png", 1.0);
         
-        // localStorage에 저장
+        // localStorage에 저장 (개인/모임 분리)
         const selectedPhotos = selectedPhotoIndices.map(idx => photos[idx] as string);
+        const storageKey = mode === "personal" ? "photoBoothSets_personal" : "photoBoothSets_group";
         const newSet = {
           id: Date.now().toString(),
           photos: selectedPhotos,
@@ -560,15 +559,12 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
           createdAt: new Date().toISOString(),
         };
         const existing = JSON.parse(
-          localStorage.getItem("photoBoothSets") || "[]"
+          localStorage.getItem(storageKey) || "[]"
         );
         existing.unshift(newSet);
         const toSave = existing.slice(0, 1);
         try {
-          localStorage.setItem(
-            "photoBoothSets",
-            JSON.stringify(toSave)
-          );
+          localStorage.setItem(storageKey, JSON.stringify(toSave));
         } catch {
           // QuotaExceededError 등: 저장 실패해도 진행
         }
@@ -1071,25 +1067,33 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
                   <div className={`w-1.5 h-6 ${isPersonal ? "bg-brand-green" : "bg-brand-orange"} rounded-full shadow-sm`} />
                   <h3 className="text-base sm:text-lg font-bold text-gray-900">말풍선 문구</h3>
                   </div>
-                  <select
+                  <Select
                     value={isCustomInput ? "직접입력" : customText}
-                    onChange={(e) => {
-                      const value = e.target.value;
+                    onValueChange={(value) => {
                       if (value === "직접입력") {
                         setIsCustomInput(true);
+                        setCustomText("");
                       } else {
                         setIsCustomInput(false);
                         setCustomText(value);
                       }
                     }}
-                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border-2 border-gray-200 focus:border-brand-green focus:outline-none text-sm font-medium bg-white"
                   >
-                    {PRESET_TEXTS.map((text) => (
-                      <option key={text} value={text}>
-                        {text}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      className={`w-full bg-white/80 border-2 border-gray-100 shadow-inner h-10 rounded-lg transition-all px-3 text-sm min-w-0 ${
+                        isPersonal ? "focus:border-brand-green" : "focus:border-brand-orange"
+                      }`}
+                    >
+                      <SelectValue placeholder="문구 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRESET_TEXTS.map((text) => (
+                        <SelectItem key={text} value={text}>
+                          {text}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {isCustomInput && (
                   <>
                     <input

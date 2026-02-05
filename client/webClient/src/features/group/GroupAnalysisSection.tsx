@@ -14,12 +14,18 @@ interface GroupAnalysisSectionProps {
     /** 모임 궁합 API 응답. 연결 후 결과 화면에서 데이터 렌더링에 사용 */
     groupAnalysisResult?: GroupAnalysisResult;
     onViewRanking?: (score: number, defaultName: string) => void;
+    /** 탭 변경 시 TurtleGuide 멘트용 */
+    onTabChange?: (tab: "overall" | "pairs" | "ssafy-cut") => void;
+    /** 싸피네컷(네컷) 페이지로 이동 (개인 결과처럼 결과 페이지에서 진입용) */
+    onNavigateToPhotoBooth?: () => void;
 }
 
 export const GroupAnalysisSection: React.FC<GroupAnalysisSectionProps> = ({
     groupMembers = [],
     groupAnalysisResult = null,
     onViewRanking,
+    onTabChange,
+    onNavigateToPhotoBooth,
 }) => {
     return (
         <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 pb-20">
@@ -27,6 +33,8 @@ export const GroupAnalysisSection: React.FC<GroupAnalysisSectionProps> = ({
                 groupMembers={groupMembers}
                 groupAnalysisResult={groupAnalysisResult}
                 onViewRanking={onViewRanking}
+                onTabChange={onTabChange}
+                onNavigateToPhotoBooth={onNavigateToPhotoBooth}
             />
         </div>
     );

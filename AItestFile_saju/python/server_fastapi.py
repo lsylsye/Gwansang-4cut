@@ -890,14 +890,12 @@ async def analyze_face_api(request: FaceAnalysisRequest):
 
 def _default_group_overall(member_names: List[str]) -> Dict[str, Any]:
     """LLM 전체 궁합 파싱 실패 시 기본 구조 반환."""
-    role_badges = ["🌿", "🔥", "🪨", "🌊", "⚡", "🌟", "💫"]
     members_list = []
-    for i, name in enumerate(member_names):
+    for name in member_names:
         members_list.append({
             "name": name,
             "role": "모임 멤버",
             "keywords": ["협력", "소통"],
-            "roleBadge": role_badges[i % len(role_badges)],
             "description": "사주 기반 모임 내 역할입니다.",
             "strengths": ["협력적"],
             "warnings": ["감정 표현을 나누면 좋습니다."],
@@ -909,7 +907,7 @@ def _default_group_overall(member_names: List[str]) -> Dict[str, Any]:
             "comprehensive": "멤버 각자의 기운이 모여 하나의 흐름을 만듭니다.",
             "improvement": "서로의 차이를 인정하고 소통하면 오래 갈 수 있소.",
         },
-        "compatibility": {"score": 70},
+        "compatibility": {"score": 500},
         "teamwork": {
             "communication": 70,
             "speed": 70,
@@ -929,6 +927,99 @@ def _default_group_overall(member_names: List[str]) -> Dict[str, Any]:
         },
         "members": members_list,
     }
+
+
+def _process_group_members(group_members: List) -> tuple:
+    """groupMembers 검증 및 사주·RAG 처리. (members_result, members_data_for_llm) 반환."""
+    if not group_members or len(group_members) < 2:
+        raise HTTPException(status_code=400, detail="groupMembers는 2명 이상 필요합니다.")
+    if len(group_members) > 7:
+        raise HTTPException(status_code=400, detail="groupMembers는 최대 7명까지 가능합니다.")
+
+    members_result = []
+    members_data_for_llm = []
+
+    for member in group_members:
+        try:
+            birth_date = (member.birthDate or "").replace(".", "-").strip()
+            birth_time = (member.birthTime or "00:00").strip()
+            saju_data_dict = {
+                "birthDate": birth_date,
+                "birthTime": birth_time,
+                "gender": member.gender,
+                "calendarType": member.calendarType or "solar",
+                "birthTimeUnknown": member.birthTimeUnknown,
+            }
+            birth_info = parse_birth_info(saju_data_dict)
+            saju = calculate_saju(birth_info)
+            myeongri = calculate_myeongri(saju)
+            saju_info = {
+                    "yearPillar": saju["yearPillar"],
+                "monthPillar": saju["monthPillar"],
+                "dayPillar": saju["dayPillar"],
+                "hourPillar": saju["hourPillar"],
+                "yearStem": saju["yearStem"],
+                "yearBranch": saju["yearBranch"],
+                "monthStem": saju["monthStem"],
+                "monthBranch": saju["monthBranch"],
+                "dayStem": saju["dayStem"],
+                "dayBranch": saju["dayBranch"],
+                "hourStem": saju["hourStem"],
+                "hourBranch": saju["hourBranch"],
+                "solarTerm": saju["solarTerm"],
+                "fiveElements": myeongri["fiveElements"],
+            }
+            members_result.append({
+                "id": member.id,
+                "name": member.name,
+                "sajuInfo": saju_info,
+            })
+
+            day_stem = saju["dayStem"]
+            keywords = myeongri.get("keywords", [])
+            five_elements = myeongri.get("fiveElements", {})
+            day_element = "목"
+            if five_elements:
+                max_el = max(five_elements.items(), key=lambda x: x[1])
+                if max_el[1] > 0:
+                    day_element = max_el[0]
+            search_query = summarize_saju_for_search(day_stem, day_element, keywords)
+            context = ""
+            try:
+                use_redis = should_use_redis()
+                if use_redis:
+                    try:
+                        relevant_chunks = search_by_vector(search_query, topK=8)
+                        context = format_search_context(relevant_chunks)
+                    except Exception:
+                        chunks = get_knowledge_chunks()
+                        if chunks:
+                            relevant_chunks = search_chunks(chunks, search_query, topK=8)
+                            context = format_context(relevant_chunks)
+                else:
+                    chunks = get_knowledge_chunks()
+                    if chunks:
+                        relevant_chunks = search_chunks(chunks, search_query, topK=8)
+                        context = format_context(relevant_chunks)
+            except Exception as e:
+                print(f"   [멤버 {member.name}] RAG 검색 오류: {e}")
+                context = "[참고 자료 없음]"
+
+            members_data_for_llm.append({
+                "name": member.name,
+                "sajuInfo": saju_info,
+                "rag_context": context,
+            })
+        except Exception as e:
+            print(f"❌ [멤버 {member.name}] 사주/RAG 처리 오류: {e}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(
+                status_code=500,
+                detail=f"멤버 '{member.name}' 사주 처리 중 오류: {str(e)}",
+            )
+
+    return members_result, members_data_for_llm
 
 
 def _ensure_all_pairs(member_names: List[str], pairs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -963,117 +1054,21 @@ def _ensure_all_pairs(member_names: List[str], pairs: List[Dict[str, Any]]) -> L
     return out
 
 
-@app.post("/api/face/facemesh/group")
-async def analyze_facemesh_group(request: GroupFaceMeshRequest):
+@app.post("/api/face/facemesh/group/overall")
+async def analyze_facemesh_group_overall(request: GroupFaceMeshRequest):
     """
-    모임 관상 API (사주만 사용, 관상 미사용).
-    - 멤버별 사주 계산 + RAG 검색. 전체 궁합 LLM 1회 + 1대1 궁합 LLM 1회 호출.
-    - 응답: members, overall(personality, compatibility, teamwork, maintenance, members), pairs.
+    모임 전체 궁합만 생성. (members + overall)
+    전체 궁합 페이지를 먼저 보여줄 때 사용. 1:1 궁합은 /group/pairs 별도 호출.
     """
     try:
-        print(f"📥 모임 관상(facemesh/group) 요청 수신 - 멤버 수: {len(request.groupMembers or [])}")
-        if not request.groupMembers or len(request.groupMembers) < 2:
-            raise HTTPException(
-                status_code=400,
-                detail="groupMembers는 2명 이상 필요합니다.",
-            )
-        if len(request.groupMembers) > 7:
-            raise HTTPException(
-                status_code=400,
-                detail="groupMembers는 최대 7명까지 가능합니다.",
-            )
-
-        members_result = []
-        members_data_for_llm = []
-
-        for idx, member in enumerate(request.groupMembers):
-            try:
-                birth_date = (member.birthDate or "").replace(".", "-").strip()
-                birth_time = (member.birthTime or "00:00").strip()
-                saju_data_dict = {
-                    "birthDate": birth_date,
-                    "birthTime": birth_time,
-                    "gender": member.gender,
-                    "calendarType": member.calendarType or "solar",
-                    "birthTimeUnknown": member.birthTimeUnknown,
-                }
-                birth_info = parse_birth_info(saju_data_dict)
-                saju = calculate_saju(birth_info)
-                myeongri = calculate_myeongri(saju)
-                saju_info = {
-                    "yearPillar": saju["yearPillar"],
-                    "monthPillar": saju["monthPillar"],
-                    "dayPillar": saju["dayPillar"],
-                    "hourPillar": saju["hourPillar"],
-                    "yearStem": saju["yearStem"],
-                    "yearBranch": saju["yearBranch"],
-                    "monthStem": saju["monthStem"],
-                    "monthBranch": saju["monthBranch"],
-                    "dayStem": saju["dayStem"],
-                    "dayBranch": saju["dayBranch"],
-                    "hourStem": saju["hourStem"],
-                    "hourBranch": saju["hourBranch"],
-                    "solarTerm": saju["solarTerm"],
-                    "fiveElements": myeongri["fiveElements"],
-                }
-                members_result.append({
-                    "id": member.id,
-                    "name": member.name,
-                    "sajuInfo": saju_info,
-                })
-
-                # RAG 검색 (개인 관상과 동일한 사주 기반)
-                day_stem = saju["dayStem"]
-                keywords = myeongri.get("keywords", [])
-                five_elements = myeongri.get("fiveElements", {})
-                day_element = "목"
-                if five_elements:
-                    max_el = max(five_elements.items(), key=lambda x: x[1])
-                    if max_el[1] > 0:
-                        day_element = max_el[0]
-                search_query = summarize_saju_for_search(day_stem, day_element, keywords)
-                context = ""
-                try:
-                    use_redis = should_use_redis()
-                    if use_redis:
-                        try:
-                            relevant_chunks = search_by_vector(search_query, topK=8)
-                            context = format_search_context(relevant_chunks)
-                        except Exception:
-                            chunks = get_knowledge_chunks()
-                            if chunks:
-                                relevant_chunks = search_chunks(chunks, search_query, topK=8)
-                                context = format_context(relevant_chunks)
-                    else:
-                        chunks = get_knowledge_chunks()
-                        if chunks:
-                            relevant_chunks = search_chunks(chunks, search_query, topK=8)
-                            context = format_context(relevant_chunks)
-                except Exception as e:
-                    print(f"   [멤버 {member.name}] RAG 검색 오류: {e}")
-                    context = "[참고 자료 없음]"
-
-                members_data_for_llm.append({
-                    "name": member.name,
-                    "sajuInfo": saju_info,
-                    "rag_context": context,
-                })
-            except Exception as e:
-                print(f"❌ [멤버 {member.name}] 사주/RAG 처리 오류: {e}")
-                import traceback
-                traceback.print_exc()
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"멤버 '{member.name}' 사주 처리 중 오류: {str(e)}",
-                )
-
+        print(f"📥 모임 전체 궁합(facemesh/group/overall) 요청 - 멤버 수: {len(request.groupMembers or [])}")
+        members_result, members_data_for_llm = _process_group_members(request.groupMembers or [])
         member_names = [m["name"] for m in members_result]
 
-        # 1) 전체 궁합 LLM 1회
         system_overall, user_overall = build_group_overall_prompt(members_data_for_llm)
-        overall_text = call_gms_api(
-            system_prompt=system_overall,
-            user_prompt=user_overall,
+        overall_text = await call_gms_api_async(
+            system_overall,
+            user_overall,
             model=request.model,
             timeout=request.timeout,
         )
@@ -1081,18 +1076,96 @@ async def analyze_facemesh_group(request: GroupFaceMeshRequest):
         if not overall:
             overall = _default_group_overall(member_names)
 
-        # 2) 1대1 궁합 LLM 1회
+        print(f"✅ 모임 전체 궁합 완료 - 멤버 {len(members_result)}명")
+        return {
+            "success": True,
+            "timestamp": request.timestamp or "",
+            "members": members_result,
+            "overall": overall,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ 모임 전체 궁합 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"서버 오류: {str(e)}")
+
+
+@app.post("/api/face/facemesh/group/pairs")
+async def analyze_facemesh_group_pairs(request: GroupFaceMeshRequest):
+    """
+    모임 1:1 궁합만 생성. (members + pairs)
+    전체 궁합 조회 후 1:1 탭용으로 호출.
+    """
+    try:
+        print(f"📥 모임 1:1 궁합(facemesh/group/pairs) 요청 - 멤버 수: {len(request.groupMembers or [])}")
+        members_result, members_data_for_llm = _process_group_members(request.groupMembers or [])
+        member_names = [m["name"] for m in members_result]
+
         system_pairs, user_pairs = build_group_pairs_prompt(member_names, members_data_for_llm)
-        pairs_text = call_gms_api(
-            system_prompt=system_pairs,
-            user_prompt=user_pairs,
+        pairs_text = await call_gms_api_async(
+            system_pairs,
+            user_pairs,
             model=request.model,
             timeout=request.timeout,
         )
         pairs = parse_group_pairs_response(pairs_text or "", member_names)
         pairs = _ensure_all_pairs(member_names, pairs)
 
-        print(f"✅ 모임 관상(facemesh/group) 완료 - 멤버 {len(members_result)}명, overall + pairs 생성")
+        print(f"✅ 모임 1:1 궁합 완료 - 멤버 {len(members_result)}명, 쌍 {len(pairs)}개")
+        return {
+            "success": True,
+            "timestamp": request.timestamp or "",
+            "members": members_result,
+            "pairs": pairs,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ 모임 1:1 궁합 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"서버 오류: {str(e)}")
+
+
+@app.post("/api/face/facemesh/group")
+async def analyze_facemesh_group(request: GroupFaceMeshRequest):
+    """
+    모임 관상 API (사주만 사용, 관상 미사용). 통합 호출.
+    - 멤버별 사주 계산 + RAG 검색. 전체 궁합 LLM 1회 + 1대1 궁합 LLM 1회 호출.
+    - 프론트는 전체 궁합 먼저 보여주려면 /group/overall, /group/pairs 각각 호출 권장.
+    """
+    try:
+        print(f"📥 모임 관상(facemesh/group) 통합 요청 - 멤버 수: {len(request.groupMembers or [])}")
+        members_result, members_data_for_llm = _process_group_members(request.groupMembers or [])
+        member_names = [m["name"] for m in members_result]
+
+        system_overall, user_overall = build_group_overall_prompt(members_data_for_llm)
+        system_pairs, user_pairs = build_group_pairs_prompt(member_names, members_data_for_llm)
+
+        # 권장: overall / pairs LLM 호출을 동시에 수행 (병렬)
+        overall_text, pairs_text = await asyncio.gather(
+            call_gms_api_async(
+                system_overall,
+                user_overall,
+                model=request.model,
+                timeout=request.timeout,
+            ),
+            call_gms_api_async(
+                system_pairs,
+                user_pairs,
+                model=request.model,
+                timeout=request.timeout,
+            ),
+        )
+        overall = parse_group_overall_response(overall_text or "")
+        if not overall:
+            overall = _default_group_overall(member_names)
+        pairs = parse_group_pairs_response(pairs_text or "", member_names)
+        pairs = _ensure_all_pairs(member_names, pairs)
+
+        print(f"✅ 모임 관상(facemesh/group) 통합 완료 - 멤버 {len(members_result)}명")
         return {
             "success": True,
             "timestamp": request.timestamp or "",

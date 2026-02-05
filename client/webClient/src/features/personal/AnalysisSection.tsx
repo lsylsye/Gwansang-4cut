@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images, Share2 } from "lucide-react";
+import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images, Share2, ImageOff, Loader2 } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { FaceAnalysis } from "./face/components/FaceAnalysis";
 import { StatsAnalysis, type ConstitutionPhase } from "./stats/components/StatsAnalysis";
@@ -12,9 +12,11 @@ import {
     FaceAnalysisResult,
     transformToFaceAnalysisFeatures 
 } from "@/shared/api/faceAnalysisApi";
+import { savePersonalAnalysis } from "@/shared/api/personalAnalysisApi";
 import html2canvas from "html2canvas";
 import { useHideTurtleGuide } from "@/shared/contexts/HideTurtleGuideContext";
 import { TabNavigation } from "@/shared/components/TabNavigation";
+import { GlassCard } from "@/shared/ui/core/GlassCard";
 
 // --- Types ---
 interface AnalysisSectionProps {
@@ -23,6 +25,8 @@ interface AnalysisSectionProps {
     onNavigateToPhotoBooth?: () => void;
     frameImage?: string;
     fromPhotoBooth?: boolean;
+    /** 결과 페이지 탭 변경 시 TurtleGuide 멘트용 (App에서 구독) */
+    onTabChange?: (tab: "physiognomy" | "constitution" | "future" | "ssafy-cut") => void;
     // 실제 API 결과 데이터 (옵션)
     faceAnalysisResult?: Stage1Response | null;
     totalReview?: TotalReview | null;
@@ -315,6 +319,7 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
     onNavigateToPhotoBooth, 
     frameImage, 
     fromPhotoBooth,
+    onTabChange,
     faceAnalysisResult,
     totalReview: totalReviewProp,
     isLoading = false 
@@ -329,6 +334,11 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
         setHideTurtleGuide(currentTab === "constitution");
         return () => setHideTurtleGuide(false);
     }, [currentTab, setHideTurtleGuide]);
+
+    // 탭 변경 시 상위(App)에 알려 TurtleGuide 멘트 갱신
+    useEffect(() => {
+        onTabChange?.(currentTab);
+    }, [currentTab, onTabChange]);
 
     // API 결과가 있으면 변환하여 사용
     const featuresData = React.useMemo(() => {
@@ -351,6 +361,8 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
 
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isSavingShare, setIsSavingShare] = useState(false);
+    const [savedUuid, setSavedUuid] = useState<string | null>(null);
     const [futureImage, setFutureImage] = useState<string | null>(null);
     const [savedFrameImage, setSavedFrameImage] = useState<string | null>(null);
 
@@ -358,11 +370,12 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
     const [constitutionPhase, setConstitutionPhase] = useState<ConstitutionPhase>("intro");
     const [constitutionSelectedMenuIdx, setConstitutionSelectedMenuIdx] = useState<number | null>(null);
 
-    // localStorage에서 프레임 이미지 로드
+    // localStorage에서 프레임 이미지 로드 (개인 관상용 키만 사용)
     useEffect(() => {
         const loadFrameImage = () => {
             try {
-                const saved = localStorage.getItem("photoBoothSets");
+                const saved = localStorage.getItem("photoBoothSets_personal")
+                    || localStorage.getItem("photoBoothSets");
                 if (saved) {
                     const sets = JSON.parse(saved);
                     if (sets.length > 0 && sets[0].frameImage) {
@@ -395,12 +408,72 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
         }
     }, [fromPhotoBooth, frameImage, savedFrameImage]);
 
-    // Mock QR code URL
-    const shareUrl = `${window.location.origin}/result/abc123`;
+    // 공유 URL 생성 (UUID가 있으면 실제 URL, 없으면 임시)
+    const shareUrl = savedUuid 
+        ? `${window.location.origin}/personal/${savedUuid}` 
+        : `${window.location.origin}/result/temp`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`;
 
-    const handleShare = () => {
-        setIsShareModalOpen(true);
+    const handleShare = async () => {
+        // 이미 저장된 UUID가 있으면 바로 모달 열기
+        if (savedUuid) {
+            setIsShareModalOpen(true);
+            return;
+        }
+
+        // 저장할 데이터 준비
+        setIsSavingShare(true);
+        try {
+            // 관상 분석 데이터 준비
+            const faceAnalysisData: any = {};
+            
+            // totalReview에서 faceOverview, careerFortune 가져오기
+            if (totalReviewData?.faceOverview) {
+                faceAnalysisData.faceOverview = totalReviewData.faceOverview;
+            }
+            if (totalReviewData?.careerFortune) {
+                faceAnalysisData.careerFortune = totalReviewData.careerFortune;
+            }
+            
+            // featuresData에서 각 부위별 데이터 가져오기
+            if (featuresData) {
+                if (featuresData.common) faceAnalysisData.common = featuresData.common;
+                if (featuresData.faceShape) faceAnalysisData.faceShape = featuresData.faceShape;
+                if (featuresData.forehead) faceAnalysisData.forehead = featuresData.forehead;
+                if (featuresData.eyes) faceAnalysisData.eyes = featuresData.eyes;
+                if (featuresData.nose) faceAnalysisData.nose = featuresData.nose;
+                if (featuresData.mouth) faceAnalysisData.mouth = featuresData.mouth;
+                if (featuresData.chin) faceAnalysisData.chin = featuresData.chin;
+            }
+            
+            console.log("📦 저장할 관상 분석 데이터:", faceAnalysisData);
+
+            // 체질 분석 데이터 준비 (체질 풀이에 필요한 sajuInfo와 totalReview 포함)
+            const constitutionData: any = {
+                phase: constitutionPhase,
+                selectedMenuIdx: constitutionSelectedMenuIdx,
+                // 체질 풀이에 필요한 데이터
+                sajuInfo: faceAnalysisResult?.sajuInfo || null,
+                totalReview: totalReviewData || null,
+            };
+
+            // API 호출하여 저장
+            const uuid = await savePersonalAnalysis({
+                faceAnalysis: faceAnalysisData,
+                constitutionAnalysis: constitutionData,
+            });
+
+            // UUID 저장
+            setSavedUuid(uuid);
+            
+            // 모달 열기
+            setIsShareModalOpen(true);
+        } catch (error) {
+            console.error('분석 결과 저장 실패:', error);
+            alert('분석 결과 저장에 실패했습니다. 다시 시도해주세요.');
+        } finally {
+            setIsSavingShare(false);
+        }
     };
 
     const handleDownload = async () => {
@@ -492,11 +565,22 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                                 totalReview={totalReviewData}
                             />
                         ) : (
-                            <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-500">
-                                <div className="animate-spin w-12 h-12 border-4 border-brand-green border-t-transparent rounded-full mb-4" />
-                                <p className="text-lg font-medium">분석 결과를 불러오는 중...</p>
-                                <p className="text-sm text-gray-400 mt-2">잠시만 기다려주세요</p>
-                            </div>
+                            <GlassCard className="w-full max-w-2xl mx-auto min-h-[320px] p-10 sm:p-12 border-4 border-white rounded-[32px] shadow-clay-lg bg-white/70 flex flex-col items-center justify-center text-center">
+                                <div className="w-16 h-16 rounded-full bg-brand-green/10 flex items-center justify-center mb-5">
+                                    <Loader2 className="w-8 h-8 text-brand-green animate-spin" strokeWidth={2} />
+                                </div>
+                                <p className="text-gray-800 text-lg font-semibold font-display mb-1">분석 결과를 불러오는 중...</p>
+                                <p className="text-gray-500 text-sm">잠시만 기다려주세요</p>
+                                <div className="mt-6 flex gap-1.5">
+                                    {[0, 1, 2].map((i) => (
+                                        <span
+                                            key={i}
+                                            className="w-2 h-2 rounded-full bg-brand-green/60 animate-pulse"
+                                            style={{ animationDelay: `${i * 0.2}s` }}
+                                        />
+                                    ))}
+                                </div>
+                            </GlassCard>
                         )
                     )}
 
@@ -504,7 +588,6 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                     {(currentTab === "constitution" || currentTab === "future") && (
                         <StatsAnalysis
                             tab={currentTab}
-                            images={images}
                             futureImage={futureImage}
                             onFutureImageUpload={setFutureImage}
                             constitutionPhase={constitutionPhase}
@@ -518,7 +601,7 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
 
                     {/* --- Tab 4: 싸피네컷 --- */}
                     {currentTab === "ssafy-cut" && (
-                        <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 px-4">
+                        <div className="flex flex-col items-center justify-center px-4">
                             {(frameImage || savedFrameImage) ? (
                                 <div className="w-full max-w-4xl space-y-8">
                                     <div className="flex justify-center">
@@ -555,18 +638,22 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                                     </div>
                                 </div>
                             ) : (
-                                <div className="text-center space-y-4">
-                                    <p className="text-gray-500 text-lg">아직 싸피네컷이 없습니다.</p>
+                                <GlassCard className="w-full max-w-2xl mx-auto p-10 sm:p-12 border-4 border-white rounded-[32px] shadow-clay-lg bg-white/70 flex flex-col items-center justify-center text-center">
+                                    <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                                        <ImageOff className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
+                                    </div>
+                                    <p className="text-gray-600 text-lg font-medium font-sans mb-6">촬영된 사진이 없습니다.</p>
                                     {onNavigateToPhotoBooth && (
                                         <ActionButton
-                                            variant="primary"
+                                            variant="secondary"
                                             onClick={onNavigateToPhotoBooth}
+                                            className="flex items-center gap-2"
                                         >
-                                            <Images size={20} className="mr-2" />
-                                            싸피네컷 찍으러 가기
+                                            <Images size={20} />
+                                            사진 찍기
                                         </ActionButton>
                                     )}
-                                </div>
+                                </GlassCard>
                             )}
                         </div>
                     )}
@@ -575,8 +662,21 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
 
             {/* Bottom Actions */}
             <div className="flex flex-wrap justify-center gap-4 mt-16 pb-10 no-capture">
-                <ActionButton variant="primary" onClick={handleShare} className="flex items-center gap-2">
-                    <Share2 size={20} /> 링크 공유하기
+                <ActionButton 
+                    variant="primary" 
+                    onClick={handleShare} 
+                    className="flex items-center gap-2"
+                    disabled={isSavingShare}
+                >
+                    {isSavingShare ? (
+                        <>
+                            <Loader2 size={20} className="animate-spin" /> 저장 중...
+                        </>
+                    ) : (
+                        <>
+                            <Share2 size={20} /> 링크 공유하기
+                        </>
+                    )}
                 </ActionButton>
             </div>
 

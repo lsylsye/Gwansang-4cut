@@ -57,8 +57,8 @@ export const OhengStarChart: React.FC<OhengStarChartProps> = ({
         const colors = [
             "#4CAF50", // 인덱스 0: 목 - 녹색
             "#EF5350", // 인덱스 1: 화 - 빨간색
-            "#FF9800", // 인덱스 2: 토 - 주황색
-            "#9E9E9E", // 인덱스 3: 금 - 회색
+            "#8D6E63", // 인덱스 2: 토 - 갈색(earth)
+            "#607D8B", // 인덱스 3: 금 - 슬레이트(metal)
             "#42A5F5", // 인덱스 4: 수 - 파란색
         ];
 
@@ -157,21 +157,19 @@ export const OhengStarChart: React.FC<OhengStarChartProps> = ({
         ctx.stroke();
 
         // ============================================
-        // 원형 외곽에 오행 라벨 표시
+        // 원형 외곽에 오행 라벨 표시 (한글(한자) 형식, 오행별 색상)
         // ============================================
-        // 각 오행의 라벨 (angles 배열과 동일한 순서) - 한자만 표시
-        const ohengLabels = ["木", "火", "土", "金", "水"];
+        const ohengLabels = ["목(木)", "화(火)", "토(土)", "금(金)", "수(水)"];
         
-        ctx.fillStyle = "#424242";
         ctx.font = "bold 13px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         
         angles.forEach((angle, index) => {
-            // 원형 외곽에서 약간 바깥쪽에 라벨 배치
             const labelRadius = maxRadius + 20;
             const labelX = centerX + labelRadius * Math.cos(angle);
             const labelY = centerY + labelRadius * Math.sin(angle);
+            ctx.fillStyle = colors[index];
             ctx.fillText(ohengLabels[index], labelX, labelY);
         });
 
@@ -317,11 +315,9 @@ export const OhengStarChart: React.FC<OhengStarChartProps> = ({
             animationFrameRef.current = requestAnimationFrame(animate);
         };
 
-        // 초기 그리기 후 애니메이션 시작
-        const timeoutId = setTimeout(() => {
-            drawGraph(); // 초기 그리기
-            animationFrameRef.current = requestAnimationFrame(animate);
-        }, 100);
+        // 초기 그리기 즉시 실행 후 애니메이션 시작
+        drawGraph();
+        animationFrameRef.current = requestAnimationFrame(animate);
 
         // 리사이즈 이벤트 처리
         const handleResize = () => {
@@ -331,7 +327,6 @@ export const OhengStarChart: React.FC<OhengStarChartProps> = ({
         window.addEventListener('resize', handleResize);
 
         return () => {
-            clearTimeout(timeoutId);
             window.removeEventListener('resize', handleResize);
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
