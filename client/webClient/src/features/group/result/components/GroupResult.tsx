@@ -503,7 +503,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                     </div>
                                 </section>
                                 <section className="section-flow">
-                                    <h2 className="text-base font-bold text-gray-800 font-display flow-mb-block w-full">거북 도사의 총평 및 취업운</h2>
+                                    <h2 className="text-base font-bold text-gray-800 font-display flow-mb-block w-full">거북도사의 총평</h2>
                                     <h3 className="text-sm font-bold text-gray-700 font-display flow-mb-title mt-4 w-full">1. 모임의 조화 및 균형 해석</h3>
                                     <p className="text-sm text-gray-700 leading-[1.8] font-sans flow-mb-block w-full break-keep">{dataSource.personality.harmony}</p>
                                     <h3 className="text-sm font-bold text-gray-700 font-display flow-mb-title mt-4 w-full">2. 종합 궁합 해석</h3>
@@ -706,7 +706,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                         <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-200 to-orange-100 border-2 rounded-xl flex items-center justify-center shadow-sm shrink-0">
                                             <ScrollText className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
                                         </div>
-                                        <h3 className="font-bold text-lg sm:text-xl lg:text-2xl text-gray-800 font-display">거북 도사의 총평 및 취업운</h3>
+                                        <h3 className="font-bold text-lg sm:text-xl lg:text-2xl text-gray-800 font-display">거북도사의 총평</h3>
                                     </div>
 
                                     <div className="flex-1 min-h-0 space-y-4 sm:space-y-6 overflow-y-auto custom-scrollbar pr-2 max-h-[50vh] sm:max-h-[600px]">

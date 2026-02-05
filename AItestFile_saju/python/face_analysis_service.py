@@ -213,73 +213,70 @@ _OSHAPE_MEANINGS = {
     ),
 }
 
-
-def _count_mok(r_lw: float, r_um: float, r_wj: float) -> int:
-    """목형: R_LW≥1.30, 0.90≤R_UM≤1.05, 0.95≤R_WJ≤1.05 중 2개 이상."""
-    c = 0
-    if r_lw >= 1.30:
-        c += 1
-    if 0.90 <= r_um <= 1.05:
-        c += 1
-    if 0.95 <= r_wj <= 1.05:
-        c += 1
-    return c
-
-
-def _count_hwa(r_lw: float, r_um: float, r_wj: float) -> int:
-    """화형: 상안 과다(R_UM>1.10) 포함 + 총 2개 이상."""
-    if r_um <= 1.10:
-        return 0
-    c = 1  # 상안 과다
-    if r_wj >= 1.15:
-        c += 1
-    if r_lw >= 1.25:
-        c += 1
-    return c if c >= 2 else 0
+# 오형 시그니처 기준 (연속 점수용)
+_OSHAPE_MOK_R_LW_BASE = 1.15   # 목형: R_LW 시그니처
+_OSHAPE_MOK_R_LW_SPAN = 0.35
+_OSHAPE_HWA_R_UM_BASE = 1.0    # 화형: R_UM 시그니처
+_OSHAPE_HWA_R_UM_SPAN = 0.2
+_OSHAPE_GEUM_R_WJ_BASE = 1.1   # 금형: R_WJ 시그니처
+_OSHAPE_GEUM_R_WJ_SPAN = 0.35
+_OSHAPE_SU_R_LW_CAP = 1.0      # 수형: R_LW·R_UM 낮을수록 강함
+_OSHAPE_SU_R_UM_CAP = 0.95
+_OSHAPE_SU_SPAN = 0.25
+_OSHAPE_TO_CENTER_LW = 1.05    # 토형: 균형 중심
+_OSHAPE_TO_CENTER_UM = 1.0
+_OSHAPE_TO_CENTER_WJ = 1.05
+_OSHAPE_TO_DEVIATION_SCALE = 0.5
+_OSHAPE_SECONDARY_MIN = 0.05   # 부형으로 쓸 최소 점수
 
 
-def _count_to(r_lw: float, r_um: float, r_wj: float) -> int:
-    """토형: 0.95≤R_LW≤1.10, R_WJ≤0.95, R_UM<0.90 중 2개 이상."""
-    c = 0
-    if 0.95 <= r_lw <= 1.10:
-        c += 1
-    if r_wj <= 0.95:
-        c += 1
-    if r_um < 0.90:
-        c += 1
-    return c
+def _score_oshape_mok(r_lw: float, _r_um: float, _r_wj: float) -> float:
+    """목형 강도: R_LW(세로/가로)가 클수록 높음."""
+    return max(0.0, (r_lw - _OSHAPE_MOK_R_LW_BASE) / _OSHAPE_MOK_R_LW_SPAN)
 
 
-def _count_geum(r_lw: float, r_um: float, r_wj: float) -> int:
-    """금형: 광대 과다(R_WJ≥1.20) 포함 + 총 2개 이상. J/W≤0.85 → R_WJ≥1/0.85."""
-    if r_wj < 1.20:
-        return 0
-    c = 1
-    if 1.15 <= r_lw <= 1.30:
-        c += 1
-    if r_wj >= (1.0 / 0.85):  # J/W ≤ 0.85
-        c += 1
-    return c if c >= 2 else 0
+def _score_oshape_hwa(_r_lw: float, r_um: float, _r_wj: float) -> float:
+    """화형 강도: R_UM(상안/중안)이 클수록 높음."""
+    return max(0.0, (r_um - _OSHAPE_HWA_R_UM_BASE) / _OSHAPE_HWA_R_UM_SPAN)
 
 
-def _count_su(r_lw: float, r_um: float, r_wj: float) -> int:
-    """수형: R_LW≤0.95, R_WJ≤0.90, R_UM≤0.85 중 2개 이상."""
-    c = 0
-    if r_lw <= 0.95:
-        c += 1
-    if r_wj <= 0.90:
-        c += 1
-    if r_um <= 0.85:
-        c += 1
-    return c
+def _score_oshape_geum(_r_lw: float, _r_um: float, r_wj: float) -> float:
+    """금형 강도: R_WJ(가로/턱)가 클수록 높음."""
+    return max(0.0, (r_wj - _OSHAPE_GEUM_R_WJ_BASE) / _OSHAPE_GEUM_R_WJ_SPAN)
+
+
+def _score_oshape_su(r_lw: float, r_um: float, _r_wj: float) -> float:
+    """수형 강도: R_LW·R_UM이 낮을수록(짧고 눌린 얼굴) 높음."""
+    term_lw = max(0.0, _OSHAPE_SU_R_LW_CAP - r_lw)
+    term_um = max(0.0, _OSHAPE_SU_R_UM_CAP - r_um)
+    return min(1.0, (term_lw + term_um) / _OSHAPE_SU_SPAN)
+
+
+def _score_oshape_to(r_lw: float, r_um: float, r_wj: float) -> float:
+    """토형 강도: 세 비율이 균형(중심)에 가까울수록 높음."""
+    dev = (
+        abs(r_lw - _OSHAPE_TO_CENTER_LW)
+        + abs(r_um - _OSHAPE_TO_CENTER_UM)
+        + abs(r_wj - _OSHAPE_TO_CENTER_WJ)
+    )
+    return max(0.0, 1.0 - dev / _OSHAPE_TO_DEVIATION_SCALE)
+
+
+def _compute_oshape_scores(r_lw: float, r_um: float, r_wj: float) -> List[Tuple[str, float]]:
+    """오형별 강도 점수를 계산해 (라벨, 점수) 리스트로 반환. 정렬은 호출부에서."""
+    return [
+        ("목형", _score_oshape_mok(r_lw, r_um, r_wj)),
+        ("화형", _score_oshape_hwa(r_lw, r_um, r_wj)),
+        ("토형", _score_oshape_to(r_lw, r_um, r_wj)),
+        ("금형", _score_oshape_geum(r_lw, r_um, r_wj)),
+        ("수형", _score_oshape_su(r_lw, r_um, r_wj)),
+    ]
 
 
 def calculate_face_shape(landmarks: List[Dict]) -> Dict[str, Any]:
     """
-    얼굴형(그릇) 분석 — pitch 보정 후 오형(목·화·토·금·수) 5분류.
-
-    비율만 사용: L,W,J,U,M → R_LW, R_UM, R_WJ. 각 오형은 3개 feature 중 2개 이상
-    충족 시 카운트. 최고 점수 타입 1개 또는 동점이면 "목형&화형" 형태로 반환.
+    얼굴형(그릇) 분석 — pitch 보정 후 오형(목·화·토·금·수) 연속 점수로 강도 계산,
+    점수 상위 2개를 주형(primary)·부형(secondary)으로 선택.
     """
     theta = estimate_pitch_degrees(landmarks)
     theta_cap = min(theta, PITCH_CAP_DEG)
@@ -314,30 +311,31 @@ def calculate_face_shape(landmarks: List[Dict]) -> Dict[str, Any]:
     R_UM = U / M
     R_WJ = W / J
 
-    scores = {
-        "목형": _count_mok(R_LW, R_UM, R_WJ),
-        "화형": _count_hwa(R_LW, R_UM, R_WJ),
-        "토형": _count_to(R_LW, R_UM, R_WJ),
-        "금형": _count_geum(R_LW, R_UM, R_WJ),
-        "수형": _count_su(R_LW, R_UM, R_WJ),
-    }
-    max_score = max(scores.values())
-    winners = [name for name in _OSHAPE_LABELS if scores[name] == max_score]
-    face_type = "&".join(winners)
+    # 오형별 강도 점수 계산 → 점수 내림차순 정렬 → 상위 2개가 주형·부형
+    scored = _compute_oshape_scores(R_LW, R_UM, R_WJ)
+    scored.sort(key=lambda x: -x[1])
+    primary = scored[0][0]
+    secondary_label = scored[1][0] if len(scored) > 1 else None
+    secondary_score = scored[1][1] if len(scored) > 1 else 0.0
+    secondary = (
+        secondary_label
+        if secondary_label and secondary_label != primary and secondary_score >= _OSHAPE_SECONDARY_MIN
+        else None
+    )
 
-    if len(winners) == 1:
-        core_meaning, advice = _OSHAPE_MEANINGS[winners[0]]
-    else:
+    face_type = f"{primary}·{secondary}" if secondary else primary
+    core_meaning, advice = _OSHAPE_MEANINGS[primary]
+    if secondary:
         core_meaning = (
-            "관상에서 얼굴형(그릇)은 타고난 활동 범위와 리더십·대외적 성향을 나타냅니다. "
-            f"여러 오형의 특징이 고르게 드러나는 상이오 ({face_type})."
+            f"관상에서 얼굴형(그릇)은 주로 {primary}이오. "
+            f"{secondary} 성향이 겹쳐 있어 ({face_type}), 두 오형의 특성을 고르게 갖춘 상이오."
         )
         advice = "균형 잡힌 성품을 살려 다양한 분야에서 조화를 이루며 성공할 수 있소."
 
     gauge_min, gauge_max = 0.85, 1.45
     gauge_value = clamp_gauge_value(R_LW, gauge_min, gauge_max)
 
-    return {
+    result = {
         "measures": {
             "L": f"{L:.4f}",
             "W": f"{W:.4f}",
@@ -367,6 +365,10 @@ def calculate_face_shape(landmarks: List[Dict]) -> Dict[str, Any]:
         "advice": advice,
         "_type": face_type,
     }
+    result["primary"] = primary
+    if secondary:
+        result["secondary"] = secondary
+    return result
 
 
 def _default_face_shape(reason: Optional[str] = None) -> Dict[str, Any]:
@@ -391,6 +393,8 @@ def _default_face_shape(reason: Optional[str] = None) -> Dict[str, Any]:
         },
         "coreMeaning": core_meaning,
         "advice": advice,
+        "_type": "토형",
+        "primary": "토형",
     }
 
 
