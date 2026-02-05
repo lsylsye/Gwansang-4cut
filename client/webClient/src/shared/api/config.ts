@@ -1,10 +1,64 @@
-export const API_BASE_URL = 'http://localhost:8080';
+/**
+ * API 엔드포인트 설정
+ * - 모든 베이스 URL은 .env의 VITE_* 변수에서 로드 (미설정 시 기본값 사용).
+ * - 경로 규칙:
+ *   - /api/db   : DB 관련 (랭킹 저장·조회, 결과 저장·조회)
+ *   - /api/face : 관상/사주 관련 (개인 관상, 모임 관상, 사주 분석, 오행 조합)
+ *   - /api/image: 이미지 생성 관련
+ *
+ * .env 예시:
+ *   VITE_API_BASE_URL=http://localhost:8080/api/db
+ *   VITE_AI_SERVER_URL=http://localhost:8000/api/face
+ *   VITE_IMAGE_SERVER_URL=http://localhost:8001/api/image
+ */
 
-// AI 서버 URL (FastAPI 서버 - Gemini/사주 분석 API)
-export const AI_SERVER_URL = import.meta.env.VITE_AI_SERVER_URL || 'http://localhost:8000';
+// DB 서버 (랭킹 저장·조회, 결과 저장·조회) — 기본 /api/db
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api/db";
 
-export const API_ENDPOINTS = {
-  FACEMESH_PERSONAL: `${API_BASE_URL}/test-api/facemesh/personal`,
-  FACEMESH_GROUP: `${API_BASE_URL}/test-api/facemesh/group`,
-  SAJU_ANALYZE: `${AI_SERVER_URL}/api/saju/analyze`,
+// 관상/사주 서버 (개인·모임 관상, 사주 분석, 오행 조합) — 기본 /api/face
+export const FACE_BASE_URL =
+  import.meta.env.VITE_AI_SERVER_URL ?? "http://localhost:8000/api/face";
+
+// 이미지 생성 서버 — 기본 /api/image
+export const IMAGE_BASE_URL =
+  import.meta.env.VITE_IMAGE_SERVER_URL ?? "http://localhost:8001/api/image";
+
+/** DB 관련 (베이스: /api/db) — 랭킹 저장·조회, 결과 저장·조회 */
+export const DB_ENDPOINTS = {
+  BASE: API_BASE_URL,
+  // RANKING: `${API_BASE_URL}/ranking`, RESULT: `${API_BASE_URL}/result` 등 추가
 } as const;
+
+/** 관상/사주 관련 (베이스: /api/face) — 개인·모임 관상, 사주, 오행 조합 */
+export const FACE_ENDPOINTS = {
+  BASE: FACE_BASE_URL,
+  /** 개인 관상 + 사주 통합 분석 */
+  FACEMESH_PERSONAL: `${FACE_BASE_URL}/facemesh/personal`,
+  /** 모임 관상 (단체 facemesh 전송·분석) */
+  FACEMESH_GROUP: `${FACE_BASE_URL}/facemesh/group`,
+  /** 사주 분석 (간단) */
+  SAJU_ANALYZE: `${FACE_BASE_URL}/saju/analyze`,
+  /** 모임 오행 조합 (RAG) */
+  GROUP_OHENG_COMBINATION: `${FACE_BASE_URL}/group-oheng-combination`,
+} as const;
+
+/** 이미지 생성 관련 (베이스: /api/image) */
+export const IMAGE_ENDPOINTS = {
+  BASE: IMAGE_BASE_URL,
+  UPLOAD: `${IMAGE_BASE_URL}/upload`,
+} as const;
+
+/** 통합 엔드포인트 (기존 호출부 호환용 — 코드에서는 API_ENDPOINTS 또는 도메인별 *_ENDPOINTS 사용) */
+export const API_ENDPOINTS = {
+  FACEMESH_PERSONAL: FACE_ENDPOINTS.FACEMESH_PERSONAL,
+  FACEMESH_GROUP: FACE_ENDPOINTS.FACEMESH_GROUP,
+  SAJU_ANALYZE: FACE_ENDPOINTS.SAJU_ANALYZE,
+  GROUP_OHENG_COMBINATION: FACE_ENDPOINTS.GROUP_OHENG_COMBINATION,
+  IMAGE_UPLOAD: IMAGE_ENDPOINTS.UPLOAD,
+} as const;
+
+/** .env VITE_AI_SERVER_URL과 1:1 대응 (기존명 호환) */
+export const AI_SERVER_URL = FACE_BASE_URL;
+/** .env VITE_IMAGE_SERVER_URL과 1:1 대응 (기존명 호환) */
+export const IMAGE_SERVER_URL = IMAGE_BASE_URL;

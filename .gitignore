@@ -17,11 +17,6 @@ bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
 
-### IntelliJ IDEA ###
-application.yml
-application-prod.yml
-application-test.yml
-
 .idea
 *.iws
 *.iml
@@ -45,3 +40,8 @@ out/
 
 ### env ###
 .env
+
+### package-lock.json ###
+package-lock.json
+
+260127 Tailwind UI

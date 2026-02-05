@@ -93,13 +93,13 @@ export const Modal: React.FC<ModalProps> = ({
 
 interface ModalHeaderProps {
   children: React.ReactNode;
-  description?: string;
+  description?: React.ReactNode;
 }
 
 export const ModalHeader: React.FC<ModalHeaderProps> = ({ children, description }) => (
   <div className="text-center mb-6 sm:mb-8">
     <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 font-display">{children}</h3>
-    {description && <p className="text-gray-500 font-sans text-sm">{description}</p>}
+    {description != null && <p className="text-gray-500 text-sm">{description}</p>}
   </div>
 );
 

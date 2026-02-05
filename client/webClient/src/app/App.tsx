@@ -11,6 +11,8 @@ import { GroupAnalysisSection } from "@/features/group/GroupAnalysisSection";
 import { RankingSection } from "@/features/ranking/components/RankingSection";
 import { PhotoBoothSection } from "@/features/photo/components/PhotoBoothSection";
 import { TurtleGuide } from "@/shared/components/TurtleGuide";
+import { HideTurtleGuideProvider, useHideTurtleGuide } from "@/shared/contexts/HideTurtleGuideContext";
+import { Toast } from "@/shared/components/Toast";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { AnimatePresence, motion } from "motion/react";
 import { Trophy } from "lucide-react";
@@ -29,7 +31,13 @@ import {
   getPhotoBoothPath,
   isPhotoBoothPath,
   isAnalyzingPath,
+  isResultPath,
 } from "@/shared/config/routes";
+import { 
+  analyzeFace, 
+  FaceAnalysisApiResponse,
+  TotalReview 
+} from "@/shared/api/faceAnalysisApi";
 
 export default function App() {
   const navigate = useNavigate();
@@ -47,7 +55,27 @@ export default function App() {
   const [analysisDone, setAnalysisDone] = useState(false);
   const [frameImageState, setFrameImageState] = useState<string | null>(null);
   const [fromPhotoBoothState, setFromPhotoBoothState] = useState(false);
+  
+  // API 응답 상태 관리
+  const [faceAnalysisResult, setFaceAnalysisResult] = useState<FaceAnalysisApiResponse | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showAnalysisCompleteToast, setShowAnalysisCompleteToast] = useState(false);
+  const [isPhotoBoothCapturing, setIsPhotoBoothCapturing] = useState(false);
+  // faceMeshMetadata를 App에서 관리
+  const [faceMeshMetadata, setFaceMeshMetadata] = useState<any>(null);
+  /** 모임 궁합 API 응답 (members + groupCombination). API 연결 후 결과 화면에서 렌더링용 */
+  const [groupAnalysisResult, setGroupAnalysisResult] = useState<{
+    success: boolean;
+    members: Array<{ id?: number; name: string; sajuInfo?: unknown }>;
+    groupCombination?: string;
+  } | null>(null);
   const pathnameRef = useRef(location.pathname);
+
+  // URL 변경 시 스크롤 맨 위로
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   // location.state 변경 감지
   useEffect(() => {
@@ -67,7 +95,7 @@ export default function App() {
   useEffect(() => {
     if (location.pathname === ROUTES.PERSONAL_UPLOAD) {
       setMode("personal");
-    } else if (location.pathname === ROUTES.GROUP_UPLOAD) {
+    } else if (location.pathname === ROUTES.GROUP_UPLOAD || location.pathname === ROUTES.GROUP_UPLOAD_MEMBERS) {
       setMode("group");
     }
   }, [location.pathname]);
@@ -77,61 +105,96 @@ export default function App() {
     navigate(getUploadPath(selectedMode));
   };
 
-  const handleAnalyze = (
+  const handleAnalyze = async (
     capturedImages: string[],
     selectedFeatures: string[],
     sajuData: SajuData,
     members?: GroupMember[],
+    metadata?: any,
   ) => {
     setAnalysisDone(false);
+    setAnalysisError(null);
+    setFaceAnalysisResult(null);
     setImages(capturedImages);
     setFeatures(selectedFeatures);
     setSaju(sajuData);
+    // members 있으면 그룹 플로우 (직접 /group/upload 접근 시 mode 지연 대비)
+    const isGroupFlow = Boolean(members && members.length > 0);
+    if (isGroupFlow && metadata?.success && Array.isArray(metadata?.members)) {
+      setGroupAnalysisResult(metadata);
+    } else if (!isGroupFlow && metadata) {
+      setFaceMeshMetadata(metadata);
+    } else if (isGroupFlow) {
+      setGroupAnalysisResult(null);
+    }
     if (members) {
       setGroupMembers(members);
       setUserTeamName("기운찬 도사님들의 모임");
     }
 
-    // 개인 모드: /analyzing으로 이동 후 ANALYSIS_LOADING_MS 후 /result로 이동
-    if (mode === "personal") {
-      navigate(ROUTES.PERSONAL_ANALYZING);
-      setTimeout(() => {
-        console.log("⏰ 분석 완료 - result로 이동합니다", { 
-          currentPath: pathnameRef.current,
-          analysisDone: analysisDone 
-        });
-        setAnalysisDone(true);
-        // 싸피네컷 다 안 찍었는데 분석 끝난 경우: /photo-booth에 있으면 /result로 보내지 않음
-        const currentPath = pathnameRef.current;
-        const isPhotoBooth = isPhotoBoothPath(currentPath);
-        if (!isPhotoBooth) {
-          console.log("✅ /personal/result로 이동");
-          navigate(ROUTES.PERSONAL_RESULT);
-        } else {
-          console.log("⚠️ photo-booth에 있어서 자동 이동하지 않음:", currentPath);
-        }
-      }, ANALYSIS_LOADING_MS);
+    // 그룹 모드: [개발용] 바로 /group/result 이동 — 이 분기 없으면 모임 궁합 분석하기 결과창 안 나옴
+    if (isGroupFlow && DEV_SKIP_ANALYZING_FOR_GROUP) {
+      setAnalysisDone(true);
+      setTimeout(() => navigate(ROUTES.GROUP_RESULT), 0);
+      return;
     }
 
-    // ----- [개발용] 단체 모드: /analyzing 생략, 바로 /result. DEV_SKIP_ANALYZING_FOR_GROUP=false 시 아래 원래 흐름 사용 -----
-    if (mode === "group" && DEV_SKIP_ANALYZING_FOR_GROUP) {
-      setTimeout(() => {
-        setAnalysisDone(true);
-        // 싸피네컷 다 안 찍었는데 분석 끝난 경우: /photo-booth에 있으면 /result로 보내지 않음
-        if (isAnalyzingPath(pathnameRef.current)) {
-          navigate(ROUTES.GROUP_RESULT);
+    // 개인 모드: /analyzing 이동 후 API 호출
+    if (!isGroupFlow) {
+      navigate(ROUTES.PERSONAL_ANALYZING);
+      setIsAnalyzing(true);
+      try {
+        if (metadata?.faces && metadata.faces.length > 0) {
+          const requestData = {
+            timestamp: new Date().toISOString(),
+            faces: metadata.faces,
+            sajuData: {
+              gender: sajuData.gender as "male" | "female",
+              calendarType: sajuData.calendarType as "solar" | "lunar",
+              birthDate: sajuData.birthDate,
+              birthTime: sajuData.birthTime,
+              birthTimeUnknown: sajuData.birthTimeUnknown,
+            },
+          };
+          const result = await analyzeFace(requestData);
+          if (result.error) {
+            setAnalysisError(result.error);
+            setIsAnalyzing(false);
+            return;
+          }
+          setFaceAnalysisResult(result);
+          setAnalysisDone(true);
+          setIsAnalyzing(false);
+          // 결과 페이지가 아닐 때만 토스트 표시
+          if (!isResultPath(pathnameRef.current)) {
+            setShowAnalysisCompleteToast(true);
+          }
+          if (!isPhotoBoothPath(pathnameRef.current)) {
+            navigate(ROUTES.PERSONAL_RESULT);
+          }
+        } else {
+          setAnalysisError("얼굴 분석 데이터가 없습니다. 다시 촬영해주세요.");
+          setIsAnalyzing(false);
         }
-      }, ANALYSIS_LOADING_MS);
-    } else if (mode === "group") {
-      // 그룹 모드 (DEV_SKIP_ANALYZING_FOR_GROUP=false): /analyzing으로 이동 후 ANALYSIS_LOADING_MS 후 /result로 이동
-      navigate(ROUTES.GROUP_ANALYZING);
-      setTimeout(() => {
-        setAnalysisDone(true);
-        if (isAnalyzingPath(pathnameRef.current)) {
-          navigate(ROUTES.GROUP_RESULT);
-        }
-      }, ANALYSIS_LOADING_MS);
+      } catch (error) {
+        setAnalysisError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
+        setIsAnalyzing(false);
+      }
+      return;
     }
+
+    // 그룹 모드 (DEV_SKIP=false): /analyzing → 타이머 후 /result
+    navigate(ROUTES.GROUP_ANALYZING);
+    setTimeout(() => {
+      setAnalysisDone(true);
+      // 결과 페이지가 아닐 때만 토스트 표시
+      if (!isResultPath(pathnameRef.current)) {
+        setShowAnalysisCompleteToast(true);
+      }
+      if (isAnalyzingPath(pathnameRef.current)) {
+        navigate(ROUTES.GROUP_RESULT);
+      }
+    }, ANALYSIS_LOADING_MS);
   };
 
   const handleViewRanking = (score?: number, name?: string) => {
@@ -146,6 +209,7 @@ export default function App() {
     setFeatures([]);
     setSaju(null);
     setGroupMembers([]);
+    setGroupAnalysisResult(null);
     setAnalysisDone(false);
     navigate(ROUTES.HOME);
   };
@@ -158,7 +222,9 @@ export default function App() {
       case ROUTES.PERSONAL_UPLOAD:
         return "자네의 얼굴에 삼라만상이 담겨 있구먼. \n내 신통한 거울에 얼굴을 비추어 보게나. \n숨겨진 운명을 내가 낱낱이 읽어보리다.";
       case ROUTES.GROUP_UPLOAD:
-        return "허허, 모임 관상을 보러 왔구먼! \n사진을 주거나, 직접 한 자리에 모여 보게. \n자네들 사이의 기운을 내가 한 번 짚어보리다.";
+        return "허허, 모임 궁합을 보러 왔구먼! \n사진을 주거나, 직접 한 자리에 모여 보게. \n자네들 사이의 기운을 내가 한 번 짚어보리다.";
+      case ROUTES.GROUP_UPLOAD_MEMBERS:
+        return "이제 각 멤버의 이름과 생년월일을 입력해 주게. \n다 적었으면 모임 궁합 분석하기를 눌러 보게나.";
       case ROUTES.PERSONAL_ANALYZING:
       case ROUTES.GROUP_ANALYZING:
         return "음... 가만있어 보자... \n천기를 스르지 않고 기운을 읽는 중이니, \n잠시만 정적을 지켜주시게나.";
@@ -177,10 +243,12 @@ export default function App() {
   };
 
   const isPhotoBooth = isPhotoBoothPath(pathname);
+  const shouldHideHeader = isPhotoBooth && isPhotoBoothCapturing;
 
   return (
     <Layout>
-      {!isPhotoBooth && (
+      <HideTurtleGuideProvider>
+      {!shouldHideHeader && (
         <header className="w-full h-16 px-6 flex justify-between items-center bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40">
         <div
           className="flex items-center gap-0.5 cursor-pointer"
@@ -228,7 +296,7 @@ export default function App() {
               </motion.div>
             )}
 
-            {(pathname === ROUTES.PERSONAL_UPLOAD || pathname === ROUTES.GROUP_UPLOAD) && (
+            {(pathname === ROUTES.PERSONAL_UPLOAD || pathname === ROUTES.GROUP_UPLOAD || pathname === ROUTES.GROUP_UPLOAD_MEMBERS) && (
               <motion.div
                 key="upload"
                 initial={{ opacity: 0, y: 20 }}
@@ -239,7 +307,10 @@ export default function App() {
               >
                 <UploadSection
                   mode={mode}
+                  pathname={pathname}
                   onAnalyze={handleAnalyze}
+                  onNavigateToMembers={() => navigate(ROUTES.GROUP_UPLOAD_MEMBERS)}
+                  onNavigateToUpload={() => navigate(ROUTES.GROUP_UPLOAD)}
                 />
               </motion.div>
             )}
@@ -256,20 +327,35 @@ export default function App() {
                   onNavigateToPhotoBooth={() =>
                     navigate(getPhotoBoothPath(mode), { state: { from: "analyzing" } })
                   }
+                  isAnalyzing={isAnalyzing}
+                  analysisError={analysisError}
+                  analysisComplete={analysisDone}
+                  onRetry={() => {
+                    // 재시도: upload 페이지로 돌아가기
+                    setAnalysisError(null);
+                    navigate(getUploadPath(mode));
+                  }}
                 />
               </motion.div>
             )}
 
-            {pathname === ROUTES.PERSONAL_RESULT && (
+            {/* 모임 궁합 분석하기 결과창: PERSONAL_RESULT뿐 아니라 GROUP_RESULT도 포함해야 /group/result에서 화면이 렌더됨 (git pull 후 조건이 PERSONAL_RESULT만 있으면 결과창 안 나옴) */}
+            {(pathname === ROUTES.PERSONAL_RESULT || pathname === ROUTES.GROUP_RESULT) && (
               <motion.div
-                key="personal-result"
+                key={pathname === ROUTES.GROUP_RESULT ? "group-result" : "personal-result"}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4 }}
                 className="w-full h-full"
               >
-                {mode === "personal" ? (
+                {pathname === ROUTES.GROUP_RESULT ? (
+                  <GroupAnalysisSection
+                    groupMembers={groupMembers}
+                    groupAnalysisResult={groupAnalysisResult}
+                    onViewRanking={handleViewRanking}
+                  />
+                ) : (
                   <AnalysisSection
                     images={images}
                     onRestart={handleRestart}
@@ -278,13 +364,9 @@ export default function App() {
                     }
                     frameImage={frameImageState || location.state?.frameImage}
                     fromPhotoBooth={fromPhotoBoothState || location.state?.fromPhotoBooth}
-                  />
-                ) : (
-                  <GroupAnalysisSection
-                    groupMembers={groupMembers}
-                    groupImage={images[0]}
-                    onRestart={handleRestart}
-                    onViewRanking={handleViewRanking}
+                    faceAnalysisResult={faceAnalysisResult?.stage1}
+                    totalReview={faceAnalysisResult?.totalReview}
+                    isLoading={isAnalyzing}
                   />
                 )}
               </motion.div>
@@ -320,6 +402,9 @@ export default function App() {
               >
                 <PhotoBoothSection
                   mode={mode}
+                  analysisDone={analysisDone}
+                  onNavigateToResult={() => navigate(getResultPath(mode))}
+                  onStepChange={(isCapturing) => setIsPhotoBoothCapturing(isCapturing)}
                   onBack={() => {
                     // analyzing이 완료된 상태면 결과창으로, 진행 중이면 analyzing으로
                     if (analysisDone) {
@@ -363,13 +448,53 @@ export default function App() {
         </div>
       </main>
 
-      {/* Global Floating Turtle Guide */}
-      {!isPhotoBooth && (
-        <TurtleGuide
-          message={getGuideMessage()}
-          isThinking={isAnalyzingPath(pathname)}
-        />
-      )}
+      {/* Global Floating Turtle Guide (체질 분석 탭에서는 숨김) */}
+      <TurtleGuideGate
+        pathname={pathname}
+        getGuideMessage={getGuideMessage}
+        isPhotoBooth={isPhotoBooth}
+      />
+
+      {/* 관상 분석 완료 Toast - 결과 페이지가 아닐 때만 표시 */}
+      <Toast
+        message="관상 분석이 완료되었습니다. 결과를 확인하시겠어요?"
+        isOpen={showAnalysisCompleteToast && !isResultPath(pathname)}
+        onClose={() => setShowAnalysisCompleteToast(false)}
+        onAction={() => {
+          if (analysisDone) {
+            const currentPath = pathnameRef.current;
+            if (isPhotoBoothPath(currentPath)) {
+              navigate(getResultPath(mode));
+            } else {
+              navigate(getResultPath(mode));
+            }
+            setShowAnalysisCompleteToast(false);
+          }
+        }}
+        type="success"
+        variant="morphism"
+        duration={10000}
+      />
+      </HideTurtleGuideProvider>
     </Layout>
+  );
+}
+
+function TurtleGuideGate({
+  pathname,
+  getGuideMessage,
+  isPhotoBooth,
+}: {
+  pathname: string;
+  getGuideMessage: () => string;
+  isPhotoBooth: boolean;
+}) {
+  const { hideTurtleGuide } = useHideTurtleGuide();
+  if (isPhotoBooth || hideTurtleGuide) return null;
+  return (
+    <TurtleGuide
+      message={getGuideMessage()}
+      isThinking={isAnalyzingPath(pathname)}
+    />
   );
 }

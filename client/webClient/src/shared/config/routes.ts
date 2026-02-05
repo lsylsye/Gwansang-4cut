@@ -4,6 +4,8 @@ export const ROUTES = {
   HOME: "/",
   PERSONAL_UPLOAD: "/personal/upload",
   GROUP_UPLOAD: "/group/upload",
+  /** 모임 인적사항 등록 단계 (이름·사진·생년월일) — /group/upload에서 사진 등록 후 이동 */
+  GROUP_UPLOAD_MEMBERS: "/group/upload/members",
   PERSONAL_ANALYZING: "/personal/analyzing",
   GROUP_ANALYZING: "/group/analyzing",
   PERSONAL_RESULT: "/personal/result",
@@ -32,3 +34,6 @@ export const isPhotoBoothPath = (pathname: string) =>
 
 export const isAnalyzingPath = (pathname: string) =>
   pathname === ROUTES.PERSONAL_ANALYZING || pathname === ROUTES.GROUP_ANALYZING;
+
+export const isResultPath = (pathname: string) =>
+  pathname === ROUTES.PERSONAL_RESULT || pathname === ROUTES.GROUP_RESULT;

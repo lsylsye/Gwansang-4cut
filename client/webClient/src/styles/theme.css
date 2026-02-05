@@ -243,6 +243,17 @@
       animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
     }
   }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 @layer base {
@@ -310,4 +321,54 @@
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }
+}
+
+/* 드래그 가능한 멤버 카드 / 그래프 노드 — 파란 선택 영역 제거 */
+.member-card,
+[data-draggable-node] {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.member-card {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+[data-draggable-node] {
+  cursor: grab;
+}
+[data-draggable-node]:active {
+  cursor: grabbing;
+}
+
+/* 팀 오행 요약 카드 — 가독성 */
+.summary-card {
+  padding: 12px 16px;
+  gap: 8px;
+}
+.summary-card .summary-item {
+  font-size: 15px;
+  line-height: 1.6;
+  padding: 6px 0;
+}
+.summary-card h3,
+.summary-card .text-lg.font-semibold {
+  font-size: 18px;
+  font-weight: 600;
+}
+.element-icon {
+  font-size: 18px;
+}
+
+/* 궁합 결과 팝업 — 선 위 미니 뱃지 + 하단 바 (얼굴 안 가림) */
+.match-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 12px;
+}
+.match-result-popup {
+  font-size: 14px;
+  padding: 8px 12px;
+  max-width: 100%;
 }

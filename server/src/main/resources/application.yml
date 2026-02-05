@@ -1,0 +1,22 @@
+spring:
+
+  # 1. 데이터베이스 설정
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${MYSQL_DATABASE}?createDatabaseIfNotExist=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # 2. JPA 설정
+  jpa:
+    hibernate:
+      ddl-auto: update # 일단 update
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
+
+# 3. CORS 설정
+app:
+  cors:
+    allowedOrigins: http://localhost:5173, http://localhost:3000, http://localhost:8080, https://i14e208.p.ssafy.io

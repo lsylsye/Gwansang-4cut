@@ -25,7 +25,7 @@ function getEulerAngles(matrix: any) {
 }
 
 interface FaceMeshWebcamProps {
-  onCapture?: (image: string) => void;
+  onCapture?: (image: string, metadata?: any) => void;
   onClose?: () => void;
   onFaceCountChange?: (count: number) => void;
   maxFaces?: number;
@@ -245,7 +245,6 @@ export const FaceMeshWebcam = ({
           const needToSend = allReady && currentFrameTrackers.some(t => !t.isSent);
 
           if (needToSend) {
-            
             // ✅ 1. 현재 로컬 시간(한국 시간 등)을 ISO 포맷으로 변환
             const now = new Date();
             const offset = now.getTimezoneOffset() * 60000; // 타임존 오프셋 계산 (분 -> 밀리초)

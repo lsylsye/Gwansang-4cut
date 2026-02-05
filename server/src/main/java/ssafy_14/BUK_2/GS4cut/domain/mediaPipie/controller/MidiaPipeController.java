@@ -13,7 +13,7 @@ import ssafy_14.BUK_2.GS4cut.domain.mediaPipie.repository.MediaPipeRepository;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api")
+@RequestMapping("/api/db")
 public class MidiaPipeController {
 
     private final MediaPipeRepository mediaPipeRepository;

@@ -6,6 +6,7 @@ Jupyter Lab GPU 서버에서 사용하기 위한 Python 버전
 import os
 import json
 import requests
+import aiohttp
 from typing import Dict, Any, Optional
 
 
@@ -204,3 +205,90 @@ def generate_text(
         str: 생성된 텍스트
     """
     return call_gms_api(system_prompt, user_prompt, model, timeout)
+
+
+async def call_gms_api_async(
+    system_prompt: str,
+    user_prompt: str,
+    model: str = "gpt-5-mini",
+    timeout: int = 300
+) -> str:
+    """
+    GMS API 비동기 호출 (병렬 처리용)
+    
+    Args:
+        system_prompt: 시스템 프롬프트
+        user_prompt: 사용자 프롬프트
+        model: 사용할 모델명 (기본값: "gpt-5-mini")
+        timeout: 요청 타임아웃 (초, 기본값: 300)
+        
+    Returns:
+        str: 생성된 텍스트
+        
+    Raises:
+        ValueError: API 키가 없거나 응답 파싱 실패
+        aiohttp.ClientError: 네트워크 오류
+    """
+    config = get_config()
+    api_key = config["apiKey"]
+    base_url = config["baseUrl"]
+    
+    request_body = {
+        "model": model,
+        "input": [
+            {
+                "role": "system",
+                "content": [{"type": "input_text", "text": system_prompt}],
+            },
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": user_prompt}],
+            },
+        ],
+    }
+    
+    print(f"\n🔗 [ASYNC] API 호출: {base_url}")
+    print(f"📤 [ASYNC] 모델: {model}")
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                base_url,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=request_body,
+                timeout=aiohttp.ClientTimeout(total=timeout)
+            ) as response:
+                print(f"📥 [ASYNC] HTTP 상태 코드: {response.status}")
+                
+                if response.status >= 400:
+                    error_text = await response.text()
+                    raise ValueError(f"❌ HTTP 에러 {response.status}: {error_text[:500]}")
+                
+                data = await response.json()
+                
+                print(f"📥 [ASYNC] API 응답 키: {data.keys() if data else 'None'}")
+                
+                # error 키가 있고 값이 None이 아닌 경우에만 에러 처리
+                if "error" in data and data["error"] is not None:
+                    error_info = data['error']
+                    if isinstance(error_info, dict):
+                        raise ValueError(f"❌ API 에러: {error_info.get('message', str(error_info))}")
+                    else:
+                        raise ValueError(f"❌ API 에러: {str(error_info)}")
+                
+                return extract_output_text(data)
+                
+    except aiohttp.ClientTimeout:
+        raise ValueError(
+            f"❌ 요청 타임아웃: {timeout}초 내에 응답을 받지 못했습니다.\n"
+            f"   GPU 서버의 처리 시간이 오래 걸릴 수 있습니다."
+        )
+    except aiohttp.ClientError as e:
+        raise ValueError(
+            f"❌ 네트워크 오류: API 서버에 연결할 수 없습니다.\n"
+            f"   URL: {base_url}\n"
+            f"   오류: {str(e)}"
+        )

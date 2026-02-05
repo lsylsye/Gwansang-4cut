@@ -165,7 +165,7 @@ export const LandingSection: React.FC<LandingSectionProps> = ({ onStart }) => {
                 {/* Option 2: Group Face */}
                 <ModeSelectionCard
                     mode="group"
-                    title="모임 관상"
+                    title="모임 궁합"
                     description={<>친구들과 함께 촬영하여<br />우리 모임의 기운을 확인해보세요.</>}
                     icon={Users}
                     badgeText="HOT"

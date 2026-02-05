@@ -8,4 +8,6 @@
   Run `npm i` to install the dependencies.
 
   Run `npm run dev` to start the development server.
+
+  **git pull 후**: `npm run check-after-pull` 실행을 권장합니다. 실패 시 `TROUBLESHOOTING.md`를 참고하세요.
   

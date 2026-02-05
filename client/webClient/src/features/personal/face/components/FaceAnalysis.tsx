@@ -6,20 +6,24 @@ import { Sparkles, X } from "lucide-react";
 // --- Types ---
 interface FaceAnalysisProps {
     image: string;
-    scores: any[];
+    scores?: any[];  // 선택적으로 변경
     features: any;
     totalReview?: TotalReview; // 거북 도사의 총평 데이터 (백엔드에서 받아옴)
 }
 
-// 거북 도사의 총평: 3가지 구성
-// 1. 부위 간의 조화 및 균형 해석
-// 2. 종합 운세 해석
-// 3. 운을 좋게 만드는 방법 제안
+// 거북 도사의 총평: 2가지 구성
+// 1. 전체 관상 분석 종합 의견
+// 2. 취업운
 interface TotalReview {
-    harmony?: string; // 부위 간의 조화 및 균형 해석
-    comprehensive?: string; // 종합 운세 해석
-    improvement?: string; // 운을 좋게 만드는 방법 제안
+    faceOverview?: string; // 전체 관상 분석 종합 의견
+    careerFortune?: string; // 취업운 (사주 포함)
 }
+
+// 백엔드 응답이 없을 때 표시할 기본 예시 데이터
+const DEFAULT_TOTAL_REVIEW: TotalReview = {
+    faceOverview: "이마가 넓고 눈이 균형 잡혀 있으며, 코와 입의 비율이 조화롭습니다. 전체적으로 상중하 삼정(三停)이 고르게 발달해 있어, 초년·중년·말년 운이 안정적으로 흘러갈 가능성이 높습니다. 특히 이마와 턱이 서로 받쳐주는 구조로, 생각한 것을 끝까지 실행하는 힘이 돋보입니다. 당신은 '부드러운 카리스마'를 가진 얼굴입니다. 첫인상은 다소 차분해 보일 수 있으나, 시간이 지날수록 신뢰를 얻는 타입입니다.",
+    careerFortune: "올해는 취업운이 상승하는 시기입니다. 관상에서 보이는 안정적인 이마와 균형 잡힌 눈은 면접에서 신뢰감을 주는 인상입니다. 사주의 오행 분포를 보면, 기획·분석·관리 분야에서 두각을 나타낼 수 있으며, 상반기보다 하반기에 더 좋은 기회가 올 가능성이 높습니다. 면접 시에는 차분하고 논리적인 답변을 강조하면 좋겠습니다."
+};
 
 // highlightIndex: 0=얼굴형(공통·얼굴형), 1=이마, 2=눈, 3=코, 4=입, 5=턱
 const HIGHLIGHT_ORDER = 6;
@@ -47,14 +51,15 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
         chin: "턱/하관",
     };
 
-    /** 범위 게이지: value가 어느 구간(segment)에 해당하는지 시각화. 게이지 안에는 구간 기준값(segment min~max)만 표시 */
+    /** 범위 게이지: value가 어느 구간(segment)에 해당하는지 시각화. 게이지 바 아래에 구간별 기준값만 표시 */
     const renderRangeGauge = (
         g: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] },
         customLabel?: string
     ) => {
         const { value, rangeMin, rangeMax, unit = "", segments } = g;
         const span = rangeMax - rangeMin || 1;
-        const pct = Math.max(0, Math.min(100, ((value - rangeMin) / span) * 100));
+        const pctRaw = Math.max(0, Math.min(100, ((value - rangeMin) / span) * 100));
+        const pct = 6 + (94 - 6) * (pctRaw / 100);
 
         type Seg = { label: string; segMin: number; segMax: number };
         const resolved: Seg[] = segments.map((s, i) => {
@@ -66,7 +71,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
         const formatVal = (v: number) => (Math.abs(v) < 0.01 && v !== 0 ? v.toFixed(4) : v % 1 === 0 ? String(v) : v.toFixed(2));
 
         return (
-            <div className="mb-5 p-4 rounded-xl border border-gray-200 bg-gray-50/50">
+            <div className="mb-5 p-4 rounded-xl border border-gray-200 bg-gray-50/50 overflow-visible">
                 <p className="text-gray-700 font-semibold mb-2 text-[19px]">{customLabel ?? "범위 게이지"}</p>
                 <div className="flex rounded-lg overflow-hidden border border-gray-200 text-[17px] bg-white">
                     {resolved.map((r, i) => (
@@ -82,8 +87,8 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         </div>
                     ))}
                 </div>
-                <div className="relative h-2.5 mt-2 bg-gray-200 rounded-full">
-                    <div className="absolute inset-y-0 left-0 flex" style={{ width: "100%" }}>
+                <div className="relative h-3 mt-2 bg-gray-200 rounded-full overflow-visible">
+                    <div className="absolute inset-y-0 left-0 flex rounded-full overflow-hidden" style={{ width: "100%" }}>
                         {resolved.map((r, i) => (
                             <div
                                 key={i}
@@ -92,44 +97,80 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                             />
                         ))}
                     </div>
-                    <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-brand-green border-2 border-white shadow" style={{ left: `max(0%,min(100%,${pct}%))`, marginLeft: "-8px" }} />
+                    <div className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-brand-green border-2 border-white shadow" style={{ left: `${pct}%`, marginLeft: "-10px" }} />
                 </div>
-                <p className="text-[17px] text-gray-600 mt-1.5 font-medium">측정값: {formatVal(value)}{unit}</p>
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                    <p className="text-gray-600 text-[15px] font-medium mb-2">기준값 (구간)</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[15px]">
-                        {resolved.map((r, i) => (
-                            <div key={i} className="py-2 px-3 rounded-lg bg-white border border-gray-100">
-                                <span className="font-medium text-gray-800">{r.label}:</span>{" "}
-                                <span className="text-gray-600">{formatVal(r.segMin)}{unit} ~ {formatVal(r.segMax)}{unit}</span>
-                            </div>
-                        ))}
-                    </div>
+                <div className="mt-2 flex min-w-0 text-[15px] text-gray-600">
+                    {resolved.map((r, i) => (
+                        <div
+                            key={i}
+                            className="flex-shrink-0 text-center min-w-0 px-0.5"
+                            style={{ flex: Math.max(0.15, (r.segMax - r.segMin) / span) }}
+                        >
+                            {formatVal(r.segMin)}{unit} ~ {formatVal(r.segMax)}{unit}
+                        </div>
+                    ))}
                 </div>
             </div>
         );
     };
 
-    /** 한 블록(forehead, eyes, nose, mouth, chin) 렌더 — 측정 데이터 + 게이지(기준값) + 핵심의미 */
+    /** 파트별 블록: 파트명 + (라벨: 측정값) + 핵심의미 + 조언. measureEntries로 라벨과 키 지정 */
+    type PartSpec = { partName: string; measureKeys?: string[]; measureLabels?: Record<string, string> };
+    const renderPartBlocks = (
+        f: {
+            measures?: Record<string, string>;
+            coreMeaningParts?: string[];
+            adviceParts?: string[];
+        },
+        partSpecs: PartSpec[]
+    ) => {
+        if (!f?.coreMeaningParts?.length) return null;
+        const parts = f.coreMeaningParts;
+        const adviceParts = f.adviceParts ?? [];
+        const measures = f.measures ?? {};
+        return (
+            <div className="space-y-5">
+                {partSpecs.map((spec, i) => {
+                    const core = parts[i];
+                    const advice = adviceParts[i];
+                    if (!core && !advice) return null;
+                    const entries = (spec.measureKeys ?? []).map((k) => {
+                        const v = (measures as Record<string, string>)[k];
+                        return v != null && v !== "" ? { label: (spec.measureLabels ?? {})[k] ?? k, value: v } : null;
+                    }).filter(Boolean) as { label: string; value: string }[];
+                    return (
+                        <div key={i} className="p-4 rounded-xl border border-gray-100 bg-white space-y-2">
+                            <h5 className="font-semibold text-gray-800 text-lg">{spec.partName}</h5>
+                            {entries.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-2">
+                                    {entries.map((e, j) => (
+                                        <span key={j} className="px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 text-[15px]">
+                                            <span className="text-gray-500">{e.label}:</span> {e.value}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                            {core && <p className="text-gray-700 text-base leading-relaxed">{core}</p>}
+                            {advice && (
+                                <p className="text-gray-600 text-[15px] leading-relaxed border-l-2 border-brand-green/30 pl-3">
+                                    💡 {advice}
+                                </p>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    /** 한 블록(forehead, eyes, nose, mouth, chin) 렌더 — 게이지 + 핵심의미 (측정 데이터 섹션 없음) */
     const renderBlock = (
         f: { title?: string; values?: string; criteria?: string; gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] }; interpretation?: string } | undefined
     ) => {
         if (!f) return null;
-        const hasMeasureData = (f.values != null && f.values !== "") || (f.criteria != null && f.criteria !== "");
         return (
             <div className="space-y-5 text-[20px] leading-relaxed">
                 <h4 className="font-bold text-gray-800 font-display text-2xl border-b-2 border-brand-green/20 pb-2">{f.title}</h4>
-                {hasMeasureData && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 측정 데이터</h5>
-                        <p className="text-gray-700">
-                            {f.values != null && f.values !== "" && <>{f.values}</>}
-                            {f.criteria != null && f.criteria !== "" && (
-                                <>{f.values != null && f.values !== "" ? " 적용 기준: " : ""}{f.criteria}{f.values != null && f.values !== "" ? "." : ""}</>
-                            )}
-                        </p>
-                    </section>
-                )}
                 {f.gauge && renderRangeGauge(f.gauge, "범위 게이지")}
                 {f.interpretation != null && f.interpretation !== "" && (
                     <section>
@@ -141,219 +182,228 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
         );
     };
 
-    /** 이마 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
+    /** 이마 전용: 게이지 먼저, 그 아래 파트 블록(세로 비중·이마 폭·좌우 대칭). 측정 키는 백엔드 반환값(U1~U3, R_F1~R_F3, F_width, R_FW, Asym, dominant) 및 API 호환(heightRatio 등) 모두 수용 */
+    const foreheadPartSpecs: PartSpec[] = [
+        { partName: "세로 비중", measureKeys: ["R_F1", "R_F2", "R_F3", "dominant", "heightRatio"], measureLabels: { R_F1: "상부 비율", R_F2: "중앙 비율", R_F3: "하부 비율", dominant: "우세 구간", heightRatio: "얼굴 대비 이마 높이 비율" } },
+        { partName: "이마 폭", measureKeys: ["F_width", "R_FW", "width", "widthRatio"], measureLabels: { F_width: "이마 폭", R_FW: "얼굴 대비 이마 폭 비율", width: "이마 폭", widthRatio: "얼굴 대비 이마 폭 비율" } },
+        { partName: "좌우 대칭", measureKeys: ["Asym"], measureLabels: { Asym: "좌우 비대칭도" } },
+    ];
     const renderForeheadBlock = (f: {
-        measures?: { height?: string; heightRatio?: string; width?: string; widthRatio?: string };
+        measures?: Record<string, string> & { height?: string; heightRatio?: string; width?: string; widthRatio?: string };
         gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
         coreMeaning?: string;
+        advice?: string;
+        coreMeaningParts?: string[];
+        adviceParts?: string[];
     } | undefined) => {
         if (!f) return null;
-        const m = f.measures || {};
-        const hasMeasures = m.height || m.heightRatio || m.width || m.widthRatio;
+        const useParts = (f as { coreMeaningParts?: string[] }).coreMeaningParts?.length;
         return (
             <div className="space-y-6 text-[20px] leading-relaxed">
                 <h4 className="font-bold text-gray-800 font-display text-2xl border-b-2 border-brand-green/20 pb-2">🧠 이마 분석 · 사고력과 초년운</h4>
 
-                {hasMeasures && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 측정 데이터</h5>
-                        <div className="grid grid-cols-2 gap-2 text-[18px]">
-                            {m.height != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">이마 높이:</span> {m.height}</div>}
-                            {m.heightRatio != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">얼굴 대비 이마 높이 비율:</span> {m.heightRatio}</div>}
-                            {m.width != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">이마 폭:</span> {m.width}</div>}
-                            {m.widthRatio != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">얼굴 대비 이마 폭 비율:</span> {m.widthRatio}</div>}
-                        </div>
-                    </section>
-                )}
-
                 {f.gauge && renderRangeGauge(f.gauge, "🧭 이마 높이 게이지 (초년운·사고력)")}
 
-                {f.coreMeaning && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 이마가 말해주는 핵심 의미</h5>
-                        <p className="text-gray-700">{f.coreMeaning}</p>
-                    </section>
+                {useParts ? renderPartBlocks(f, foreheadPartSpecs) : (
+                    <>
+                        {f.coreMeaning && (
+                            <section>
+                                <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 이마가 말해주는 핵심 의미</h5>
+                                <p className="text-gray-700">{f.coreMeaning}</p>
+                            </section>
+                        )}
+                        {f.advice && (
+                            <section>
+                                <h5 className="font-semibold text-gray-800 mb-2 text-xl">💡 조언</h5>
+                                <p className="text-gray-700">{f.advice}</p>
+                            </section>
+                        )}
+                    </>
                 )}
             </div>
         );
     };
 
-    /** 눈 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
+    /** 눈 전용: 게이지 먼저, 그 아래 파트 블록(개방도·비대칭·눈 사이) 또는 통합 핵심의미/조언 */
+    const eyesPartSpecs: PartSpec[] = [
+        { partName: "개방도", measureKeys: ["openL", "openR"], measureLabels: { openL: "좌측 눈 개방도", openR: "우측 눈 개방도" } },
+        { partName: "비대칭", measureKeys: ["asymmetry", "asymmetryCriteria"], measureLabels: { asymmetry: "개방도 차이", asymmetryCriteria: "눈 비대칭 기준" } },
+        { partName: "눈 사이", measureKeys: ["interDist"], measureLabels: { interDist: "눈 사이 거리" } },
+    ];
     const renderEyesBlock = (f: {
         measures?: { openL?: string; openR?: string; asymmetry?: string; asymmetryCriteria?: string; interDist?: string; widthRatio?: string; symmetry?: string };
         gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
         coreMeaning?: string;
+        advice?: string;
+        coreMeaningParts?: string[];
+        adviceParts?: string[];
     } | undefined) => {
         if (!f) return null;
-        const m = f.measures || {};
-        const measureRows: { label: string; value: string }[] = [
-            m.openL != null && { label: "좌측 눈 개방도", value: m.openL },
-            m.openR != null && { label: "우측 눈 개방도", value: m.openR },
-            m.asymmetry != null && { label: "개방도 차이", value: m.asymmetry },
-            m.asymmetryCriteria != null && { label: "눈 비대칭 기준", value: m.asymmetryCriteria },
-            m.interDist != null && { label: "눈 사이 거리", value: m.interDist },
-            m.widthRatio != null && { label: "얼굴 폭 대비 비율", value: m.widthRatio },
-            m.symmetry != null && { label: "전체 대칭도", value: m.symmetry },
-        ].filter(Boolean) as { label: string; value: string }[];
+        const useParts = (f as { coreMeaningParts?: string[] }).coreMeaningParts?.length;
         return (
             <div className="space-y-6 text-[20px] leading-relaxed">
                 <h4 className="font-bold text-gray-800 font-display text-2xl border-b-2 border-brand-green/20 pb-2">👁 눈 분석 · 성격 · 직업운 · 관계 감각</h4>
 
-                {measureRows.length > 0 && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 측정 데이터</h5>
-                        <div className="grid grid-cols-2 gap-2 text-[18px]">
-                            {measureRows.map((r, i) => (
-                                <div key={i} className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">{r.label}:</span> {r.value}</div>
-                            ))}
-                        </div>
-                    </section>
-                )}
-
                 {f.gauge && renderRangeGauge(f.gauge, "⚖️ 좌·우 눈 균형 게이지 (성향 안정도)")}
 
-                {f.coreMeaning && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 눈이 말해주는 핵심 의미</h5>
-                        <p className="text-gray-700">{f.coreMeaning}</p>
-                    </section>
+                {useParts ? renderPartBlocks(f, eyesPartSpecs) : (
+                    <>
+                        {f.coreMeaning && (
+                            <section>
+                                <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 눈이 말해주는 핵심 의미</h5>
+                                <p className="text-gray-700">{f.coreMeaning}</p>
+                            </section>
+                        )}
+                        {f.advice && (
+                            <section>
+                                <h5 className="font-semibold text-gray-800 mb-2 text-xl">💡 조언</h5>
+                                <p className="text-gray-700">{f.advice}</p>
+                            </section>
+                        )}
+                    </>
                 )}
             </div>
         );
     };
 
-    /** 코 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
+    /** 코 전용: 게이지 먼저, 그 아래 파트 블록(길이·폭·형상·기울기) 또는 통합 핵심의미/조언 */
+    const nosePartSpecs: PartSpec[] = [
+        { partName: "길이 비율", measureKeys: ["length_ratio", "lengthRatio", "lengthCriteria"], measureLabels: { length_ratio: "얼굴 대비 코 길이 비율", lengthRatio: "얼굴 대비 코 길이 비율", lengthCriteria: "길이 기준" } },
+        { partName: "폭 비율", measureKeys: ["nose_width_ratio", "width", "widthCriteria"], measureLabels: { nose_width_ratio: "코 폭 비율", width: "코 폭", widthCriteria: "폭 기준" } },
+        { partName: "형상 비율", measureKeys: ["nose_shape_ratio", "shapeCriteria"], measureLabels: { nose_shape_ratio: "형상 비율", shapeCriteria: "형상 기준" } },
+        { partName: "기울기", measureKeys: ["nose_shift_ratio"], measureLabels: { nose_shift_ratio: "중심선 기울기" } },
+    ];
     const renderNoseBlock = (f: {
-        measures?: { length?: string; lengthRatio?: string; width?: string; lengthCriteria?: string };
+        measures?: Record<string, string> & { length?: string; lengthRatio?: string; width?: string; lengthCriteria?: string };
         gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
         coreMeaning?: string;
+        advice?: string;
+        coreMeaningParts?: string[];
+        adviceParts?: string[];
     } | undefined) => {
         if (!f) return null;
-        const m = f.measures || {};
-        const hasMeasures = m.length != null || m.lengthRatio != null || m.width != null || m.lengthCriteria != null;
+        const useParts = (f as { coreMeaningParts?: string[] }).coreMeaningParts?.length;
         return (
             <div className="space-y-6 text-[20px] leading-relaxed">
                 <h4 className="font-bold text-gray-800 font-display text-2xl border-b-2 border-brand-green/20 pb-2">💰 코 분석 · 재물운 · 축적 능력 · 현실 감각</h4>
 
-                {hasMeasures && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 측정 데이터</h5>
-                        <div className="grid grid-cols-2 gap-2 text-[18px]">
-                            {m.length != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">코 길이:</span> {m.length}</div>}
-                            {m.lengthRatio != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">얼굴 대비 코 길이 비율:</span> {m.lengthRatio}</div>}
-                            {m.width != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">코 폭:</span> {m.width}</div>}
-                            {m.lengthCriteria != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">길이 기준:</span> {m.lengthCriteria}</div>}
-                        </div>
-                    </section>
-                )}
-
                 {f.gauge && renderRangeGauge(f.gauge, "📈 재물운 게이지 (축적 성향)")}
 
-                {f.coreMeaning && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 코가 말해주는 핵심 의미</h5>
-                        <p className="text-gray-700">{f.coreMeaning}</p>
-                    </section>
+                {useParts ? renderPartBlocks(f, nosePartSpecs) : (
+                    <>
+                        {f.coreMeaning && (
+                            <section>
+                                <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 코가 말해주는 핵심 의미</h5>
+                                <p className="text-gray-700">{f.coreMeaning}</p>
+                            </section>
+                        )}
+                        {f.advice && (
+                            <section>
+                                <h5 className="font-semibold text-gray-800 mb-2 text-xl">💡 조언</h5>
+                                <p className="text-gray-700">{f.advice}</p>
+                            </section>
+                        )}
+                    </>
                 )}
             </div>
         );
     };
 
-    /** 입 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
+    /** 입 전용: 게이지 먼저, 그 아래 파트 블록(입꼬리·입술·입 폭) 또는 통합 핵심의미/조언 */
+    const mouthPartSpecs: PartSpec[] = [
+        { partName: "입꼬리 기울기", measureKeys: ["cornerSlope", "cornerCriteria"], measureLabels: { cornerSlope: "입꼬리 기울기", cornerCriteria: "입꼬리 기준" } },
+        { partName: "입술 두께", measureKeys: ["lipThickness"], measureLabels: { lipThickness: "입술 두께" } },
+        { partName: "입 폭", measureKeys: ["width", "mouth_width_ratio"], measureLabels: { width: "입 너비", mouth_width_ratio: "얼굴 대비 입 폭 비율" } },
+    ];
     const renderMouthBlock = (f: {
         measures?: { width?: string; lipThickness?: string; cornerSlope?: string; cornerCriteria?: string };
         gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
         coreMeaning?: string;
+        advice?: string;
+        coreMeaningParts?: string[];
+        adviceParts?: string[];
     } | undefined) => {
         if (!f) return null;
-        const m = f.measures || {};
-        const hasMeasures = m.width != null || m.lipThickness != null || m.cornerSlope != null || m.cornerCriteria != null;
+        const useParts = (f as { coreMeaningParts?: string[] }).coreMeaningParts?.length;
         return (
             <div className="space-y-6 text-[20px] leading-relaxed">
                 <h4 className="font-bold text-gray-800 font-display text-2xl border-b-2 border-brand-green/20 pb-2">💬 입 분석 · 신뢰 · 애정 · 표현 방식</h4>
 
-                {hasMeasures && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 측정 데이터</h5>
-                        <div className="grid grid-cols-2 gap-2 text-[18px]">
-                            {m.width != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">입 너비:</span> {m.width}</div>}
-                            {m.lipThickness != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">입술 두께:</span> {m.lipThickness}</div>}
-                            {m.cornerSlope != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">입꼬리 기울기:</span> {m.cornerSlope}</div>}
-                            {m.cornerCriteria != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">입꼬리 기준:</span> {m.cornerCriteria}</div>}
-                        </div>
-                    </section>
-                )}
-
                 {f.gauge && renderRangeGauge(f.gauge, "📉 감정 표현 게이지 (외부 인상)")}
 
-                {f.coreMeaning && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 입이 말해주는 핵심 의미</h5>
-                        <p className="text-gray-700">{f.coreMeaning}</p>
-                    </section>
+                {useParts ? renderPartBlocks(f, mouthPartSpecs) : (
+                    <>
+                        {f.coreMeaning && (
+                            <section>
+                                <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 입이 말해주는 핵심 의미</h5>
+                                <p className="text-gray-700">{f.coreMeaning}</p>
+                            </section>
+                        )}
+                        {f.advice && (
+                            <section>
+                                <h5 className="font-semibold text-gray-800 mb-2 text-xl">💡 조언</h5>
+                                <p className="text-gray-700">{f.advice}</p>
+                            </section>
+                        )}
+                    </>
                 )}
             </div>
         );
     };
 
-    /** 턱 전용: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
+    /** 턱 전용: 게이지 먼저, 그 아래 파트 블록(각도·길이·깊이·안정성) */
+    const chinPartSpecs: PartSpec[] = [
+        { partName: "각도(성향)", measureKeys: ["angle", "angleCriteria"], measureLabels: { angle: "턱 각도", angleCriteria: "각도 기준" } },
+        { partName: "길이", measureKeys: ["chin_ratio", "chin_length", "length"], measureLabels: { chin_ratio: "턱 길이 비율", chin_length: "턱 길이", length: "턱 길이" } },
+        { partName: "깊이", measureKeys: ["chin_depth_ratio", "chin_depth"], measureLabels: { chin_depth_ratio: "턱 깊이 비율", chin_depth: "턱 깊이" } },
+        { partName: "안정성", measureKeys: ["support_asym"], measureLabels: { support_asym: "좌우 지지 대칭" } },
+    ];
     const renderChinBlock = (f: {
-        measures?: { length?: string; width?: string; angle?: string; angleCriteria?: string };
+        measures?: Record<string, string> & { length?: string; width?: string; angle?: string; angleCriteria?: string };
         gauge?: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] };
         coreMeaning?: string;
+        advice?: string;
+        coreMeaningParts?: string[];
+        adviceParts?: string[];
     } | undefined) => {
         if (!f) return null;
-        const m = f.measures || {};
-        const hasMeasures = m.length != null || m.width != null || m.angle != null || m.angleCriteria != null;
+        const useParts = (f as { coreMeaningParts?: string[] }).coreMeaningParts?.length;
         return (
             <div className="space-y-6 text-[20px] leading-relaxed">
                 <h4 className="font-bold text-gray-800 font-display text-2xl border-b-2 border-brand-green/20 pb-2">🪨 턱 분석 · 지구력 · 노년 안정도</h4>
 
-                {hasMeasures && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 측정 데이터</h5>
-                        <div className="grid grid-cols-2 gap-2 text-[18px]">
-                            {m.length != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">턱 길이:</span> {m.length}</div>}
-                            {m.width != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">턱 폭:</span> {m.width}</div>}
-                            {m.angle != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">턱 각도:</span> {m.angle}</div>}
-                            {m.angleCriteria != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">각도 기준:</span> {m.angleCriteria}</div>}
-                        </div>
-                    </section>
-                )}
-
                 {f.gauge && renderRangeGauge(f.gauge, "🧱 지구력 게이지 (버티는 힘)")}
 
-                {f.coreMeaning && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 턱이 말해주는 핵심 의미</h5>
-                        <p className="text-gray-700">{f.coreMeaning}</p>
-                    </section>
+                {useParts ? renderPartBlocks(f, chinPartSpecs) : (
+                    <>
+                        {f.coreMeaning && (
+                            <section>
+                                <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 턱이 말해주는 핵심 의미</h5>
+                                <p className="text-gray-700">{f.coreMeaning}</p>
+                            </section>
+                        )}
+                        {f.advice && (
+                            <section>
+                                <h5 className="font-semibold text-gray-800 mb-2 text-xl">💡 조언</h5>
+                                <p className="text-gray-700">{f.advice}</p>
+                            </section>
+                        )}
+                    </>
                 )}
             </div>
         );
     };
 
-    /** 공통·얼굴형: 측정 데이터 + 게이지(기준값만) + 핵심의미 */
+    /** 공통·얼굴형: 게이지 + 핵심의미 + 조언 (측정 데이터 섹션 없음, 파트 블록에서 라벨과 함께 표시) */
     const renderCommonAndFaceShape = (_common: any, faceShape: any) => {
         const fs = faceShape || {};
         const gauge = fs.gauge ? { rangeMin: 0, rangeMax: 8, ...fs.gauge } : null;
         const coreMeaning = fs.coreMeaning || fs.summary;
-        const hasMeasures = fs.measures?.w != null || fs.measures?.h != null || fs.measures?.wh != null;
+        const advice = fs.advice;
 
         return (
             <div className="space-y-6 text-[20px] leading-relaxed">
                 <h4 className="font-bold text-gray-800 font-display text-2xl border-b-2 border-brand-green/20 pb-2">🎭 얼굴형 분석 · 그릇의 크기</h4>
-
-                {hasMeasures && (
-                    <section>
-                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">📐 측정 데이터</h5>
-                        <div className="grid grid-cols-3 gap-2 text-[18px]">
-                            {fs.measures?.w != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">얼굴 너비(W):</span> {fs.measures.w}</div>}
-                            {fs.measures?.h != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">얼굴 높이(H):</span> {fs.measures.h}</div>}
-                            {fs.measures?.wh != null && <div className="p-3 rounded-lg bg-gray-50"><span className="text-gray-500">W/H 비율:</span> {fs.measures.wh}</div>}
-                        </div>
-                    </section>
-                )}
 
                 {gauge && gauge.rangeMin != null && gauge.rangeMax != null && renderRangeGauge(gauge, "🧭 얼굴형 게이지 (그릇의 크기)")}
 
@@ -361,6 +411,13 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                     <section>
                         <h5 className="font-semibold text-gray-800 mb-2 text-xl">🔍 얼굴형이 말해주는 핵심 의미</h5>
                         <p className="text-gray-700">{coreMeaning}</p>
+                    </section>
+                )}
+
+                {advice && (
+                    <section>
+                        <h5 className="font-semibold text-gray-800 mb-2 text-xl">💡 조언</h5>
+                        <p className="text-gray-700">{advice}</p>
                     </section>
                 )}
             </div>
@@ -387,27 +444,19 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                     </div>
 
                     <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 space-y-5 max-h-[50vh]">
-                        {/* 1. 부위 간의 조화 및 균형 해석 */}
-                        {totalReview?.harmony && (
+                        {/* 1. 전체 관상 분석 종합 의견 */}
+                        {(totalReview?.faceOverview || DEFAULT_TOTAL_REVIEW.faceOverview) && (
                             <section>
-                                <h4 className="text-gray-800 font-bold text-base mb-2">1. 부위 간의 조화 및 균형 해석</h4>
-                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview.harmony}</p>
+                                <h4 className="text-gray-800 font-bold text-base mb-2">1. 전체 관상 분석 종합 의견</h4>
+                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview?.faceOverview || DEFAULT_TOTAL_REVIEW.faceOverview}</p>
                             </section>
                         )}
 
-                        {/* 2. 종합 운세 해석 */}
-                        {totalReview?.comprehensive && (
+                        {/* 2. 취업운 */}
+                        {(totalReview?.careerFortune || DEFAULT_TOTAL_REVIEW.careerFortune) && (
                             <section>
-                                <h4 className="text-gray-800 font-bold text-base mb-2">2. 종합 운세 해석</h4>
-                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview.comprehensive}</p>
-                            </section>
-                        )}
-
-                        {/* 3. 운을 좋게 만드는 방법 제안 */}
-                        {totalReview?.improvement && (
-                            <section>
-                                <h4 className="text-gray-800 font-bold text-base mb-2">3. 운을 좋게 만드는 방법 제안</h4>
-                                <p className="text-gray-700 text-base leading-[1.75]">{totalReview.improvement}</p>
+                                <h4 className="text-gray-800 font-bold text-base mb-2">2. 올해의 취업운 💼</h4>
+                                <p className="text-gray-700 text-base leading-[1.75] whitespace-pre-line">{totalReview?.careerFortune || DEFAULT_TOTAL_REVIEW.careerFortune}</p>
                             </section>
                         )}
                     </div>
@@ -606,16 +655,16 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                                 </div>
                                 <div className="detail-card-content flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 text-base leading-relaxed [&_>div]:text-base [&_h4]:text-base [&_h4]:font-bold [&_h4]:border-b [&_h4]:border-brand-green/20 [&_h4]:pb-1.5 [&_h4]:mt-4 [&_h4]:first:mt-0 [&_h5]:text-base [&_h5]:font-bold [&_h5]:mt-3 [&_h5]:mb-1.5 [&_p]:leading-[1.7] [&_p]:text-base [&_ul]:space-y-1 [&_ul]:pl-4 [&_li]:text-gray-700">
                                     {activeFeature === "commonAndFaceShape" && renderCommonAndFaceShape(features.common, features.faceShape)}
-                                    {activeFeature === "forehead" && features.forehead && (features.forehead as any).oneLineSummary && renderForeheadBlock(features.forehead)}
-                                    {activeFeature === "forehead" && features.forehead && !(features.forehead as any).oneLineSummary && renderBlock(features.forehead)}
-                                    {activeFeature === "eyes" && features.eyes && (features.eyes as any).oneLineSummary && renderEyesBlock(features.eyes)}
-                                    {activeFeature === "eyes" && features.eyes && !(features.eyes as any).oneLineSummary && renderBlock(features.eyes)}
-                                    {activeFeature === "nose" && features.nose && (features.nose as any).oneLineSummary && renderNoseBlock(features.nose)}
-                                    {activeFeature === "nose" && features.nose && !(features.nose as any).oneLineSummary && renderBlock(features.nose)}
-                                    {activeFeature === "mouth" && features.mouth && (features.mouth as any).oneLineSummary && renderMouthBlock(features.mouth)}
-                                    {activeFeature === "mouth" && features.mouth && !(features.mouth as any).oneLineSummary && renderBlock(features.mouth)}
-                                    {activeFeature === "chin" && features.chin && (features.chin as any).oneLineSummary && renderChinBlock(features.chin)}
-                                    {activeFeature === "chin" && features.chin && !(features.chin as any).oneLineSummary && renderBlock(features.chin)}
+                                    {activeFeature === "forehead" && features.forehead && (features.forehead as any).coreMeaning && renderForeheadBlock(features.forehead)}
+                                    {activeFeature === "forehead" && features.forehead && !(features.forehead as any).coreMeaning && renderBlock(features.forehead)}
+                                    {activeFeature === "eyes" && features.eyes && (features.eyes as any).coreMeaning && renderEyesBlock(features.eyes)}
+                                    {activeFeature === "eyes" && features.eyes && !(features.eyes as any).coreMeaning && renderBlock(features.eyes)}
+                                    {activeFeature === "nose" && features.nose && (features.nose as any).coreMeaning && renderNoseBlock(features.nose)}
+                                    {activeFeature === "nose" && features.nose && !(features.nose as any).coreMeaning && renderBlock(features.nose)}
+                                    {activeFeature === "mouth" && features.mouth && (features.mouth as any).coreMeaning && renderMouthBlock(features.mouth)}
+                                    {activeFeature === "mouth" && features.mouth && !(features.mouth as any).coreMeaning && renderBlock(features.mouth)}
+                                    {activeFeature === "chin" && features.chin && (features.chin as any).coreMeaning && renderChinBlock(features.chin)}
+                                    {activeFeature === "chin" && features.chin && !(features.chin as any).coreMeaning && renderBlock(features.chin)}
                                 </div>
                             </GlassCard>
                         </motion.div>

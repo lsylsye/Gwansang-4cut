@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images } from "lucide-react";
+import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images, Share2 } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { FaceAnalysis } from "./face/components/FaceAnalysis";
-import { StatsAnalysis } from "./stats/components/StatsAnalysis";
+import { StatsAnalysis, type ConstitutionPhase } from "./stats/components/StatsAnalysis";
 import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
 import { SajuAnalysisResponse } from "@/shared/api/sajuApi";
-import { USE_MOCK_RESULTS } from "@/shared/config/analysis";
+import { 
+    Stage1Response, 
+    TotalReview, 
+    FaceAnalysisResult,
+    transformToFaceAnalysisFeatures 
+} from "@/shared/api/faceAnalysisApi";
 import html2canvas from "html2canvas";
+import { useHideTurtleGuide } from "@/shared/contexts/HideTurtleGuideContext";
+import { TabNavigation } from "@/shared/components/TabNavigation";
 
 // --- Types ---
 interface AnalysisSectionProps {
@@ -16,6 +23,10 @@ interface AnalysisSectionProps {
     onNavigateToPhotoBooth?: () => void;
     frameImage?: string;
     fromPhotoBooth?: boolean;
+    // 실제 API 결과 데이터 (옵션)
+    faceAnalysisResult?: Stage1Response | null;
+    totalReview?: TotalReview | null;
+    isLoading?: boolean;
 }
 
 // --- Mock Data (부위별 상세: values, criteria, interpretation, advice) ---
@@ -298,14 +309,54 @@ const MOCK_DATA = {
 };
 
 // --- Main Component ---
-export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], onRestart, onNavigateToPhotoBooth, frameImage, fromPhotoBooth }) => {
+export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ 
+    images = [], 
+    onRestart, 
+    onNavigateToPhotoBooth, 
+    frameImage, 
+    fromPhotoBooth,
+    faceAnalysisResult,
+    totalReview: totalReviewProp,
+    isLoading = false 
+}) => {
     const [currentTab, setCurrentTab] = useState<"physiognomy" | "constitution" | "future" | "ssafy-cut">(
         "physiognomy"
     );
+    const { setHideTurtleGuide } = useHideTurtleGuide();
+
+    // 체질 분석 탭일 때만 플로팅 거북 도사 숨김
+    useEffect(() => {
+        setHideTurtleGuide(currentTab === "constitution");
+        return () => setHideTurtleGuide(false);
+    }, [currentTab, setHideTurtleGuide]);
+
+    // API 결과가 있으면 변환하여 사용
+    const featuresData = React.useMemo(() => {
+        if (faceAnalysisResult?.faceAnalysis && faceAnalysisResult?.meta) {
+            return transformToFaceAnalysisFeatures(
+                faceAnalysisResult.faceAnalysis,
+                faceAnalysisResult.meta
+            );
+        }
+        return null;
+    }, [faceAnalysisResult]);
+
+    // totalReview 데이터
+    const totalReviewData = React.useMemo(() => {
+        if (totalReviewProp) {
+            return totalReviewProp;
+        }
+        return undefined; // FaceAnalysis 컴포넌트에서 기본값 사용
+    }, [totalReviewProp]);
+
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [futureImage, setFutureImage] = useState<string | null>(null);
     const [savedFrameImage, setSavedFrameImage] = useState<string | null>(null);
+
+    // 체질 분석 상태 (다른 탭 갔다 와도 마지막 결과 뷰 유지)
+    const [constitutionPhase, setConstitutionPhase] = useState<ConstitutionPhase>("intro");
+    const [constitutionSelectedMenuIdx, setConstitutionSelectedMenuIdx] = useState<number | null>(null);
 
     // localStorage에서 프레임 이미지 로드
     useEffect(() => {
@@ -410,37 +461,19 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
     return (
         <div className="w-full max-w-7xl mx-auto pb-20" id="analysis-result-container">
             {/* Tab Navigation */}
-            <div className="flex justify-center mb-10 no-capture">
-                <div className="bg-white/80 backdrop-blur-md p-2 rounded-3xl flex gap-1.5 shadow-clay-sm border-4 border-white">
-                    {[
-                        { id: "physiognomy", label: "관상 분석", icon: Brain },
-                        { id: "constitution", label: "체질 분석", icon: Heart },
-                        { id: "future", label: "미래의 나", icon: Camera },
-                        { id: "ssafy-cut", label: "싸피네컷", icon: Images },
-                    ].map((tab) => {
-                        const Icon = tab.icon;
-                        const isActive = currentTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                data-tab={tab.id}
-                                onClick={() => {
-                                    setCurrentTab(tab.id as any);
-                                }}
-                                className={`
-                            flex items-center gap-2 px-8 py-3.5 rounded-2xl transition-all duration-300 font-bold font-display
-                            ${isActive
-                                        ? "bg-brand-green text-white shadow-clay-xs scale-105"
-                                        : "hover:bg-gray-100 text-gray-400 hover:text-gray-700"}
-                        `}
-                            >
-                                <Icon size={20} />
-                                {tab.label}
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
+            <TabNavigation
+                tabs={[
+                    { id: "physiognomy", label: "관상 분석", icon: Brain },
+                    { id: "constitution", label: "체질 분석", icon: Heart },
+                    { id: "future", label: "미래의 나", icon: Camera },
+                    { id: "ssafy-cut", label: "싸피네컷", icon: Images },
+                ]}
+                activeTab={currentTab}
+                onTabChange={(tabId) => {
+                    setCurrentTab(tabId as any);
+                }}
+                activeColor="green"
+            />
 
             <AnimatePresence mode="wait">
                 <motion.div
@@ -452,20 +485,34 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
                 >
                     {/* --- Tab 1: Physiognomy Analysis --- */}
                     {currentTab === "physiognomy" && (
-                        <FaceAnalysis
-                            image={images[0] || ""}
-                            scores={MOCK_DATA.scores}
-                            features={MOCK_DATA.features}
-                        />
+                        featuresData ? (
+                            <FaceAnalysis
+                                image={images[0] || ""}
+                                features={featuresData}
+                                totalReview={totalReviewData}
+                            />
+                        ) : (
+                            <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-500">
+                                <div className="animate-spin w-12 h-12 border-4 border-brand-green border-t-transparent rounded-full mb-4" />
+                                <p className="text-lg font-medium">분석 결과를 불러오는 중...</p>
+                                <p className="text-sm text-gray-400 mt-2">잠시만 기다려주세요</p>
+                            </div>
+                        )
                     )}
 
                     {/* --- Tab 2 & 3: Constitution & Future --- */}
                     {(currentTab === "constitution" || currentTab === "future") && (
-                        <StatsAnalysis 
-                            tab={currentTab} 
-                            images={images} 
+                        <StatsAnalysis
+                            tab={currentTab}
+                            images={images}
                             futureImage={futureImage}
                             onFutureImageUpload={setFutureImage}
+                            constitutionPhase={constitutionPhase}
+                            onConstitutionPhaseChange={setConstitutionPhase}
+                            constitutionSelectedMenuIdx={constitutionSelectedMenuIdx}
+                            onConstitutionSelectedMenuIdxChange={setConstitutionSelectedMenuIdx}
+                            sajuInfo={faceAnalysisResult?.sajuInfo}
+                            totalReview={totalReviewData ?? undefined}
                         />
                     )}
 
@@ -528,19 +575,8 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({ images = [], o
 
             {/* Bottom Actions */}
             <div className="flex flex-wrap justify-center gap-4 mt-16 pb-10 no-capture">
-                <ActionButton variant="secondary" onClick={onRestart} className="flex items-center gap-2">
-                    <RotateCcw size={20} /> 처음으로
-                </ActionButton>
-                <ActionButton 
-                    variant="secondary" 
-                    onClick={handleDownload} 
-                    className="flex items-center gap-2"
-                    disabled={isDownloading}
-                >
-                    <Download size={20} /> {isDownloading ? "저장 중..." : "결과 다운로드"}
-                </ActionButton>
                 <ActionButton variant="primary" onClick={handleShare} className="flex items-center gap-2">
-                    <QrCode size={20} /> QR로 공유하기
+                    <Share2 size={20} /> 링크 공유하기
                 </ActionButton>
             </div>
 

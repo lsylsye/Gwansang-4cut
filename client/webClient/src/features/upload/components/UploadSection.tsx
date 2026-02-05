@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
+import { useLocation } from "react-router-dom";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import {
@@ -37,6 +38,7 @@ import {
 } from "@/shared/ui/forms/select";
 import { motion, AnimatePresence } from "motion/react";
 import { AnalyzeMode, SajuData, GroupMember } from "@/shared/types";
+import { ROUTES } from "@/shared/config/routes";
 import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
 import { ConsentModal } from "./ConsentModal";
 import { FaceMeshWebcam } from "./FaceMeshWebcam";
@@ -47,12 +49,18 @@ import selfieImage from "@/assets/selfie.png";
 
 interface UploadSectionProps {
   mode: AnalyzeMode;
+  pathname?: string;
   onAnalyze: (
     images: string[],
     features: string[],
     sajuData: SajuData,
     groupMembers?: GroupMember[],
+    faceMeshMetadata?: any,
   ) => void;
+  /** 그룹 모드: 사진 등록 후 인적사항 등록 페이지로 이동 */
+  onNavigateToMembers?: () => void;
+  /** 그룹 모드: 인적사항 페이지에서 업로드 페이지로 돌아가기 */
+  onNavigateToUpload?: () => void;
 }
 
 const CAPTURE_STEPS = [
@@ -99,8 +107,13 @@ function getTodayDateString(): string {
 
 export const UploadSection: React.FC<UploadSectionProps> = ({
   mode,
+  pathname: pathnameProp = "",
   onAnalyze,
+  onNavigateToMembers,
+  onNavigateToUpload,
 }) => {
+  const location = useLocation();
+  const pathname = pathnameProp || location.pathname;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const groupFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -132,9 +145,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   const [hasConsented, setHasConsented] = useState(false);
   const [sajuData, setSajuData] = useState<SajuData>({
     birthDate: "",
-    birthTime: "00:00",
+    birthTime: "",
     gender: "male",
-    calendarType: "solar",
     birthTimeUnknown: false,
   });
   const [faceMeshMetadata, setFaceMeshMetadata] = useState<any>(null);
@@ -201,14 +213,15 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       );
       setGroupMembers(members);
       setIsSegmenting(false);
-      setCurrentStep(3);
+      if (onNavigateToMembers) onNavigateToMembers();
+      else setCurrentStep(3);
       analyzeGroupPhotoForApi(photo).then(setGroupUploadFaceMetadata).catch(() => {});
     } catch {
       setFaceDetectionError("얼굴 분석 중 오류가 발생했습니다.");
       setIsSegmenting(false);
       setIsGroupPhotoConfirming(true);
     }
-  }, []);
+  }, [onNavigateToMembers]);
 
   useEffect(() => {
     if (isCapturing || isCameraActive) {
@@ -242,7 +255,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           })();
         } else {
           setCapturedImages([result, null, null]);
-          setCurrentStep(3);
+          if (onNavigateToMembers) onNavigateToMembers();
+          else setCurrentStep(3);
         }
       };
       reader.readAsDataURL(file);
@@ -281,27 +295,14 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           console.error("이전 촬영 데이터 삭제 실패:", error);
         }
 
-        if (faceMeshMetadata) {
-          const finalPayload = {
-            ...faceMeshMetadata,
-            sajuData: sajuData,
-          };
-
-          console.log("🚀 백엔드 전송 데이터 (Personal):", finalPayload);
-
-          fetch(API_ENDPOINTS.FACEMESH_PERSONAL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(finalPayload),
-          }).catch((err) => {
-            console.error("최종 데이터 전송 실패:", err);
-          });
-        }
-
+        // App.tsx에서 API 호출하도록 metadata 전달
+        // 더 이상 여기서 fetch 하지 않음
         onAnalyze(
           capturedImages as string[],
           [],
           sajuData,
+          undefined,  // groupMembers
+          faceMeshMetadata,  // metadata 전달
         );
       }
     } else {
@@ -323,6 +324,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     faceMeshMetadata,
   ]);
 
+  // 인적사항 URL(/group/upload/members)로 직접 왔는데 멤버가 없으면 업로드 페이지로
+  useEffect(() => {
+    if (pathname === ROUTES.GROUP_UPLOAD_MEMBERS && mode === "group" && groupMembers.length < 2 && onNavigateToUpload) {
+      onNavigateToUpload();
+    }
+  }, [pathname, mode, groupMembers.length, onNavigateToUpload]);
+
   const handleRetake = () => {
     if (mode === "personal") {
       setCapturedImages([null]);
@@ -341,8 +349,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       setIsGroupPhotoConfirming(false);
       setFaceDetectionError(null);
       setCurrentStep(0);
+      if (pathname === ROUTES.GROUP_UPLOAD_MEMBERS && onNavigateToUpload) onNavigateToUpload();
       if (groupFileInputRef.current) groupFileInputRef.current.value = "";
-      // 모임: 다시 촬영하기 → 모임 관상 확인하기(촬영/업로드 선택) 섹션으로
+      // 모임: 다시 촬영하기 → 모임 궁합 확인하기(촬영/업로드 선택) 섹션으로
     }
   };
 
@@ -445,32 +454,45 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         groupMembers: membersWithoutAvatar,
       };
     } else if (groupMembers.length >= 2 && groupMembers.every((m) => m.avatar)) {
-      // 멤버별 개인 사진 업로드: 각 멤버 avatar로 landmarks 추출 후 faces 조합
-      const now = new Date();
-      const offset = now.getTimezoneOffset() * 60000;
-      const timestamp = new Date(now.getTime() - offset).toISOString().slice(0, -1);
-      const faceResults = await Promise.all(
-        groupMembers.map((m) => (m.avatar ? analyzePersonalImage(m.avatar) : Promise.resolve(null)))
-      );
-      const faces = faceResults
-        .map((meta, i) => (meta?.faces?.[0] ? { ...meta.faces[0], faceIndex: i + 1 } : null))
-        .filter((f) => f != null) as Array<{ faceIndex: number; duration: number; landmarks: Array<{ index: number; x: number; y: number; z: number }> }>;
-      finalPayload = { timestamp, faces, groupMembers: membersWithoutAvatar };
+      // 멤버별 개인 사진 업로드: 각 멤버 avatar로 landmarks 추출 후 faces 조합 (실패해도 결과창으로 이동)
+      try {
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000;
+        const timestamp = new Date(now.getTime() - offset).toISOString().slice(0, -1);
+        const faceResults = await Promise.all(
+          groupMembers.map((m) => (m.avatar ? analyzePersonalImage(m.avatar) : Promise.resolve(null)))
+        );
+        const faces = faceResults
+          .map((meta, i) => (meta?.faces?.[0] ? { ...meta.faces[0], faceIndex: i + 1 } : null))
+          .filter((f) => f != null) as Array<{ faceIndex: number; duration: number; landmarks: Array<{ index: number; x: number; y: number; z: number }> }>;
+        finalPayload = { timestamp, faces, groupMembers: membersWithoutAvatar };
+      } catch (err) {
+        console.error("멤버 얼굴 분석 실패, 결과창으로 이동:", err);
+      }
     }
 
+    let groupApiResponse: { success: boolean; members?: unknown[]; groupCombination?: string } | null = null;
     if (finalPayload) {
-      console.log("🚀 백엔드 전송 데이터 (Group):", finalPayload);
-      fetch(API_ENDPOINTS.FACEMESH_GROUP, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(finalPayload),
-      }).catch((err) => {
+      try {
+        const res = await fetch(API_ENDPOINTS.FACEMESH_GROUP, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(finalPayload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data?.success) {
+          groupApiResponse = data;
+        } else {
+          console.error("모임 API 응답 오류:", data?.detail ?? data);
+        }
+      } catch (err) {
         console.error("모임 데이터 전송 실패:", err);
-      });
+      }
     }
 
+    const validImages = capturedImages.filter((img): img is string => img !== null);
     onAnalyze(
-      capturedImages as string[],
+      validImages,
       [],
       {
         birthDate: "",
@@ -480,6 +502,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         birthTimeUnknown: false,
       },
       groupMembers,
+      groupApiResponse ?? undefined,
     );
   };
 
@@ -624,7 +647,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                           setSajuData({
                             ...sajuData,
                             birthTimeUnknown: checked === true,
-                            birthTime: checked === true ? "" : "00:00",
+                            birthTime: checked === true ? "" : "",
                           });
                         }}
                       />
@@ -640,16 +663,19 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                         <Select
                           value={
                             sajuData.birthTime
-                              ? parseInt(sajuData.birthTime.split(":")[0], 10).toString()
+                              ? (() => {
+                                  const hours = sajuData.birthTime.split(":")[0];
+                                  return hours ? parseInt(hours, 10).toString() : "0";
+                                })()
                               : "0"
                           }
                           onValueChange={(value) => {
-                            const currentTime = sajuData.birthTime || "00:00";
+                            const currentTime = sajuData.birthTime || "";
                             const [, minutes] = currentTime.split(":");
                             const h = value.padStart(2, "0");
                             setSajuData({
                               ...sajuData,
-                              birthTime: `${h}:${minutes}`,
+                              birthTime: `${h}:${minutes || ""}`,
                             });
                           }}
                         >
@@ -670,34 +696,53 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                         <Input
                           type="text"
                           inputMode="numeric"
-                          placeholder="0"
+                          placeholder="00"
                           maxLength={2}
                           value={
                             sajuData.birthTime
-                              ? sajuData.birthTime.split(":")[1]
+                              ? sajuData.birthTime.split(":")[1] || ""
                               : ""
                           }
                           onChange={(e) => {
                             const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-                            const currentTime = sajuData.birthTime || "00:00";
-                            const [hours] = currentTime.split(":");
-                            const num = v === "" ? 0 : parseInt(v, 10);
-                            const clamped = num > 59 ? "59" : v === "" ? "00" : v;
-                            setSajuData({
-                              ...sajuData,
-                              birthTime: `${hours}:${clamped}`,
-                            });
-                          }}
-                          onBlur={() => {
-                            const currentTime = sajuData.birthTime || "00:00";
-                            const [hours, min] = currentTime.split(":");
-                            const parsed = parseInt(min || "0", 10);
-                            const clamped = Math.min(59, Math.max(0, isNaN(parsed) ? 0 : parsed)).toString().padStart(2, "0");
-                            if (min !== clamped) {
+                            const currentTime = sajuData.birthTime || "";
+                            const [hours = "00"] = currentTime.split(":");
+                            if (v === "") {
+                              // 빈 값일 때는 빈 문자열로 유지
+                              setSajuData({
+                                ...sajuData,
+                                birthTime: hours ? `${hours}:` : "",
+                              });
+                            } else {
+                              // 입력 중에는 그대로 저장 (포맷팅은 onBlur에서)
+                              const num = parseInt(v, 10);
+                              const clamped = num > 59 ? "59" : v;
                               setSajuData({
                                 ...sajuData,
                                 birthTime: `${hours}:${clamped}`,
                               });
+                            }
+                          }}
+                          onBlur={() => {
+                            const currentTime = sajuData.birthTime || "";
+                            if (!currentTime) return;
+                            const [hours, min] = currentTime.split(":");
+                            if (min === undefined || min === "") {
+                              // 분이 없으면 "00"으로 설정
+                              setSajuData({
+                                ...sajuData,
+                                birthTime: `${hours || "00"}:00`,
+                              });
+                            } else {
+                              // 포맷팅: 2자리로 맞춤
+                              const parsed = parseInt(min, 10);
+                              const clamped = Math.min(59, Math.max(0, isNaN(parsed) ? 0 : parsed)).toString().padStart(2, "0");
+                              if (min !== clamped) {
+                                setSajuData({
+                                  ...sajuData,
+                                  birthTime: `${hours || "00"}:${clamped}`,
+                                });
+                              }
                             }
                           }}
                           className="bg-white/80 border-2 border-gray-100 focus:border-brand-orange shadow-inner h-10 rounded-lg transition-all w-full min-w-0 text-sm pl-3 pr-9"
@@ -738,7 +783,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     );
   }
 
-  // --- Segmenting Animation Overlay (모임 관상 단체 사진 MediaPipe 분석 중) ---
+  // --- Segmenting Animation Overlay (모임 궁합 단체 사진 MediaPipe 분석 중) ---
   if (isSegmenting) {
     return (
       <div className="flex flex-col items-center justify-center w-full min-h-[50vh]">
@@ -923,7 +968,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               variant="orange-primary"
               onClick={() => {
                 setIsIndividualPhotoUpload(false);
-                setCurrentStep(3);
+                if (onNavigateToMembers) onNavigateToMembers();
+                else setCurrentStep(3);
               }}
               disabled={!allPhotosUploaded}
               className={`w-full py-6 transition-all duration-300 text-base ${!allPhotosUploaded
@@ -963,7 +1009,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           className="text-center mb-12"
         >
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 font-display">
-            {isPersonal ? "개인 관상 확인하기" : "모임 관상 확인하기"}
+            {isPersonal ? "개인 관상 확인하기" : "모임 궁합 확인하기"}
           </h2>
         </motion.div>
 
@@ -989,7 +1035,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               <p className="text-base text-gray-500 font-sans leading-relaxed">
                 실시간 안면 인식 시스템으로
                 <br />
-                {isPersonal ? "나의 관상을 확인합니다." : "모임 관상을 확인합니다."}
+                {isPersonal ? "나의 관상을 확인합니다." : "모임 궁합을 확인합니다."}
               </p>
             </div>
           </GlassCard>
@@ -1014,7 +1060,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
               <p className="text-base text-gray-500 font-sans leading-relaxed">
                 미리 촬영한 사진을 업로드하여
                 <br />
-                {isPersonal ? "나의 관상을 확인합니다." : "모임 관상을 확인합니다."}
+                {isPersonal ? "나의 관상을 확인합니다." : "모임 궁합을 확인합니다."}
               </p>
             </div>
           </GlassCard>
@@ -1512,8 +1558,10 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     );
   }
 
-  // --- Camera View ---
-  return (
+  // --- 인적사항 등록 (URL: /group/upload/members 또는 step 3) ---
+  const isMembersStep = mode === "group" && (pathname === ROUTES.GROUP_UPLOAD_MEMBERS || currentStep === 3);
+  if (isMembersStep) {
+    return (
     <div className="flex flex-col items-center justify-center gap-4 w-full max-w-4xl mx-auto pb-12 px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -1803,5 +1851,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         </div>
       </motion.div>
     </div>
-  );
+    );
+  }
+
+  return null;
 };
