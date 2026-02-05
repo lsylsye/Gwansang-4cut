@@ -29,10 +29,14 @@ export interface PersonalAnalysisData {
   };
   // 체질 분석 데이터 ('당신의 체질 풀이' 아래 내용)
   constitutionAnalysis?: {
-    phase?: string; // intro, loading, result
+    phase?: string; // intro, loading, result, constitution
     selectedMenuIdx?: number | null;
     // 체질 분석 결과 데이터
     content?: any;
+    // 체질 풀이에 필요한 사주 정보
+    sajuInfo?: any;
+    // 체질 풀이에 필요한 총평 정보
+    totalReview?: any;
   };
 }
 

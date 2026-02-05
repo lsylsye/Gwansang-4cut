@@ -447,10 +447,13 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
             
             console.log("📦 저장할 관상 분석 데이터:", faceAnalysisData);
 
-            // 체질 분석 데이터 준비
+            // 체질 분석 데이터 준비 (체질 풀이에 필요한 sajuInfo와 totalReview 포함)
             const constitutionData: any = {
                 phase: constitutionPhase,
                 selectedMenuIdx: constitutionSelectedMenuIdx,
+                // 체질 풀이에 필요한 데이터
+                sajuInfo: faceAnalysisResult?.sajuInfo || null,
+                totalReview: totalReviewData || null,
             };
 
             // API 호출하여 저장
