@@ -1,10 +1,12 @@
 package ssafy_14.BUK_2.GS4cut.domain.groupAnalysis.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Getter
 @Entity
 @Table(name = "group_analysis")
 public class GroupAnalysis {
