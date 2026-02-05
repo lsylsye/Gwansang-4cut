@@ -107,16 +107,16 @@ const GROUP_MOCK_DATA = {
         }
     ],
     pairs: [
-        { member1: "표경보", member2: "박윤환", rank: 1, score: 95, type: "best", reason: "둘 다 책임감이 있고 현실 감각이 뛰어나서, 함께 있으면 가장 단단하고 안정적인 궁합이에요. 말을 많이 하지 않아도 서로를 잘 이해해요.", summary: "책임감과 중심 역할이 잘 맞아서, 오래 함께해도 믿고 의지할 수 있는 조합이에요." },
-        { member1: "이승연", member2: "표경보", rank: 2, score: 92, type: "best", reason: "말을 많이 하지 않아도 서로 편안하게 지낼 수 있는 궁합이에요. 감정 기복이 거의 없어서 오래 함께해도 안정감이 있어요.", summary: "말 없이도 분위기를 잘 읽어 주고받는 타입이라, 함께 있기만 해도 편해요." },
-        { member1: "이승연", member2: "박윤환", rank: 3, score: 88, type: "best", reason: "서로 역할이 겹치지 않아서 의지할 수 있는 현실적인 궁합이에요. 한쪽이 방향을 잡아 주면 다른 쪽이 잘 받쳐 주는 편이에요.", summary: "현실 감각과 감정 밸런스가 잘 맞아서, 모임이나 일에서도 시너지가 나요." },
-        { member1: "표경보", member2: "정현우", rank: 4, score: 75, type: "normal", reason: "무난하게 잘 맞지만, 깊게 파고들면 서로 다른 스타일이라 거리감이 생길 수 있어요. 갈등은 거의 없어요.", summary: "일상적으로는 편하게 지내지만, 중요한 결정이 있을 때는 대화를 충분히 나누는 게 좋아요." },
-        { member1: "이정현", member2: "표경보", rank: 5, score: 72, type: "normal", reason: "에너지가 넘치는 쪽과 안정감이 있는 쪽이 잘 맞아요. 한쪽이 튀면 다른 쪽이 자연스럽게 잡아 주는 구조예요.", summary: "서로의 성향 차이가 오히려 균형을 만들어 줄 수 있어요. 말이 많고 적고의 차이만 감안하면 돼요." },
-        { member1: "이승연", member2: "정현우", rank: 6, score: 70, type: "normal", reason: "말은 잘 통하고 눈치도 빠른 편이라 대화는 편해요. 다만 둘 다 결론을 미루는 스타일이라, 중요한 건 정리해서 말하는 게 좋아요.", summary: "눈치로 맞추다 보면 오해가 쌓일 수 있으니, 가끔은 말로 확인하는 습관이 있으면 좋아요." },
-        { member1: "정현우", member2: "박윤환", rank: 7, score: 65, type: "unstable", reason: "일적으로는 잘 맞지만 감정적으로는 거리가 있을 수 있어요. 긴장감이 있는 실무 궁합이라, 사적인 대화를 조금씩 늘려 보는 걸 추천해요.", summary: "업무나 모임에서는 시너지가 나지만, 마음을 열 때는 시간이 조금 더 필요해요." },
-        { member1: "이정현", member2: "이승연", rank: 8, score: 60, type: "unstable", reason: "처음엔 케미가 좋지만, 자주 만나면 타이밍이 어긋나면서 피로가 쌓일 수 있어요. 적당한 거리를 두는 게 오래 가는 비결이에요.", summary: "서로의 리듬이 다르다는 걸 인정하고, 만남 빈도를 조절하면 관계가 안정돼요." },
-        { member1: "이정현", member2: "정현우", rank: 9, score: 55, type: "unstable", reason: "겉보기보다 불안정한 궁합이에요. 말이나 행동이 오해로 쌓이기 쉬우니, 중요한 건 말로 확인하고 넘어가는 게 좋아요.", summary: "직설적으로 말해도 상처받지 않도록, 서로 존중하는 말투를 쓰는 게 좋아요." },
-        { member1: "이정현", member2: "박윤환", rank: 10, score: 45, type: "worst", reason: "전체 조합 중에서도 충돌 가능성이 가장 높은 편이에요. 서로의 방식이 정반대라서, 한쪽만 맞추다 보면 불만이 쌓일 수 있어요.", summary: "서로 다르다는 걸 먼저 인정하고, 작은 것부터 맞춰 보는 게 좋아요. 무리하게 이해하려 하기보다 거리를 두는 것도 방법이에요." }
+        { member1: "표경보", member2: "박윤환", rank: 1, score: 95, type: "best", reason: "기준형 × 고참형. 말 없어도 신뢰 쌓이는 조합. 둘 다 고집 세서 한 번 틀어지면 오래 갈 수 있으니 말로 풀어 보는 게 좋음.", summary: "말 없어도 믿고 의지할 수 있는 조합" },
+        { member1: "이승연", member2: "표경보", rank: 2, score: 92, type: "best", reason: "안정형 × 불꽃형. 초반엔 잘 맞고, 피로 쌓이면 거리. 표경보의 즉흥성이 부담될 수 있음.", summary: "말 없이도 분위기 잘 읽어 주고받는 조합" },
+        { member1: "이승연", member2: "박윤환", rank: 3, score: 88, type: "best", reason: "조용한 안정 × 조용한 기준. 오래 가는 조합이지만 말이 너무 없음. 가끔은 일부러라도 대화 필요.", summary: "역할이 겹치지 않아 의지하기 좋은 조합" },
+        { member1: "표경보", member2: "정현우", rank: 4, score: 75, type: "normal", reason: "불꽃 × 기준. 초반엔 잘 맞다가 피로 누적 가능. 역할 분담 명확하면 문제 없음.", summary: "일상적으로 편하지만 중요한 건 대화로 정리하는 게 좋음" },
+        { member1: "이정현", member2: "표경보", rank: 5, score: 72, type: "normal", reason: "균형 잡는 사람 × 분위기 메이커. 표경보가 중심 잡아 주면 시너지 큼. 방치하면 이정현이 과열될 수 있음.", summary: "성향 차이가 균형 만들어 주는 조합" },
+        { member1: "이승연", member2: "정현우", rank: 6, score: 70, type: "normal", reason: "조용한 안정 × 조용한 기준. 오래 가는 조합이지만 말이 너무 없음. 가끔은 일부러라도 대화 필요.", summary: "눈치로 맞추다 보면 오해 쌓일 수 있으니 말로 확인하는 습관이 좋음" },
+        { member1: "정현우", member2: "박윤환", rank: 7, score: 65, type: "unstable", reason: "밀어붙임 × 선 긋기. 서로 답답해할 수 있는 조합. 사전 조율만 있으면 안정됨.", summary: "업무·모임에서는 시너지 나지만 마음 열 때는 시간이 더 필요" },
+        { member1: "이정현", member2: "이승연", rank: 8, score: 60, type: "unstable", reason: "참는 사람 × 말하는 사람. 균형 맞으면 최고, 어긋나면 상처 구조. 이정현 말 강도 조절이 핵심.", summary: "리듬 다르다는 걸 인정하고 만남 빈도 조절하면 안정됨" },
+        { member1: "이정현", member2: "정현우", rank: 9, score: 55, type: "unstable", reason: "의견 제시자 × 최종 정리자. 일 처리 궁합 좋음. 정현우가 제동 걸면 이정현은 속으로 불편할 수 있음.", summary: "직설적으로 말해도 상처 안 받도록 존중하는 말투가 좋음" },
+        { member1: "이정현", member2: "박윤환", rank: 10, score: 45, type: "worst", reason: "조율자 × 직설가. 잘 맞으면 결정 속도 + 안정성 최고. 감정 상한 상태에선 말투 충돌 주의.", summary: "서로 다르다는 걸 인정하고 작은 것부터 맞춰 보는 게 좋음" }
     ]
 };
 
@@ -797,8 +797,8 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                         </div>
                                                     )}
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <h4 className="font-bold text-slate-900 text-lg font-display truncate min-w-0">{member.name}</h4>
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <h4 className="font-bold text-slate-900 text-lg font-display break-words min-w-0">{member.name}</h4>
                                                             {(() => {
                                                                 const palette = MEMBER_CARD_PALETTE[idx % MEMBER_CARD_PALETTE.length];
                                                                 return (
@@ -823,19 +823,19 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                         ));
                                                     })()}
                                                 </div>
-                                                <p className="text-sm text-slate-600 font-sans leading-relaxed bg-slate-50/80 p-2.5 rounded-lg line-clamp-2 flex-1 min-h-0">{member.description}</p>
+                                                <p className="text-sm text-slate-600 font-sans leading-relaxed bg-slate-50/80 p-2.5 rounded-lg line-clamp-3 flex-1 min-h-0">{member.description}</p>
                                                 <div className="space-y-1.5 text-sm pt-3 border-t border-slate-100 flex-shrink-0">
                                                     <div className="flex items-center gap-2 bg-emerald-50 rounded-lg border border-emerald-100 py-1.5 px-2.5 min-w-0">
                                                         <Sparkles className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                                                         <span className="text-xs font-semibold uppercase tracking-wide text-emerald-600 font-sans flex-shrink-0">장점</span>
                                                         <span className="text-emerald-700/80 flex-shrink-0 mx-0.5 font-sans">·</span>
-                                                        <span className="font-hand text-emerald-800 text-sm leading-snug truncate min-w-0">{member.strengths[0]}</span>
+                                                        <span className="font-hand text-emerald-800 text-sm leading-snug break-words min-w-0">{member.strengths[0]}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2 bg-amber-50 rounded-lg border border-amber-100 py-1.5 px-2.5 min-w-0">
                                                         <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0" />
                                                         <span className="text-xs font-semibold uppercase tracking-wide text-amber-600 font-sans flex-shrink-0">주의</span>
                                                         <span className="text-amber-700/80 flex-shrink-0 mx-0.5 font-sans">·</span>
-                                                        <span className="font-hand text-amber-900 text-sm leading-snug truncate min-w-0">{member.warnings[0]}</span>
+                                                        <span className="font-hand text-amber-900 text-sm leading-snug break-words min-w-0">{member.warnings[0]}</span>
                                                     </div>
                                                 </div>
                                             </div>

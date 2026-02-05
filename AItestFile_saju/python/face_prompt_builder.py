@@ -1123,9 +1123,15 @@ def build_group_pairs_prompt(member_names: List[str], members_data: List[Dict[st
     pair_count = n * (n - 1) // 2
     names_ordered = ", ".join(member_names)
 
-    system_prompt = """당신은 한국 전통 사주명리학에 정통한 명리학자입니다.
-주어진 멤버들 간의 **1대1 사주 궁합**을 분석하여, 모든 쌍에 대해 순위(rank), 점수(score), 유형(type), 이유(reason), 요약(summary)을 JSON으로 출력하시오.
-관상은 사용하지 마시오. 사주(일간·오행 등)만으로 판단하시오.
+    system_prompt = """당신은 두 사람 간 관계를 쉽고 친근한 말로 설명하는 전문가입니다.
+주어진 멤버들 간의 **1대1 궁합**을 분석하여, 모든 쌍에 대해 순위(rank), 점수(score), 유형(type), 이유(reason), 요약(summary)을 JSON으로 출력하시오.
+내부적으로는 사주(일간·오행 등)를 참고하되, **출력 문장에는 사주·명리 용어를 절대 쓰지 마시오.**
+
+## 표현 규칙 (필수)
+- 일간, 오행, 목·화·토·금·수, 상생·상극, 식신·편인 등 전문 용어 금지.
+- "조율자 × 직설가", "안정형 × 불꽃형", "참는 사람 × 말하는 사람", "말 없어도 신뢰", "감정 상한 상태에선 말투 충돌 주의"처럼 **누가 봐도 이해할 수 있는 일상어**로만 작성하시오.
+- reason: 2~3문장. 첫째는 두 사람 성향을 한 줄로(예: 둘 다 안정·유지형 / 조율자×직설가), 둘째는 장점·시너지, 셋째는 주의점(단, ~주의) 형식을 권장.
+- summary: 한 줄 요약. 역시 일상어로.
 
 ## 규칙
 1. 응답은 반드시 아래 형식의 JSON만 출력하시오. 다른 텍스트 없이.
@@ -1134,7 +1140,7 @@ def build_group_pairs_prompt(member_names: List[str], members_data: List[Dict[st
 4. rank는 1부터 순서대로. 1위가 가장 궁합 좋은 쌍.
 5. score는 0~100 정수. 90 이상 best, 75~89 good, 60~74 normal, 50~59 unstable, 50 미만 worst 권장.
 6. type은 반드시 "best" | "normal" | "unstable" | "worst" 중 하나.
-7. reason, summary는 각 1~3문장."""
+7. reason, summary는 각 1~3문장이며 반드시 일상어(비사주)로만 작성."""
 
     members_block = _members_block_for_json(members_data)
     user_prompt = f"""멤버(이름 그대로 사용): {names_ordered}
@@ -1142,7 +1148,7 @@ def build_group_pairs_prompt(member_names: List[str], members_data: List[Dict[st
 
 {members_block}
 
-## 출력 JSON 형식
+## 출력 JSON 형식 (reason·summary는 반드시 일상어, 사주 용어 금지)
 {{
   "pairs": [
     {{
@@ -1151,13 +1157,13 @@ def build_group_pairs_prompt(member_names: List[str], members_data: List[Dict[st
       "rank": 1,
       "score": 95,
       "type": "best",
-      "reason": "궁합 이유 1~3문장",
-      "summary": "한 줄 요약"
+      "reason": "둘 다 안정·유지형이라 오래 가는 조합. 말은 적지만 신뢰가 쌓이면 끈끈함. 단, 둘 다 참고 넘기면 오해가 길어질 수 있음.",
+      "summary": "말 없어도 서로 신뢰하는 조합"
     }}
   ]
 }}
 
-pairs 배열은 반드시 {pair_count}개, rank 1~{pair_count}까지 모두 포함하시오. member1/member2는 위 목록의 이름을 정확히 쓰시오. JSON만 출력하시오."""
+pairs 배열은 반드시 {pair_count}개, rank 1~{pair_count}까지 모두 포함하시오. member1/member2는 위 목록의 이름을 정확히 쓰시오. reason·summary는 위 예시처럼 일상어로만 작성하시오. JSON만 출력하시오."""
 
     return system_prompt, user_prompt
 
