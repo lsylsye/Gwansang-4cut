@@ -27,7 +27,8 @@ export const IMAGE_BASE_URL =
 /** DB 관련 (베이스: /api/db) — 랭킹 저장·조회, 결과 저장·조회 */
 export const DB_ENDPOINTS = {
   BASE: API_BASE_URL,
-  // RANKING: `${API_BASE_URL}/ranking`, RESULT: `${API_BASE_URL}/result` 등 추가
+  /** 랭킹 등록 POST /api/db/ranking */
+  RANKING: `${API_BASE_URL}/ranking`,
 } as const;
 
 /** 관상/사주 관련 (베이스: /api/face) — 개인·모임 관상, 사주, 오행 조합 */
@@ -62,6 +63,7 @@ export const API_ENDPOINTS = {
   SAJU_ANALYZE: FACE_ENDPOINTS.SAJU_ANALYZE,
   GROUP_OHENG_COMBINATION: FACE_ENDPOINTS.GROUP_OHENG_COMBINATION,
   IMAGE_UPLOAD: IMAGE_ENDPOINTS.UPLOAD,
+  RANKING: DB_ENDPOINTS.RANKING,
 } as const;
 
 /** .env VITE_AI_SERVER_URL과 1:1 대응 (기존명 호환) */

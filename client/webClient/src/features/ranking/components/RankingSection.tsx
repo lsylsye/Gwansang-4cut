@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Trophy, Turtle, TrendingUp, Sparkles, CheckCircle, Users, ArrowLeft, Share2 } from "lucide-react";
+import { TrendingUp, Sparkles, CheckCircle, Users, ArrowLeft, Share2, Search } from "lucide-react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
+import { Toast } from "@/shared/components/Toast";
+import { getRankings, registerRanking } from "@/shared/api/rankingApi";
 
 interface RankingItem {
   id: string | number;
@@ -10,29 +12,83 @@ interface RankingItem {
   score: number;
   members: number;
   rank: number;
-  tag: string;
   isUser?: boolean;
+  /** 멤버 이름 (인원수 옆에 표시, 우리 팀은 인적 사항에서 불러옴) */
+  memberNames?: string[];
 }
 
+const MOCK_NAMES = ["홍길동", "김철수", "이영희", "박민수", "최지훈", "정수진", "한소희", "윤도현"];
+
 const MOCK_RANKINGS: RankingItem[] = [
-  { id: 1, teamName: "환상의 짝꿍 팀", score: 98, members: 4, rank: 1, tag: "천생연분" },
-  { id: 2, teamName: "마라탕 처돌이들", score: 92, members: 3, rank: 2, tag: "도원결의" },
-  { id: 3, teamName: "밤샘 코딩러들", score: 85, members: 5, rank: 3, tag: "동고동락" },
-  { id: 4, teamName: "불타는 청춘", score: 79, members: 2, rank: 4, tag: "화끈화끈" },
-  { id: 5, teamName: "거북이 친구들", score: 72, members: 6, rank: 5, tag: "장수기원" },
-  { id: 6, teamName: "주말 등산러", score: 68, members: 4, rank: 6, tag: "일편단심" },
-  { id: 7, teamName: "새벽 러닝크루", score: 65, members: 3, rank: 7, tag: "활력충전" },
-  { id: 8, teamName: "독서 모임", score: 62, members: 5, rank: 8, tag: "지혜의샘" },
-  { id: 9, teamName: "요리 마스터즈", score: 58, members: 4, rank: 9, tag: "미식가들" },
-  { id: 10, teamName: "사진 찍는 사람들", score: 55, members: 6, rank: 10, tag: "순간포착" },
-  { id: 11, teamName: "게임 프렌즈", score: 52, members: 4, rank: 11, tag: "원팀원드림" },
-  { id: 12, teamName: "여행가는 날", score: 48, members: 5, rank: 12, tag: "여행러버" },
-  { id: 13, teamName: "커피 애호가", score: 45, members: 3, rank: 13, tag: "카페인중독" },
-  { id: 14, teamName: "헬스 매니아", score: 42, members: 4, rank: 14, tag: "근육신화" },
-  { id: 15, teamName: "영화 보는 친구들", score: 38, members: 6, rank: 15, tag: "시네마틱" },
+  { id: 1, teamName: "환상의 짝꿍 팀", score: 98, members: 4, rank: 1, memberNames: MOCK_NAMES.slice(0, 4) },
+  { id: 2, teamName: "마라탕 처돌이들", score: 92, members: 3, rank: 2, memberNames: MOCK_NAMES.slice(0, 3) },
+  { id: 3, teamName: "밤샘 코딩러들", score: 85, members: 5, rank: 3, memberNames: MOCK_NAMES.slice(0, 5) },
+  { id: 4, teamName: "불타는 청춘", score: 79, members: 2, rank: 4, memberNames: MOCK_NAMES.slice(0, 2) },
+  { id: 5, teamName: "거북이 친구들", score: 72, members: 6, rank: 5, memberNames: MOCK_NAMES.slice(0, 6) },
+  { id: 6, teamName: "주말 등산러", score: 68, members: 4, rank: 6, memberNames: MOCK_NAMES.slice(0, 4) },
+  { id: 7, teamName: "새벽 러닝크루", score: 65, members: 3, rank: 7, memberNames: MOCK_NAMES.slice(0, 3) },
+  { id: 8, teamName: "독서 모임", score: 62, members: 5, rank: 8, memberNames: MOCK_NAMES.slice(0, 5) },
+  { id: 9, teamName: "요리 마스터즈", score: 58, members: 4, rank: 9, memberNames: MOCK_NAMES.slice(0, 4) },
+  { id: 10, teamName: "사진 찍는 사람들", score: 55, members: 6, rank: 10, memberNames: MOCK_NAMES.slice(0, 6) },
+  { id: 11, teamName: "게임 프렌즈", score: 52, members: 4, rank: 11, memberNames: MOCK_NAMES.slice(0, 4) },
+  { id: 12, teamName: "여행가는 날", score: 48, members: 5, rank: 12, memberNames: MOCK_NAMES.slice(0, 5) },
+  { id: 13, teamName: "커피 애호가", score: 45, members: 3, rank: 13, memberNames: MOCK_NAMES.slice(0, 3) },
+  { id: 14, teamName: "헬스 매니아", score: 42, members: 4, rank: 14, memberNames: MOCK_NAMES.slice(0, 4) },
+  { id: 15, teamName: "영화 보는 친구들", score: 38, members: 6, rank: 15, memberNames: MOCK_NAMES.slice(0, 6) },
+  { id: 16, teamName: "뮤직 러버스", score: 35, members: 4, rank: 16, memberNames: MOCK_NAMES.slice(0, 4) },
+  { id: 17, teamName: "맛집 탐방단", score: 32, members: 3, rank: 17, memberNames: MOCK_NAMES.slice(0, 3) },
+  { id: 18, teamName: "산책 동호회", score: 29, members: 5, rank: 18, memberNames: MOCK_NAMES.slice(0, 5) },
+  { id: 19, teamName: "영어 스터디", score: 26, members: 4, rank: 19, memberNames: MOCK_NAMES.slice(0, 4) },
+  { id: 20, teamName: "반려동물 가족", score: 23, members: 2, rank: 20, memberNames: MOCK_NAMES.slice(0, 2) },
+  { id: 21, teamName: "피크닉 크루", score: 20, members: 6, rank: 21, memberNames: MOCK_NAMES.slice(0, 6) },
+  { id: 22, teamName: "드라이브 모임", score: 18, members: 4, rank: 22, memberNames: MOCK_NAMES.slice(0, 4) },
+  { id: 23, teamName: "캠핑 매니아", score: 15, members: 3, rank: 23, memberNames: MOCK_NAMES.slice(0, 3) },
+  { id: 24, teamName: "그림 동아리", score: 12, members: 5, rank: 24, memberNames: MOCK_NAMES.slice(0, 5) },
+  { id: 25, teamName: "글쓰기 모임", score: 10, members: 4, rank: 25, memberNames: MOCK_NAMES.slice(0, 4) },
+  { id: 26, teamName: "요가 클래스", score: 8, members: 3, rank: 26, memberNames: MOCK_NAMES.slice(0, 3) },
+  { id: 27, teamName: "수영 동호회", score: 6, members: 6, rank: 27, memberNames: MOCK_NAMES.slice(0, 6) },
+  { id: 28, teamName: "클라이밍 크루", score: 4, members: 2, rank: 28, memberNames: MOCK_NAMES.slice(0, 2) },
+  { id: 29, teamName: "보드게임 모임", score: 2, members: 5, rank: 29, memberNames: MOCK_NAMES.slice(0, 5) },
+  { id: 30, teamName: "테니스 클럽", score: 1, members: 4, rank: 30, memberNames: MOCK_NAMES.slice(0, 4) },
 ];
 
 const CIRCLE_R = 21;
+
+/** 리스트용 점수 뱃지 — 알약 형태 (원 대신 사용) */
+function ScoreBadge({
+  score,
+  isUser,
+  isHighRank,
+  className = "",
+}: {
+  score: number;
+  isUser?: boolean;
+  isHighRank?: boolean;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`shrink-0 flex flex-col items-center gap-0.5 ${className}`}
+    >
+      <div
+        className={`
+          flex items-center justify-center min-w-[52px] px-3 py-2 rounded-full
+          font-black text-base font-sans tabular-nums
+          border-2 shadow-sm
+          ${isUser
+            ? "bg-brand-orange/10 text-brand-orange border-brand-orange/40"
+            : isHighRank
+              ? "bg-amber-50 text-amber-800 border-amber-200"
+              : "bg-gray-50 text-gray-700 border-gray-200"
+          }
+        `}
+      >
+        <span>{score}</span>
+        <span className="text-xs font-semibold ml-0.5 opacity-90">점</span>
+      </div>
+    </div>
+  );
+}
 
 /** 원형 점수 표시 (isTop3 또는 isHighRank 시 진한 색) */
 function ScoreCircle({
@@ -93,6 +149,8 @@ interface RankingSectionProps {
   userScore: number;
   initialTeamName: string;
   fromAnalysis?: boolean;
+  /** 인적 사항에 등록한 멤버 이름 (우리 팀 카드에 인원수 옆에 표시) */
+  memberNames?: string[];
 }
 
 export const RankingSection: React.FC<RankingSectionProps> = ({
@@ -100,24 +158,57 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
   userScore,
   initialTeamName,
   fromAnalysis = false,
+  memberNames = [],
 }) => {
   const [teamName, setTeamName] = useState(initialTeamName);
   const [isFixed, setIsFixed] = useState(false);
-  const [rankings, setRankings] = useState<RankingItem[]>(MOCK_RANKINGS);
+  const [baseRankings, setBaseRankings] = useState<RankingItem[]>(MOCK_RANKINGS);
+  const [toast, setToast] = useState<{ open: boolean; message: string; type: "success" | "error" }>({
+    open: false,
+    message: "",
+    type: "success",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isFixed) {
-      const allRankings = [
-        ...MOCK_RANKINGS,
-        { id: "user", teamName, score: userScore, members: 4, rank: 0, tag: "우리 팀", isUser: true },
-      ].sort((a, b) => b.score - a.score);
-      const rankedWithIndex = allRankings.map((item, index) => ({ ...item, rank: index + 1 }));
-      setRankings(rankedWithIndex);
-    }
-  }, [isFixed, teamName, userScore]);
+    getRankings()
+      .then((data) => {
+        const mapped = data
+          .map((item, i) => ({
+            id: item.id ?? i + 1,
+            teamName: item.title,
+            score: item.score,
+            members: item.numberOfMembers,
+            rank: item.rank ?? i + 1,
+            memberNames: item.memberNames?.map((m) => m.name) ?? [],
+          }))
+          .sort((a, b) => b.score - a.score)
+          .map((item, index) => ({ ...item, rank: index + 1 }));
+        setBaseRankings(mapped);
+      })
+      .catch(() => { /* 실패 시 baseRankings는 MOCK_RANKINGS 유지 */ });
+  }, []);
+
+  const names = memberNames.filter(Boolean);
+  const userEntry: RankingItem = {
+    id: "user",
+    teamName,
+    score: userScore,
+    members: names.length || 4,
+    rank: 0,
+    isUser: true,
+    memberNames: names.length ? names : undefined,
+  };
+  const rankings = isFixed
+    ? [...baseRankings, userEntry].sort((a, b) => b.score - a.score).map((item, index) => ({ ...item, rank: index + 1 }))
+    : baseRankings;
 
   const top3 = rankings.filter((r) => r.rank <= 3);
-  const restRankings = rankings.filter((r) => r.rank > 3);
+  const restRankings = rankings.filter((r) => r.rank > 3 && r.rank <= 20);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchResults = searchQuery.trim()
+    ? rankings.filter((r) => r.teamName.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : [];
 
   return (
     <div className="w-full max-w-6xl mx-auto pb-20 px-4 relative">
@@ -131,20 +222,28 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
         aria-hidden
       />
 
-      {/* 상단 타이틀 - 컬러·타이포 대비 강화 */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-8 relative z-10"
       >
-        <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-50 rounded-2xl border-2 border-emerald-200 shadow-clay-sm mb-4">
-          <Turtle size={22} className="text-emerald-600" />
-          <span className="font-bold text-base font-sans uppercase tracking-widest text-emerald-800">Global Ranking</span>
-        </div>
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 font-display tracking-tight drop-shadow-sm">
           관상네컷 모임 랭킹
         </h2>
         <p className="text-gray-600 mt-3 font-hand font-medium text-base md:text-lg">거북도사님이 분석한 최고의 궁합 모임을 확인해보세요!</p>
+        {/* 팀명 검색 — 등록 단계가 아닐 때만 표시 (등록 후 또는 그냥 랭킹 확인할 때만) */}
+        {(!fromAnalysis || isFixed) && (
+          <div className="relative max-w-md mx-auto mt-6">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="팀명 검색 — 우리 팀 순위·점수 확인"
+              className="w-full h-12 pl-12 pr-4 rounded-xl border-2 border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 transition-all shadow-sm font-medium text-center sm:text-left"
+            />
+          </div>
+        )}
       </motion.div>
 
       {/* 팀명 등록 카드 (fromAnalysis && !isFixed) — 3줄 레이아웃, 테두리 비오렌지 */}
@@ -174,9 +273,34 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                   className="flex-1 min-w-0 h-12 px-4 bg-white border-2 border-gray-200 rounded-xl text-base font-bold font-display text-center sm:text-left focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 transition-all shadow-sm"
                   placeholder="팀명을 입력해 주세요"
                 />
-                <ActionButton variant="primary-soft" onClick={() => setIsFixed(true)} className="shrink-0 h-12 px-6 text-base flex items-center justify-center gap-2 !rounded-xl">
+                <ActionButton
+                  variant="primary-soft"
+                  onClick={async () => {
+                    const names = memberNames.filter(Boolean);
+                    const payload = [
+                      {
+                        score: userScore,
+                        title: teamName.trim() || "우리 팀",
+                        numberOfMembers: names.length || 4,
+                        memberNames: (names.length ? names : []).map((name) => ({ name })),
+                      },
+                    ];
+                    setIsSubmitting(true);
+                    try {
+                      await registerRanking(payload);
+                      setIsFixed(true);
+                      setToast({ open: true, message: "랭킹에 등록되었어요!", type: "success" });
+                    } catch {
+                      setToast({ open: true, message: "랭킹 등록에 실패했어요. 다시 시도해 주세요.", type: "error" });
+                    } finally {
+                      setIsSubmitting(false);
+                    }
+                  }}
+                  disabled={isSubmitting}
+                  className="shrink-0 h-12 px-6 text-base flex items-center justify-center gap-2 !rounded-xl"
+                >
                   <CheckCircle size={20} />
-                  랭킹에 등록하기
+                  {isSubmitting ? "등록 중…" : "랭킹에 등록하기"}
                 </ActionButton>
               </div>
             </div>
@@ -184,8 +308,51 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
         </motion.div>
       )}
 
-      {/* 상하 레이아웃: TOP3(상) 강조 → 순위 리스트(하) */}
+      {/* 검색 중: 결과만 표시 / 검색 전: TOP3 + 4~20 리스트 (등록 단계에서는 검색 결과 비표시) */}
       <div className={`flex flex-col gap-10 transition-opacity duration-300 ${fromAnalysis && !isFixed ? "opacity-40 pointer-events-none" : ""}`}>
+        {searchQuery.trim() && (!fromAnalysis || isFixed) ? (
+          /* 검색 결과만 — 순위 리스트 영역 재사용 */
+          <section className="rounded-2xl border border-gray-200 bg-white/90 shadow-md p-4 sm:p-6">
+            {searchResults.length === 0 ? (
+              <p className="text-center text-gray-500 font-sans py-12">검색 결과가 없습니다.</p>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 font-sans text-center mb-4">
+                  &quot;{searchQuery.trim()}&quot; 검색 결과 {searchResults.length}건
+                </p>
+                <div className="space-y-2 max-w-2xl mx-auto">
+                  {searchResults.map((item) => {
+                    const isUser = item.isUser;
+                    const showTrophy = item.rank <= 10;
+                    return (
+                      <GlassCard
+                        key={item.id}
+                        className={`p-4 flex items-center gap-4 border rounded-xl ${isUser ? "border-brand-orange bg-orange-50/80 ring-2 ring-brand-orange/25" : "border-gray-200 bg-white shadow-sm"}`}
+                      >
+                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 font-black text-base font-sans ${
+                          isUser ? "bg-brand-orange text-white" : showTrophy ? "bg-brand-orange/90 text-white" : "bg-gray-100 text-gray-600"
+                        }`}>
+                          {item.rank}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className={`font-bold font-display truncate ${isUser ? "text-brand-orange" : "text-gray-900"}`}>
+                            {item.teamName}
+                            {isUser && <span className="ml-1 text-xs font-sans bg-brand-orange/25 text-brand-orange font-bold px-1.5 py-0.5 rounded uppercase">YOU</span>}
+                          </h4>
+                          <div className="flex items-center gap-3 text-sm text-gray-600 font-sans mt-1">
+                            <span className="flex items-center gap-1"><Users size={12} /> {item.memberNames?.length ? `${item.members}명 · ${item.memberNames.join(", ")}` : `${item.members}명`}</span>
+                          </div>
+                        </div>
+                        <ScoreBadge score={item.score} isUser={isUser} isHighRank={showTrophy} />
+                      </GlassCard>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </section>
+        ) : (
+          <>
         {/* 상단: TOP3 전용 섹션 — 좌우 32px 여백 */}
         <section className="relative px-8">
           {/* 왕관 이모지 */}
@@ -276,7 +443,6 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                           }`}
                         >
                           <span className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent rounded-2xl pointer-events-none" aria-hidden />
-                          <Trophy size={isFirst || item.isUser ? 26 : 24} className={`relative z-10 shrink-0 ${item.isUser ? "text-brand-orange drop-shadow-sm" : isFirst ? "text-amber-600 drop-shadow-sm" : "text-emerald-600"}`} />
                           <span className="relative z-10 font-black font-sans tabular-nums">
                             <span className={item.isUser ? "text-2xl text-brand-orange" : isFirst ? "text-2xl text-amber-900" : "text-xl text-emerald-800"}>{item.score}</span>
                             <span className={item.isUser ? "text-lg text-orange-600 ml-0.5" : isFirst ? "text-lg text-amber-700 ml-0.5" : "text-lg text-emerald-600 ml-0.5"}>점</span>
@@ -293,7 +459,9 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                         )}
                       </h4>
                       <p className="text-xs text-gray-500 font-sans text-center mt-1">
-                        {item.members}명 · {item.tag}
+                        {item.memberNames?.length
+                          ? `${item.members}명 · ${item.memberNames.join(", ")}`
+                          : `${item.members}명`}
                       </p>
                       </div>
                       {/* 1위 전용 반짝거리는 효과 — 콘텐츠 위 레이어로 표시 */}
@@ -328,33 +496,26 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
           </div>
         </section>
 
-        {/* 하단: 나머지 순위 리스트 */}
-        <section className="flex flex-col min-h-0">
-          <div className="min-h-0 overflow-y-auto rounded-2xl border border-gray-200 bg-white/90 shadow-md p-3 space-y-3 pr-1 max-h-[calc(100vh-520px)] lg:max-h-[480px]">
-            {restRankings.length === 0 ? (
-              <p className="text-gray-500 font-sans text-center py-8 text-base">4위 이하는 없습니다.</p>
-            ) : (
-              restRankings.map((item, index) => {
+        {/* 하단: 4~20위 순위 리스트 — 좌우 2열 */}
+        <section className="flex flex-col">
+          {restRankings.length === 0 ? (
+            <div className="rounded-2xl border border-gray-200 bg-white/90 shadow-md p-8">
+              <p className="text-gray-500 font-sans text-center text-base">4~20위가 없습니다.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+              <div className="rounded-2xl border border-gray-200 bg-white/90 shadow-md p-3 space-y-2.5">
+                {restRankings.slice(0, Math.ceil(restRankings.length / 2)).map((item, index) => {
                 const isUser = item.isUser;
-                const isTens = item.rank % 10 === 0 && item.rank >= 20; // TOP 20, TOP 30 … (TOP 10은 아래 구분선으로 표시)
                 const showTrophy = item.rank <= 10;
-                const isFirstAfterTop10 = item.rank === 11; // 10위 이후 구분선 (TOP10 / 그 이하)
+                const isFirstAfterTop10 = item.rank === 11;
                 return (
                   <motion.div
                     key={item.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.04 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.03 }}
                   >
-                    {/* 20위 단위 구분선 (TOP 20, TOP 30 …) */}
-                    {isTens && (
-                      <div className="flex items-center gap-3 py-2 mb-1">
-                        <div className="flex-1 h-px bg-gray-200" />
-                        <span className="text-sm font-bold text-gray-400 font-sans uppercase tracking-wider">TOP {item.rank}</span>
-                        <div className="flex-1 h-px bg-gray-200" />
-                      </div>
-                    )}
-                    {/* 10위 이후 구분선 — TOP 10 */}
                     {isFirstAfterTop10 && (
                       <div className="flex items-center gap-3 py-2 mb-1">
                         <div className="flex-1 h-0.5 bg-gray-300" />
@@ -363,46 +524,76 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                       </div>
                     )}
                     <GlassCard
-                      className={`p-4 sm:p-5 flex items-center gap-4 border transition-all rounded-xl ${isUser ? "border-brand-orange bg-orange-50/80 ring-2 ring-brand-orange/25 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)]" : "border-gray-200 bg-white shadow-sm hover:shadow-md"}`}
+                      className={`p-3 sm:p-4 flex items-center gap-3 border transition-all rounded-xl ${isUser ? "border-brand-orange bg-orange-50/80 ring-2 ring-brand-orange/25 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)]" : "border-gray-200 bg-white shadow-sm hover:shadow-md"}`}
                     >
-                      <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 font-black text-base font-sans ${
+                      <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 font-black text-sm font-sans ${
                         isUser ? "bg-brand-orange text-white shadow-clay-xs" : showTrophy ? "bg-brand-orange/90 text-white shadow-clay-xs" : "bg-gray-100 text-gray-600"
                       }`}>
                         {item.rank}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className={`font-bold font-display truncate text-base sm:text-lg ${isUser ? "text-brand-orange" : "text-gray-900"}`}>
-                            {item.teamName}
-                            {isUser && <span className="ml-1 text-xs font-sans bg-brand-orange/25 text-brand-orange font-bold px-1.5 py-0.5 rounded uppercase">YOU</span>}
-                          </h4>
-                          <span className="text-xs text-gray-500 font-sans border border-gray-200 rounded-md px-2 py-0.5">{item.tag}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-gray-600 font-sans mt-1">
-                          <span className="flex items-center gap-1"><Users size={12} /> {item.members}명</span>
-                          {/* 미니 게이지 바: 점수 시각화 */}
-                          <span className="flex items-center gap-1.5">
-                            <span className="w-14 h-2 bg-gray-100 rounded-full overflow-hidden">
-                              <span
-                                className="block h-full rounded-full bg-amber-500"
-                                style={{ width: `${item.score}%` }}
-                              />
-                            </span>
-                            <span className={`font-black text-base ${isUser ? "text-brand-orange" : "text-gray-800"}`}>{item.score}</span>
-                          </span>
+                        <h4 className={`font-bold font-display truncate text-sm sm:text-base ${isUser ? "text-brand-orange" : "text-gray-900"}`}>
+                          {item.teamName}
+                          {isUser && <span className="ml-1 text-xs font-sans bg-brand-orange/25 text-brand-orange font-bold px-1.5 py-0.5 rounded uppercase">YOU</span>}
+                        </h4>
+                        <div className="flex items-center gap-2 text-xs text-gray-600 font-sans mt-0.5">
+                          <span className="flex items-center gap-0.5"><Users size={10} /> {item.memberNames?.length ? `${item.members}명 · ${item.memberNames.join(", ")}` : `${item.members}명`}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {showTrophy && <Trophy size={18} className="text-amber-500" />}
-                        <ScoreCircle score={item.score} isUser={isUser} isTop3={false} isHighRank={showTrophy} size={44} />
-                      </div>
+                      <ScoreBadge score={item.score} isUser={isUser} isHighRank={showTrophy} />
                     </GlassCard>
                   </motion.div>
                 );
-              })
-            )}
-          </div>
+              })}
+              </div>
+              <div className="rounded-2xl border border-gray-200 bg-white/90 shadow-md p-3 space-y-2.5">
+                {restRankings.slice(Math.ceil(restRankings.length / 2)).map((item, index) => {
+                const isUser = item.isUser;
+                const showTrophy = item.rank <= 10;
+                const isFirstAfterTop10 = item.rank === 11;
+                const idx = Math.ceil(restRankings.length / 2) + index;
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.03 }}
+                  >
+                    {isFirstAfterTop10 && (
+                      <div className="flex items-center gap-3 py-2 mb-1">
+                        <div className="flex-1 h-0.5 bg-gray-300" />
+                        <span className="text-xs font-bold text-gray-400 font-sans">TOP 10</span>
+                        <div className="flex-1 h-0.5 bg-gray-300" />
+                      </div>
+                    )}
+                    <GlassCard
+                      className={`p-3 sm:p-4 flex items-center gap-3 border transition-all rounded-xl ${isUser ? "border-brand-orange bg-orange-50/80 ring-2 ring-brand-orange/25 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)]" : "border-gray-200 bg-white shadow-sm hover:shadow-md"}`}
+                    >
+                      <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 font-black text-sm font-sans ${
+                        isUser ? "bg-brand-orange text-white shadow-clay-xs" : showTrophy ? "bg-brand-orange/90 text-white shadow-clay-xs" : "bg-gray-100 text-gray-600"
+                      }`}>
+                        {item.rank}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className={`font-bold font-display truncate text-sm sm:text-base ${isUser ? "text-brand-orange" : "text-gray-900"}`}>
+                          {item.teamName}
+                          {isUser && <span className="ml-1 text-xs font-sans bg-brand-orange/25 text-brand-orange font-bold px-1.5 py-0.5 rounded uppercase">YOU</span>}
+                        </h4>
+                        <div className="flex items-center gap-2 text-xs text-gray-600 font-sans mt-0.5">
+                          <span className="flex items-center gap-0.5"><Users size={10} /> {item.memberNames?.length ? `${item.members}명 · ${item.memberNames.join(", ")}` : `${item.members}명`}</span>
+                        </div>
+                      </div>
+                      <ScoreBadge score={item.score} isUser={isUser} isHighRank={showTrophy} />
+                    </GlassCard>
+                  </motion.div>
+                );
+              })}
+              </div>
+            </div>
+          )}
         </section>
+          </>
+        )}
       </div>
 
       {/* 하단 버튼 */}
@@ -422,6 +613,13 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
           </ActionButton>
         )}
       </motion.div>
+
+      <Toast
+        isOpen={toast.open}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((t) => ({ ...t, open: false }))}
+      />
     </div>
   );
 };
