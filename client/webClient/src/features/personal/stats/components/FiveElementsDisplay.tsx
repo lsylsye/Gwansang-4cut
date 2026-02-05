@@ -1,5 +1,6 @@
 import React, { useRef } from "react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/shared/ui/display/hover-card";
 import { OhengStarChart } from "./OhengStarChart";
 
 /** 오행(목/화/토/금/수) 개수 — 백엔드에서 동일 구조로 내려주면 그대로 사용 */
@@ -65,6 +66,39 @@ function getDefaultHeadLabel(counts: OhengCounts): string {
     return `${labels[entries[0][0]]}${ohengParticle(entries[0][0])} 중심인 체질`;
 }
 
+/** 오행 체질이란? 호버 카드 (체질 풀이용, 하드코딩) */
+const OHAENG_CHEJIL_INFO = (
+    <div className="text-left text-sm text-gray-700 space-y-3 max-w-[320px]">
+        <p className="font-semibold text-gray-800">오행 체질이란?</p>
+        <p>
+            &quot;타고난 몸의 사용 설명서&quot;예요. <strong>어디가 약하냐</strong>가 아니라, <strong>내 몸이 어떤 방식으로 균형을 잡느냐</strong>가 핵심이에요.
+            같은 음식·스트레스·나이도 반응이 달라요.
+        </p>
+        <p className="text-xs text-gray-600">
+            아래는 <strong>해당 오행이 부족할 때</strong> 챙기면 좋은 관리예요. (많을 때 강점이 아니라, 적을 때 보완 방향)
+        </p>
+        <table className="w-full text-xs border-collapse">
+            <thead>
+                <tr className="border-b border-gray-200">
+                    <th className="py-1 pr-2 text-left font-semibold">오행</th>
+                    <th className="py-1 pr-2 text-left font-semibold">몸의 역할</th>
+                    <th className="py-1 text-left font-semibold">부족할 때 챙기기</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">木 목</td><td className="py-1 pr-2">순환·신경</td><td className="py-1">움직임, 스트레칭</td></tr>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">火 화</td><td className="py-1 pr-2">열·혈액·심장</td><td className="py-1">수면, 흥분 조절</td></tr>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">土 토</td><td className="py-1 pr-2">소화·중심</td><td className="py-1">식사 리듬, 과식 금물</td></tr>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">金 금</td><td className="py-1 pr-2">호흡·피부·면역</td><td className="py-1">호흡, 규칙성</td></tr>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">水 수</td><td className="py-1 pr-2">저장·신장</td><td className="py-1">수면, 과로 금지</td></tr>
+            </tbody>
+        </table>
+        <p className="text-gray-600">
+            체질은 고칠 결함이 아니라, <strong>부족한 오행을 어떻게 챙기느냐</strong>가 관리 포인트예요.
+        </p>
+    </div>
+);
+
 export const FiveElementsDisplay: React.FC<FiveElementsDisplayProps> = ({
     counts,
     title = "오행 분포",
@@ -86,7 +120,23 @@ export const FiveElementsDisplay: React.FC<FiveElementsDisplayProps> = ({
             className={`p-6 sm:p-8 border border-gray-200 rounded-2xl bg-white/60 ${className}`}
         >
             {title && (
-                <p className="text-gray-900 font-bold text-lg mb-4 font-display">{title}</p>
+                <div className="flex items-center gap-2 mb-4">
+                    <p className="text-gray-900 font-bold text-lg font-display">{title}</p>
+                    <HoverCard openDelay={200} closeDelay={100}>
+                        <HoverCardTrigger asChild>
+                            <button
+                                type="button"
+                                className="text-xs text-brand-green hover:text-brand-green/80 underline underline-offset-2 cursor-help focus:outline-none"
+                                aria-label="오행 체질이란?"
+                            >
+                                오행 체질이란?
+                            </button>
+                        </HoverCardTrigger>
+                        <HoverCardContent side="bottom" align="start" className="w-auto max-w-[340px] p-4">
+                            {OHAENG_CHEJIL_INFO}
+                        </HoverCardContent>
+                    </HoverCard>
+                </div>
             )}
             
             {/* 전체를 감싸는 외곽 박스 */}
