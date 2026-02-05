@@ -15,113 +15,6 @@ import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
 import { saveGroupAnalysis, type GroupAnalysisData } from "@/shared/api/groupAnalysisApi";
 import { useIsMobile } from "@/shared/lib/hooks/use-mobile";
 
-// --- Mock Data ---
-const GROUP_MOCK_DATA = {
-    personality: {
-        title: "완벽하게 맞지는 않는데, 이상하게 끊어지지도 않는 모임",
-        harmony: "허허, 이 다섯 분의 기운을 자세히 살펴보니 참 묘한 조합이구먼. 완벽하게 맞지는 않는데 이상하게 끊어지지도 않는 모임이오. 각자의 역할이 명확하지만, 서로의 공백을 자연스럽게 메워주는 구조라오. 웃음 포인트는 분명 있소. 누군가는 꼭 정리를 해주고, 누군가는 말 안 해도 분위기를 읽고, 대신 감정 쌓이면 말 안 하고 속으로 삭히는 사람도 있소. 이게 바로 이 모임이 오래 가는 비결이구먼. 완벽하지 않아서 오히려 편안한 거요.",
-        comprehensive: "이 모임의 구조를 자세히 분석해보니, 각자의 역할이 명확하게 분담되어 있소. 윤환이 방향을 제시하고 리더십을 발휘하며, 경보가 중심을 유지하고 안정감을 제공하오. 승연은 감정 밸런스를 맞추는 역할을 하고, 현우는 완충과 중재로 갈등을 예방하구먼. 정현은 에너지와 활력을 제공해서 모임에 생기를 불어넣소. 이 구조 자체는 굉장히 좋은 편이오. 누구 하나 빠지면 균형이 깨지는 조합이라, 각자의 존재가 모두 소중하구먼. 다만, 서로의 감정을 제대로 표현하지 않으면 작은 불씨가 커질 수 있으니 주의가 필요하오.",
-        improvement: "이 모임이 5년 이상 가려면 딱 세 가지만 지키면 되오. 첫째, 농담은 사람 없을 때 하지 말 것. 특히 정현이의 즉흥적인 농담이 때로는 상대방의 마음에 상처를 줄 수 있으니, 분위기를 잘 읽고 말하도록 하오. 둘째, 결정권은 윤환이나 경보 쪽으로 자연스럽게 넘기면 되오. 이 둘은 현실 감각이 뛰어나고 책임감이 있어서 모임의 방향을 잘 잡을 수 있소. 셋째, 너무 자주 보지 말 것. 월 1~2회가 최적이오. 자주 만나면 오히려 피로가 쌓이고, 간격을 두고 만나면 오히려 오래 가는구먼. 이 세 가지만 지켜도 '편한 모임'으로 오래 가는구먼."
-    },
-    compatibility: {
-        score: 88,
-    },
-    teamwork: {
-        communication: 75,
-        speed: 80,
-        stability: 85,
-        communicationDetail: "이 모임의 커뮤니케이션을 보면, 때때로 말이 어긋나거나 서로의 의도를 제대로 파악하지 못하는 경우가 있소. 특히 정현이의 즉흥적인 발언과 승연이나 현우의 숙성된 표현 사이에 타이밍 차이가 있어서 오해가 생기기도 하구먼. 하지만 기본적으로 서로를 이해하려는 마음은 있어서 큰 갈등으로 번지지는 않소.",
-        speedDetail: "속도와 추진력 면에서는 이 모임이 꽤 좋은 편이오. 윤환이나 경보 같은 리더십 있는 멤버들이 방향을 제시하면, 나머지 멤버들도 빠르게 따라가는 구조라오. 결정이 필요할 때도 오래 끌지 않고 빠르게 정리하는 편이구먼. 다만, 너무 빠르게 진행되면 승연이나 현우 같은 신중한 멤버들이 부담을 느낄 수 있으니 주의가 필요하오.",
-        stabilityDetail: "안정도와 지속성은 이 모임의 가장 큰 강점이구먼. 각자의 역할이 명확하고, 서로의 공백을 자연스럽게 메워주는 구조라서 모임이 오래 갈 수 있는 기반이 잘 갖춰져 있소. 경보와 윤환이 중심을 잡아주고, 승연과 현우가 완충 역할을 하며, 정현이 활력을 제공하는 구조가 안정적이오. 다만, 감정을 제대로 표현하지 않으면 작은 불씨가 커질 수 있으니 주의가 필요하구먼."
-    },
-    maintenance: {
-        do: [
-            "농담은 사람 없을 때 하지 말 것",
-            "결정권은 윤환이나 경보 쪽으로 자연스럽게",
-            "너무 자주 보지 말 것 (월 1~2회가 최적이오)"
-        ],
-        dont: [
-            "고성으로 싸우기",
-            "대놓고 충돌하기",
-            "말 줄어들 때 방치하기"
-        ],
-        maintenanceCards: [
-            { label: "소통", title: "농담은 당사자 앞에서만", description: "분위기를 읽고 말할 때만 유쾌해요." },
-            { label: "리더십", title: "결정은 윤환과 경보에게", description: "현실 감각과 책임감이 있어 방향을 잘 잡아요." },
-            { label: "빈도", title: "만남은 월 1~2회", description: "피로 방지 · 오래 가는 비결" },
-        ],
-    },
-    members: [
-        {
-            id: 1,
-            name: "이승연",
-            birthDate: "1999.01.31",
-            gender: "female" as const,
-            role: "분위기 조율자",
-            keywords: ["공기 흐름", "정서 기준점", "감정 밸런스"],
-            description: "말은 세게 안 해도, 표정·톤으로 다 느끼는 타입. 모임에서 은근히 '정서 기준점' 역할",
-            strengths: ["공기 흐름을 잘 읽음"],
-            warnings: ["마음 상하면 말 안 하고 거리 둠"]
-        },
-        {
-            id: 2,
-            name: "이정현",
-            birthDate: "2002.02.15",
-            gender: "male" as const,
-            role: "에너지 담당",
-            keywords: ["즉흥적", "솔직함", "활력"],
-            description: "에너지 담당, 말 많을 때 많고 없을 땐 없음. 즉흥적이고 솔직함",
-            strengths: ["모임에 활력"],
-            warnings: ["농담이 가끔 선 넘음"]
-        },
-        {
-            id: 3,
-            name: "표경보",
-            birthDate: "1998.10.17",
-            gender: "male" as const,
-            role: "현실 담당",
-            keywords: ["중심축", "책임감", "안정감"],
-            description: "현실 담당, 중심축. 튀지 않지만 없으면 허전. 말 적어도 신뢰감 있음",
-            strengths: ["책임감, 안정감"],
-            warnings: ["답답하단 말 들을 수 있음"]
-        },
-        {
-            id: 4,
-            name: "정현우",
-            birthDate: "1999.10.28",
-            gender: "male" as const,
-            role: "눈치 + 정보 수집형",
-            keywords: ["완충", "중재", "계산"],
-            description: "눈치 + 정보 수집형. 겉으론 무난, 속으로 계산 빠름",
-            strengths: ["중재 능력"],
-            warnings: ["본심 숨기다 오해받기 쉬움"]
-        },
-        {
-            id: 5,
-            name: "박윤환",
-            birthDate: "1995.09.15",
-            gender: "male" as const,
-            role: "형·리더 포지션",
-            keywords: ["방향 제시", "결단력", "정리"],
-            description: "형·리더 포지션. 말에 무게가 있음. 분위기 정리하거나 방향 제시 역할",
-            strengths: ["결단력"],
-            warnings: ["본인은 조언인데 상대는 잔소리로 느낄 수 있음"]
-        }
-    ],
-    pairs: [
-        { member1: "표경보", member2: "박윤환", rank: 1, score: 95, type: "best", reason: "기준형 × 고참형. 말 없어도 신뢰 쌓이는 조합. 둘 다 고집 세서 한 번 틀어지면 오래 갈 수 있으니 말로 풀어 보는 게 좋음.", summary: "말 없어도 믿고 의지할 수 있는 조합" },
-        { member1: "이승연", member2: "표경보", rank: 2, score: 92, type: "best", reason: "안정형 × 불꽃형. 초반엔 잘 맞고, 피로 쌓이면 거리. 표경보의 즉흥성이 부담될 수 있음.", summary: "말 없이도 분위기 잘 읽어 주고받는 조합" },
-        { member1: "이승연", member2: "박윤환", rank: 3, score: 88, type: "best", reason: "조용한 안정 × 조용한 기준. 오래 가는 조합이지만 말이 너무 없음. 가끔은 일부러라도 대화 필요.", summary: "역할이 겹치지 않아 의지하기 좋은 조합" },
-        { member1: "표경보", member2: "정현우", rank: 4, score: 75, type: "normal", reason: "불꽃 × 기준. 초반엔 잘 맞다가 피로 누적 가능. 역할 분담 명확하면 문제 없음.", summary: "일상적으로 편하지만 중요한 건 대화로 정리하는 게 좋음" },
-        { member1: "이정현", member2: "표경보", rank: 5, score: 72, type: "normal", reason: "균형 잡는 사람 × 분위기 메이커. 표경보가 중심 잡아 주면 시너지 큼. 방치하면 이정현이 과열될 수 있음.", summary: "성향 차이가 균형 만들어 주는 조합" },
-        { member1: "이승연", member2: "정현우", rank: 6, score: 70, type: "normal", reason: "조용한 안정 × 조용한 기준. 오래 가는 조합이지만 말이 너무 없음. 가끔은 일부러라도 대화 필요.", summary: "눈치로 맞추다 보면 오해 쌓일 수 있으니 말로 확인하는 습관이 좋음" },
-        { member1: "정현우", member2: "박윤환", rank: 7, score: 65, type: "unstable", reason: "밀어붙임 × 선 긋기. 서로 답답해할 수 있는 조합. 사전 조율만 있으면 안정됨.", summary: "업무·모임에서는 시너지 나지만 마음 열 때는 시간이 더 필요" },
-        { member1: "이정현", member2: "이승연", rank: 8, score: 60, type: "unstable", reason: "참는 사람 × 말하는 사람. 균형 맞으면 최고, 어긋나면 상처 구조. 이정현 말 강도 조절이 핵심.", summary: "리듬 다르다는 걸 인정하고 만남 빈도 조절하면 안정됨" },
-        { member1: "이정현", member2: "정현우", rank: 9, score: 55, type: "unstable", reason: "의견 제시자 × 최종 정리자. 일 처리 궁합 좋음. 정현우가 제동 걸면 이정현은 속으로 불편할 수 있음.", summary: "직설적으로 말해도 상처 안 받도록 존중하는 말투가 좋음" },
-        { member1: "이정현", member2: "박윤환", rank: 10, score: 45, type: "worst", reason: "조율자 × 직설가. 잘 맞으면 결정 속도 + 안정성 최고. 감정 상한 상태에선 말투 충돌 주의.", summary: "서로 다르다는 걸 인정하고 작은 것부터 맞춰 보는 게 좋음" }
-    ]
-};
-
 /** 2~7명 원형 다이어그램: 인원수별 각도(라디안) 배열. 맨 위(-π/2)부터 시계방향 */
 function getCircleAngles(count: number): number[] {
     const angles: number[] = [];
@@ -199,6 +92,10 @@ interface GroupResultProps {
     /** 모임 궁합 API 응답 (members, groupCombination). 있으면 이 데이터로 렌더링 가능 */
     groupAnalysisResult?: GroupAnalysisResultProp;
     onViewRanking?: (score: number, defaultName: string) => void;
+    /** 이미 랭킹 등록된 상태에서 '랭킹 보기' 클릭 시 (등록 폼 없이 목록만) */
+    onViewRankingViewOnly?: () => void;
+    /** 랭킹 등록 완료 여부 (버튼 문구: '랭킹 보기' vs '랭킹 등록하기') */
+    hasRegisteredRanking?: boolean;
     /** 탭 변경 시 TurtleGuide 멘트용 (App에서 구독) */
     onTabChange?: (tab: "overall" | "pairs" | "ssafy-cut") => void;
     /** 싸피네컷(네컷) 페이지로 이동 (개인 결과처럼 결과 페이지에서 진입용) */
@@ -209,6 +106,8 @@ export const GroupResult: React.FC<GroupResultProps> = ({
     groupMembers = [],
     groupAnalysisResult = null,
     onViewRanking,
+    onViewRankingViewOnly,
+    hasRegisteredRanking = false,
     onTabChange,
     onNavigateToPhotoBooth,
 }) => {
@@ -330,7 +229,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
         });
     };
     
-    // API 응답이 있으면 overall/pairs 사용, 없으면 Mock 사용
+    // API 응답이 있으면 overall 사용, 없으면 null (결과 없음 화면 표시)
     const dataSource = useMemo(() => {
         const o = groupAnalysisResult?.overall;
         if (o?.personality && o?.compatibility && o?.teamwork && o?.maintenance && o?.members) {
@@ -342,36 +241,40 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                 membersFromApi: o.members,
             };
         }
-        return {
-            personality: GROUP_MOCK_DATA.personality,
-            compatibility: GROUP_MOCK_DATA.compatibility,
-            teamwork: GROUP_MOCK_DATA.teamwork,
-            maintenance: GROUP_MOCK_DATA.maintenance,
-            membersFromApi: GROUP_MOCK_DATA.members as Array<{ name: string; role: string; keywords: string[]; description: string; strengths: string[]; warnings: string[] }>,
-        };
+        return null;
     }, [groupAnalysisResult]);
 
     const handleRegisterRanking = () => {
-        if (onViewRanking) {
+        if (dataSource && onViewRanking) {
             onViewRanking(Number(dataSource.compatibility?.score) || 0, dataSource.personality.title);
         }
     };
 
-    // 실제 멤버 데이터와 역할 데이터 매핑 (API overall.members 또는 Mock)
+    /** 랭킹 버튼 클릭: 이미 등록됐으면 '랭킹 보기', 아니면 '랭킹 등록하기' 플로우 */
+    const handleRankingButtonClick = () => {
+        if (hasRegisteredRanking) {
+            onViewRankingViewOnly?.();
+        } else {
+            handleRegisterRanking();
+        }
+    };
+
+    // 실제 멤버 데이터와 역할 데이터 매핑 (API overall.members만 사용)
     const membersWithRoles = useMemo(() => {
+        if (!dataSource?.membersFromApi?.length) return [];
         if (groupMembers.length === 0) {
-            return dataSource.membersFromApi.map((mock, idx) => ({
-                id: (mock as { id?: number }).id ?? idx + 1,
-                name: mock.name,
-                birthDate: (mock as { birthDate?: string }).birthDate ?? "",
+            return dataSource.membersFromApi.map((m, idx) => ({
+                id: (m as { id?: number }).id ?? idx + 1,
+                name: m.name,
+                birthDate: (m as { birthDate?: string }).birthDate ?? "",
                 birthTime: "",
-                gender: (mock as { gender?: string }).gender ?? "male",
+                gender: (m as { gender?: string }).gender ?? "male",
                 avatar: undefined,
-                role: mock.role,
-                keywords: mock.keywords,
-                description: mock.description,
-                strengths: mock.strengths,
-                warnings: mock.warnings,
+                role: m.role,
+                keywords: m.keywords ?? [],
+                description: m.description ?? "",
+                strengths: m.strengths ?? [],
+                warnings: m.warnings ?? [],
             }));
         }
         return groupMembers.map((member, idx) => {
@@ -388,21 +291,12 @@ export const GroupResult: React.FC<GroupResultProps> = ({
         });
     }, [groupMembers, dataSource]);
 
-    // 1대1 궁합: API pairs 우선, 없으면 Mock
+    // 1대1 궁합: API pairs만 사용 (없으면 빈 배열)
     const mappedPairs = useMemo(() => {
         const apiPairs = groupAnalysisResult?.pairs;
-        if (apiPairs && apiPairs.length > 0) return apiPairs;
-        if (groupMembers.length === 0) return GROUP_MOCK_DATA.pairs;
-        const nameMap = new Map<string, string>();
-        GROUP_MOCK_DATA.members.forEach((mock, idx) => {
-            if (groupMembers[idx]) nameMap.set(mock.name, groupMembers[idx].name);
-        });
-        return GROUP_MOCK_DATA.pairs.map((pair) => ({
-            ...pair,
-            member1: nameMap.get(pair.member1) ?? pair.member1,
-            member2: nameMap.get(pair.member2) ?? pair.member2,
-        }));
-    }, [groupMembers, groupAnalysisResult?.pairs]);
+        if (apiPairs && Array.isArray(apiPairs) && apiPairs.length > 0) return apiPairs;
+        return [];
+    }, [groupAnalysisResult?.pairs]);
 
     // 베스트/워스트 TOP3: 2명(1쌍)·3명(3쌍)은 50점 기준, 4명 이상은 점수 등수대로
     const THRESHOLD = 50;
@@ -488,6 +382,30 @@ export const GroupResult: React.FC<GroupResultProps> = ({
         }));
     }, [membersWithRoles]);
 
+    // 분석 데이터 없음 → 결과 없음 화면
+    if (!dataSource) {
+        return (
+            <div
+                className="w-full min-w-0 mx-auto box-border"
+                style={{
+                    maxWidth: "var(--content-max-width)",
+                    paddingLeft: "var(--content-px)",
+                    paddingRight: "var(--content-px)",
+                    paddingBottom: "var(--content-pb)",
+                }}
+            >
+                <div className="flex flex-col items-center justify-center min-h-[50vh] py-16 px-4 text-center">
+                    <Users className="w-16 h-16 text-gray-300 mb-4" aria-hidden />
+                    <h2 className="text-xl font-bold text-gray-800 font-display mb-2">결과 없음</h2>
+                    <p className="text-gray-500 font-sans text-sm sm:text-base leading-relaxed">
+                        분석된 데이터가 없습니다.
+                        <br />
+                        모임 궁합을 다시 분석해 주세요.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div
@@ -544,11 +462,11 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                         <p className="text-base text-gray-800 font-display font-bold leading-snug w-full break-keep">"{dataSource.personality.title}"</p>
                                         <ActionButton
                                             variant="orange-primary"
-                                            onClick={() => onViewRanking?.(Number(dataSource.compatibility?.score) || 0, dataSource.personality.title)}
+                                            onClick={handleRankingButtonClick}
                                             className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold w-fit"
                                         >
                                             <Trophy size={14} />
-                                            이 점수 랭킹 등록하기
+                                            {hasRegisteredRanking ? "랭킹 보기" : "이 점수 랭킹 등록하기"}
                                         </ActionButton>
                                     </div>
                                 </section>
@@ -709,15 +627,15 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                             "{dataSource.personality.title}"
                                         </p>
                                     </div>
-                                    {/* 3) 가장 우측 중앙: 랭킹 등록 버튼 */}
+                                    {/* 3) 가장 우측 중앙: 랭킹 등록/보기 버튼 */}
                                     <div className="flex items-center justify-start sm:justify-end shrink-0 self-center">
                                         <ActionButton
                                             variant="orange-primary"
-                                            onClick={() => onViewRanking?.(Number(dataSource.compatibility?.score) || 0, dataSource.personality.title)}
+                                            onClick={handleRankingButtonClick}
                                             className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold shadow-lg hover:scale-105 transition-all"
                                         >
                                             <Trophy size={14} />
-                                            이 점수 랭킹 등록하기
+                                            {hasRegisteredRanking ? "랭킹 보기" : "이 점수 랭킹 등록하기"}
                                         </ActionButton>
                                     </div>
                                 </div>
@@ -1029,7 +947,8 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                     </div>
                                     <h3 className="font-bold text-lg sm:text-xl lg:text-2xl text-gray-800 font-display">개인별 포지션</h3>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                {/* 반응형: 좁은 화면에서는 1열로 쌓아 카드 여유 확보, 넓은 화면에서만 2~3열 */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                                     {membersWithRoles.map((member, idx) => (
                                         <motion.div
                                             key={member.id}
@@ -1038,7 +957,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                             transition={{ delay: 0.1 + idx * 0.1 }}
                                         >
                                             <div className="p-3 sm:p-4 h-full min-h-[240px] sm:min-h-[280px] flex flex-col bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
-                                                <div className="flex items-center gap-2.5 sm:gap-3 mb-2.5 sm:mb-3 flex-shrink-0">
+                                                <div className="flex items-start gap-2.5 sm:gap-3 mb-2.5 sm:mb-3 flex-shrink-0">
                                                     {member.avatar && member.avatar.trim() !== "" ? (
                                                         <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border border-slate-200 flex-shrink-0 relative">
                                                             <ImageWithFallback
@@ -1056,21 +975,19 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                             {member.name[0] || "?"}
                                                         </div>
                                                     )}
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-start justify-between gap-2">
-                                                            <h4 className="font-bold text-slate-900 text-lg font-display break-words min-w-0">{member.name}</h4>
-                                                            {(() => {
-                                                                const palette = MEMBER_CARD_PALETTE[idx % MEMBER_CARD_PALETTE.length];
-                                                                return (
-                                                                    <div className="flex items-center gap-1.5 shrink-0">
-                                                                        <Award className="w-5 h-5 flex-shrink-0 text-orange-600" />
-                                                                        <Badge variant="outline" className={`text-xs font-medium px-2.5 py-0.5 rounded-md border ${palette.badge}`}>
-                                                                            {member.role}
-                                                                        </Badge>
-                                                                    </div>
-                                                                );
-                                                            })()}
-                                                        </div>
+                                                    <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                                                        <h4 className="font-bold text-slate-900 text-lg font-display break-words">{member.name}</h4>
+                                                        {(() => {
+                                                            const palette = MEMBER_CARD_PALETTE[idx % MEMBER_CARD_PALETTE.length];
+                                                            return (
+                                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                                    <Award className="w-5 h-5 flex-shrink-0 text-orange-600" />
+                                                                    <Badge variant="outline" className={`text-xs font-medium px-2.5 py-0.5 rounded-md border break-words text-left ${palette.badge}`}>
+                                                                        {member.role}
+                                                                    </Badge>
+                                                                </div>
+                                                            );
+                                                        })()}
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-wrap gap-1.5 mb-3 flex-shrink-0">
@@ -1522,10 +1439,10 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                 </ActionButton>
                 <ActionButton 
                     variant="orange-primary" 
-                    onClick={handleRegisterRanking} 
+                    onClick={handleRankingButtonClick} 
                     className="flex items-center gap-2"
                 >
-                    <Trophy size={20} /> 랭킹 등록하기
+                    <Trophy size={20} /> {hasRegisteredRanking ? "랭킹 보기" : "랭킹 등록하기"}
                 </ActionButton>
             </div>
             

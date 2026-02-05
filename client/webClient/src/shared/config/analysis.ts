@@ -21,7 +21,7 @@ export const ANALYSIS_LOADING_MS = 30_000;
 
 /**
  * [개발용] true: 단체(그룹) 모드에서 /analyzing 생략 후 바로 /result로 이동.
- * false: 그룹도 개인과 동일하게 /group/analyzing 이동 후 API 호출, 완료 시 /result.
+ * false: 그룹도 개인과 동일하게 /analyzing 이동 후 API 호출, 완료 시 /result.
  */
 export const DEV_SKIP_ANALYZING_FOR_GROUP = false;
 

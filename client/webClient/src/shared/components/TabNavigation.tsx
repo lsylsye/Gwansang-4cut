@@ -58,7 +58,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
             <div
                 ref={navRef}
                 className={`flex w-full min-w-0 ${isMobile ? 'justify-start' : 'justify-center'} mb-10 transition-all duration-300 ${
-                    isSticky ? "fixed left-0 right-0 z-50 pt-4 pb-2 px-[var(--content-px,1rem)]" : ""
+                    isSticky ? "fixed left-0 right-0 z-50 pt-4 pb-2" : ""
                 }`}
                 style={isSticky ? { 
                     top: -16,

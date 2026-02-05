@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images, Share2, ImageOff, Loader2 } from "lucide-react";
+import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images, Share2, ImageOff, Loader2, User } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { FaceAnalysis } from "./face/components/FaceAnalysis";
 import { StatsAnalysis, type ConstitutionPhase } from "./stats/components/StatsAnalysis";
@@ -530,6 +530,23 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
         navigator.clipboard.writeText(shareUrl);
         alert('링크가 복사되었습니다!');
     };
+
+    // 분석 데이터 없음(로딩 완료 후) → 결과 없음 화면 (모임 궁합과 동일)
+    if (!isLoading && !featuresData) {
+        return (
+            <div className="w-full min-w-0 mx-auto box-border pb-20 px-4">
+                <div className="flex flex-col items-center justify-center min-h-[50vh] py-16 text-center">
+                    <User className="w-16 h-16 text-gray-300 mb-4" aria-hidden />
+                    <h2 className="text-xl font-bold text-gray-800 font-display mb-2">결과 없음</h2>
+                    <p className="text-gray-500 font-sans text-sm sm:text-base leading-relaxed">
+                        분석된 데이터가 없습니다.
+                        <br />
+                        개인 관상을 다시 분석해 주세요.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full max-w-7xl mx-auto pb-20" id="analysis-result-container">

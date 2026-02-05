@@ -145,6 +145,8 @@ interface RankingSectionProps {
   fromAnalysis?: boolean;
   /** 인적 사항에 등록한 멤버 이름 (우리 팀 카드에 인원수 옆에 표시) */
   memberNames?: string[];
+  /** 랭킹 등록 성공 시 호출 (결과 화면에서 '랭킹 보기' 버튼으로 바꿀 때 사용) */
+  onRankingRegistered?: () => void;
 }
 
 export const RankingSection: React.FC<RankingSectionProps> = ({
@@ -153,6 +155,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
   initialTeamName,
   fromAnalysis = false,
   memberNames = [],
+  onRankingRegistered,
 }) => {
   const [teamName, setTeamName] = useState(initialTeamName);
   const [isFixed, setIsFixed] = useState(false);
@@ -171,17 +174,26 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
   }, []);
 
   const names = memberNames.filter(Boolean);
+  const normalizedTeamName = teamName.trim() || "우리 팀";
   const userEntry: RankingItem = {
     id: "user",
-    teamName,
+    teamName: normalizedTeamName,
     score: userScore,
     members: names.length || 4,
     rank: 0,
     isUser: true,
     memberNames: names.length ? names : undefined,
   };
+  // 등록 후에는 서버 목록(baseRankings)에 이미 우리 팀이 포함되므로, 중복 제거 후 userEntry 하나만 넣어 한 번만 표시
   const rankings = isFixed
-    ? [...baseRankings, userEntry].sort((a, b) => b.score - a.score).map((item, index) => ({ ...item, rank: index + 1 }))
+    ? (() => {
+        const withoutDuplicate = baseRankings.filter(
+          (r) => !(r.teamName === normalizedTeamName && r.score === userScore)
+        );
+        return [...withoutDuplicate, userEntry]
+          .sort((a, b) => b.score - a.score)
+          .map((item, index) => ({ ...item, rank: index + 1 }));
+      })()
     : baseRankings;
 
   const top3 = rankings.filter((r) => r.rank <= 3);
@@ -268,6 +280,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                     try {
                       await registerRanking(payload);
                       setIsFixed(true);
+                      onRankingRegistered?.();
                       setToast({ open: true, message: "랭킹에 등록되었어요!", type: "success" });
                       loadRankings(setBaseRankings, setRankingsLoading, setRankingsError);
                     } catch {
