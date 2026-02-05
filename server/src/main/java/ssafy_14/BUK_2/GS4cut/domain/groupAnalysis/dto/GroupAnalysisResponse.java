@@ -15,7 +15,7 @@ import java.util.UUID;
 @Builder
 public class GroupAnalysisResponse {
 
-    private UUID uuid;
+    private UUID id;
     private String analysisData;
     private LocalDateTime createdAt;
 
