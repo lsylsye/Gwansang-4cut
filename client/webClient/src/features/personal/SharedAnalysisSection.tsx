@@ -35,8 +35,8 @@ export const SharedAnalysisSection: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [analysisData, setAnalysisData] = useState<PersonalAnalysisData | null>(null);
 
-    // 체질 분석 상태
-    const [constitutionPhase, setConstitutionPhase] = useState<ConstitutionPhase>("intro");
+    // 체질 분석 상태 - 공유 페이지에서는 바로 체질 풀이 결과만 표시
+    const [constitutionPhase, setConstitutionPhase] = useState<ConstitutionPhase>("constitution");
     const [constitutionSelectedMenuIdx, setConstitutionSelectedMenuIdx] = useState<number | null>(null);
 
     // UUID로 데이터 조회
@@ -63,15 +63,8 @@ export const SharedAnalysisSection: React.FC = () => {
                 console.log("✅ 파싱된 데이터:", parsed);
                 setAnalysisData(parsed);
 
-                // 저장된 체질 분석 상태 복원
-                if (parsed.constitutionAnalysis) {
-                    if (parsed.constitutionAnalysis.phase) {
-                        setConstitutionPhase(parsed.constitutionAnalysis.phase as ConstitutionPhase);
-                    }
-                    if (parsed.constitutionAnalysis.selectedMenuIdx !== undefined) {
-                        setConstitutionSelectedMenuIdx(parsed.constitutionAnalysis.selectedMenuIdx);
-                    }
-                }
+                // 공유 페이지에서는 항상 체질 풀이만 바로 표시 (인트로/싸밥 추천 건너뜀)
+                // 저장된 phase 복원 없이 "constitution"으로 고정
             } catch (err) {
                 console.error("❌ 분석 결과 조회 실패:", err);
                 setError("분석 결과를 불러오는데 실패했습니다.");
@@ -136,6 +129,12 @@ export const SharedAnalysisSection: React.FC = () => {
 
     console.log("📊 불러온 totalReviewData:", totalReviewData);
 
+    // 체질 분석 데이터 (저장된 sajuInfo와 totalReview)
+    const constitutionSajuInfo = analysisData.constitutionAnalysis?.sajuInfo || null;
+    const constitutionTotalReview = analysisData.constitutionAnalysis?.totalReview || null;
+
+    console.log("📊 불러온 체질 분석 데이터:", { sajuInfo: constitutionSajuInfo, totalReview: constitutionTotalReview });
+
     return (
         <div className="w-full max-w-7xl mx-auto pb-20" id="shared-analysis-container">
             {/* 공유 결과 안내 배너 */}
@@ -182,6 +181,8 @@ export const SharedAnalysisSection: React.FC = () => {
                         onConstitutionPhaseChange={setConstitutionPhase}
                         constitutionSelectedMenuIdx={constitutionSelectedMenuIdx}
                         onConstitutionSelectedMenuIdxChange={setConstitutionSelectedMenuIdx}
+                        sajuInfo={constitutionSajuInfo}
+                        totalReview={constitutionTotalReview}
                     />
                 )}
             </motion.div>

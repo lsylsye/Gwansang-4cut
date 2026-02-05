@@ -907,6 +907,42 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
                         })()}
                     </div>
                 )}
+
+                {/* constitution phase: 인트로/싸밥 추천 없이 바로 체질 풀이만 표시 (공유 페이지용) */}
+                {constitutionPhase === "constitution" && (
+                    <div className="space-y-6">
+                        {(() => {
+                            const ohengFromApi = sajuInfo ? fiveElementsToOheng(sajuInfo.fiveElements) : null;
+                            const oheng: OhengCounts = ohengFromApi ?? CONSTITUTION_SAJU_DATA.oheng;
+                            const constitutionBlock = totalReview && (
+                                (totalReview as Record<string, string>)["total_user_saju_information"] ??
+                                totalReview.constitutionSummary
+                            );
+                            const { head } = ohengFromApi ? getOhengHead(oheng) : { head: CONSTITUTION_SAJU_DATA.head };
+
+                            // 데이터가 없는 경우에도 기본 체질 풀이 표시
+                            const constitutionData: ConstitutionSajuData = constitutionBlock
+                                ? {
+                                      type: head,
+                                      head,
+                                      oheng,
+                                      sections: [{ text: constitutionBlock }],
+                                      daeunAndFoods: {
+                                          title: "건강 관리를 위해 꼭 챙기면 좋은 것들",
+                                          body: "",
+                                          priorityFoods: [],
+                                      },
+                                  }
+                                : {
+                                      ...CONSTITUTION_SAJU_DATA,
+                                      oheng,
+                                      head,
+                                      type: head,
+                                  };
+                            return <ConstitutionSajuBlock data={constitutionData} />;
+                        })()}
+                    </div>
+                )}
             </div>
         );
     }
