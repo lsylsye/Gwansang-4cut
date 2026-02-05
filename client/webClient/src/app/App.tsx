@@ -9,6 +9,7 @@ import { AnalyzingSection } from "@/features/upload/components/AnalyzingSection"
 import { AnalysisSection } from "@/features/personal/AnalysisSection";
 import { SharedAnalysisSection } from "@/features/personal/SharedAnalysisSection";
 import { GroupAnalysisSection } from "@/features/group/GroupAnalysisSection";
+import { SharedGroupAnalysisSection } from "@/features/group/SharedGroupAnalysisSection";
 import { RankingSection } from "@/features/ranking/components/RankingSection";
 import { PhotoBoothSection } from "@/features/photo/components/PhotoBoothSection";
 import { TurtleGuide } from "@/shared/components/TurtleGuide";
@@ -32,6 +33,7 @@ import {
   isAnalyzingPath,
   isResultPath,
   isPersonalSharePath,
+  isGroupSharePath,
 } from "@/shared/config/routes";
 import { 
   analyzeFace, 
@@ -514,6 +516,20 @@ export default function App() {
                 className="w-full h-full"
               >
                 <SharedAnalysisSection />
+              </motion.div>
+            )}
+
+            {/* 단체 분석 공유 결과 페이지 */}
+            {isGroupSharePath(pathname) && (
+              <motion.div
+                key="shared-group-result"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4 }}
+                className="w-full h-full"
+              >
+                <SharedGroupAnalysisSection />
               </motion.div>
             )}
 

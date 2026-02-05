@@ -12,6 +12,7 @@ import { RelationMapSidebar, type RelationMapMember } from "./RelationMapSidebar
 import { RelationMapView, type RelationWithLevel } from "./RelationMapView";
 import { RelationDetailCard, getRelationLevel, type RelationPairForDetail } from "./RelationDetailCard";
 import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
+import { saveGroupAnalysis, type GroupAnalysisData } from "@/shared/api/groupAnalysisApi";
 import { useIsMobile } from "@/shared/lib/hooks/use-mobile";
 
 // --- Mock Data ---
@@ -218,6 +219,10 @@ export const GroupResult: React.FC<GroupResultProps> = ({
     const isMobile = useIsMobile();
     /** 모임 궁합용 싸피네컷 저장 이미지 (photoBoothSets_group) */
     const [savedGroupFrameImage, setSavedGroupFrameImage] = useState<string | null>(null);
+    /** 저장 중 로딩 상태 */
+    const [isSavingShare, setIsSavingShare] = useState(false);
+    /** 저장된 UUID */
+    const [savedUuid, setSavedUuid] = useState<string | null>(null);
 
     // 모임용 싸피네컷 저장 이미지 로드
     useEffect(() => {
@@ -245,12 +250,76 @@ export const GroupResult: React.FC<GroupResultProps> = ({
         onTabChange?.(currentTab);
     }, [currentTab, onTabChange]);
     
-    // 링크 공유 기능
-    const shareUrl = `${window.location.origin}${window.location.pathname}`;
+    // 링크 공유 기능 (저장 후 UUID로 공유 URL 생성)
+    const shareUrl = savedUuid 
+        ? `${window.location.origin}/group/share/${savedUuid}`
+        : `${window.location.origin}${window.location.pathname}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`;
     
-    const handleShare = () => {
-        setIsShareModalOpen(true);
+    const handleShare = async () => {
+        if (isSavingShare) return;
+        
+        // 이미 저장된 UUID가 있으면 바로 모달 열기
+        if (savedUuid) {
+            setIsShareModalOpen(true);
+            return;
+        }
+        
+        setIsSavingShare(true);
+        
+        try {
+            // 저장할 데이터 구성 (싸피네컷 제외)
+            const saveData: GroupAnalysisData = {
+                teamName: dataSource.personality?.title || '모임 궁합 분석',
+                memberCount: groupMembers.length || membersWithRoles.length,
+                score: dataSource.compatibility?.score,
+                members: membersWithRoles.map((m) => ({
+                    id: m.id,
+                    name: m.name,
+                    birthDate: m.birthDate,
+                    birthTime: m.birthTime,
+                    gender: m.gender as string,
+                    avatar: m.avatar,
+                    role: m.role,
+                    keywords: m.keywords,
+                    description: m.description,
+                    strengths: m.strengths,
+                    warnings: m.warnings,
+                })),
+                overallAnalysis: {
+                    personality: dataSource.personality,
+                    compatibility: dataSource.compatibility,
+                    teamwork: dataSource.teamwork,
+                    maintenance: dataSource.maintenance,
+                    members: dataSource.membersFromApi,
+                },
+                pairsAnalysis: completePairs.map((p) => ({
+                    name1: p.member1,
+                    name2: p.member2,
+                    score: p.score,
+                    summary: p.summary,
+                    strengths: p.strengths,
+                    cautions: p.cautions,
+                    tips: p.tips,
+                })),
+            };
+            
+            console.log('📦 저장할 단체 분석 데이터:', saveData);
+            
+            // API 호출하여 저장
+            const uuid = await saveGroupAnalysis(saveData);
+            
+            // UUID 저장
+            setSavedUuid(uuid);
+            
+            // 모달 열기
+            setIsShareModalOpen(true);
+        } catch (error) {
+            console.error('단체 분석 결과 저장 실패:', error);
+            alert('분석 결과 저장에 실패했습니다. 다시 시도해주세요.');
+        } finally {
+            setIsSavingShare(false);
+        }
     };
     
     const handleCopyLink = () => {
@@ -1435,8 +1504,21 @@ export const GroupResult: React.FC<GroupResultProps> = ({
             
             {/* Bottom Actions */}
             <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-8 sm:mt-12 lg:mt-16 pb-6 sm:pb-10 no-capture">
-                <ActionButton variant="secondary" onClick={handleShare} className="flex items-center gap-2 bg-white">
-                    <Share2 size={20} /> 링크 공유하기
+                <ActionButton 
+                    variant="secondary" 
+                    onClick={handleShare} 
+                    disabled={isSavingShare}
+                    className="flex items-center gap-2 bg-white"
+                >
+                    {isSavingShare ? (
+                        <>
+                            <Loader2 size={20} className="animate-spin" /> 저장 중...
+                        </>
+                    ) : (
+                        <>
+                            <Share2 size={20} /> 결과 저장 & 공유
+                        </>
+                    )}
                 </ActionButton>
                 <ActionButton 
                     variant="orange-primary" 
