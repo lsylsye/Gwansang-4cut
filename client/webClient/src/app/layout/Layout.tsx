@@ -12,7 +12,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className="min-h-screen w-full relative overflow-x-hidden bg-gray-50">
       {showGridBackground && (
         <div
-          className="fixed inset-0 z-0 opacity-40 pointer-events-none"
+          className="fixed inset-0 z-0 opacity-40 pointer-events-none hidden sm:block"
           style={{
             backgroundImage: `linear-gradient(#ccc 1px, transparent 1px), linear-gradient(to right, #ccc 1px, transparent 1px)`,
             backgroundSize: "24px 24px",

@@ -59,7 +59,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
         chin: "턱/하관",
     };
 
-    /** 범위 게이지: value가 어느 구간(segment)에 해당하는지 시각화. 게이지 바 아래에 구간별 기준값만 표시 */
+    /** 범위 게이지: value가 어느 구간(segment)에 해당하는지 시각화 */
     const renderRangeGauge = (
         g: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] },
         customLabel?: string

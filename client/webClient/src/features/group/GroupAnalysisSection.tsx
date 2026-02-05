@@ -28,7 +28,7 @@ export const GroupAnalysisSection: React.FC<GroupAnalysisSectionProps> = ({
     onNavigateToPhotoBooth,
 }) => {
     return (
-        <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 pb-20">
+        <div className="w-full min-w-0">
             <GroupResult
                 groupMembers={groupMembers}
                 groupAnalysisResult={groupAnalysisResult}

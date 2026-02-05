@@ -699,7 +699,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                     </label>
                   </div>
                   {!sajuData.birthTimeUnknown ? (
-                    <div className="grid grid-cols-2 gap-2 w-full max-w-[50%]">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-full sm:max-w-[320px]">
                       <div className="relative min-w-0">
                         <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange pointer-events-none z-10" />
                         <Select
@@ -1796,7 +1796,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                             </label>
                           </div>
                           {!member.birthTimeUnknown ? (
-                            <div className="grid grid-cols-2 gap-2 w-full min-w-0 max-w-[50%]">
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full min-w-0 max-w-full sm:max-w-[280px]">
                               <div className="relative min-w-0">
                                 <Clock
                                   className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange pointer-events-none z-10"
@@ -1835,12 +1835,14 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                                 <Input
                                   type="text"
                                   inputMode="numeric"
-                                  placeholder="0"
+                                  placeholder="00"
                                   maxLength={2}
                                   value={(() => {
-                                    if (!member.birthTime) return "";
-                                    const [, minutes] = member.birthTime.split(":");
-                                    return minutes;
+                                    const raw = member.birthTime ?? "";
+                                    if (!raw) return "";
+                                    const parts = raw.split(":");
+                                    const minutes = parts[1] ?? "";
+                                    return String(minutes);
                                   })()}
                                   onChange={(e) => {
                                     const v = e.target.value.replace(/\D/g, "").slice(0, 2);
