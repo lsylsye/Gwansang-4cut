@@ -303,9 +303,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
         setShowSajuInput(true);
       } else if (showSajuInput) {
         // 사주 정보 입력 완료 후 분석 시작
-        // 이전 싸피네컷 사진 캐시 삭제 (백엔드 POST 전에 삭제)
+        // 이전 싸피네컷 사진 캐시 삭제 (개인용만)
         try {
-          localStorage.removeItem("photoBoothSets");
+          localStorage.removeItem("photoBoothSets_personal");
         } catch (error) {
           console.error("이전 촬영 데이터 삭제 실패:", error);
         }
@@ -489,9 +489,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   };
 
   const handleGroupAnalyze = async () => {
-    // 이전 싸피네컷 사진 캐시 삭제 (백엔드 POST 전에 삭제)
+    // 이전 싸피네컷 사진 캐시 삭제 (모임용만)
     try {
-      localStorage.removeItem("photoBoothSets");
+      localStorage.removeItem("photoBoothSets_group");
     } catch (error) {
       console.error("이전 촬영 데이터 삭제 실패:", error);
     }

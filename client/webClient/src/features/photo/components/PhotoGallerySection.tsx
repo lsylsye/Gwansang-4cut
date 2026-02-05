@@ -26,20 +26,16 @@ export const PhotoGallerySection: React.FC<PhotoGallerySectionProps> = ({
   const brand = isPersonal ? "green" : "orange";
   const [photoSets, setPhotoSets] = useState<PhotoSet[]>([]);
   const [selectedSet, setSelectedSet] = useState<PhotoSet | null>(null);
-
-  useEffect(() => {
-    loadPhotoSets();
-  }, []);
+  const storageKey = isPersonal ? "photoBoothSets_personal" : "photoBoothSets_group";
 
   const loadPhotoSets = () => {
     try {
-      // 싸피네컷(photo-booth) onComplete에서 저장한 photoBoothSets 조회
-      const saved = localStorage.getItem("photoBoothSets");
+      const saved = localStorage.getItem(storageKey)
+        || (isPersonal ? localStorage.getItem("photoBoothSets") : null);
       if (saved) {
         const sets: PhotoSet[] = JSON.parse(saved);
         setPhotoSets(sets.slice(0, 1));
-      } else {
-        // If no sets, check for old format (single array)
+      } else if (isPersonal) {
         const oldPhotos = localStorage.getItem("photoBoothPhotos");
         if (oldPhotos) {
           const photos: (string | null)[] = JSON.parse(oldPhotos);
@@ -53,7 +49,7 @@ export const PhotoGallerySection: React.FC<PhotoGallerySectionProps> = ({
               createdAt: new Date().toISOString(),
             };
             setPhotoSets([newSet]);
-            localStorage.setItem("photoBoothSets", JSON.stringify([newSet]));
+            localStorage.setItem(storageKey, JSON.stringify([newSet]));
             localStorage.removeItem("photoBoothPhotos");
           }
         }
@@ -63,10 +59,14 @@ export const PhotoGallerySection: React.FC<PhotoGallerySectionProps> = ({
     }
   };
 
+  useEffect(() => {
+    loadPhotoSets();
+  }, [storageKey]);
+
   const handleDeleteSet = (id: string) => {
     const updated = photoSets.filter((set) => set.id !== id);
     setPhotoSets(updated);
-    localStorage.setItem("photoBoothSets", JSON.stringify(updated));
+    localStorage.setItem(storageKey, JSON.stringify(updated));
     if (selectedSet?.id === id) {
       setSelectedSet(null);
     }

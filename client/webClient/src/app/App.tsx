@@ -28,7 +28,6 @@ import {
   getUploadPath,
   getAnalyzingPath,
   getResultPath,
-  getPhotoBoothPath,
   isPhotoBoothPath,
   isAnalyzingPath,
   isResultPath,
@@ -298,6 +297,10 @@ export default function App() {
   };
 
   const pathname = location.pathname;
+  /** 네컷 페이지에서 사용할 모드 (진입 시 state로 전달, 없으면 personal) */
+  const photoBoothMode: AnalyzeMode =
+    (location.state as { mode?: AnalyzeMode } | null)?.mode ?? "personal";
+
   const getGuideMessage = () => {
     // 공유 페이지인 경우
     if (isPersonalSharePath(pathname)) {
@@ -319,7 +322,7 @@ export default function App() {
       case ROUTES.PERSONAL_ANALYZING:
         return "기다리는 동안 심심하지 않게 작은 선물을 준비했소. \n아래 버튼으로 가 보시게.";
       case ROUTES.GROUP_ANALYZING:
-        return "음... 가만있어 보자... \n천기를 스르지 않고 기운을 읽는 중이니, \n잠시만 정적을 지켜주시게나.";
+        return "기다리는 동안 심심하지 않게 작은 선물을 준비했소. \n아래 버튼으로 가 보시게.";
       case ROUTES.PERSONAL_RESULT: {
         const tab = personalResultTab ?? "physiognomy";
         if (tab === "constitution") return "자네의 체질과 오행을 살펴보는 구간이구먼. \n사주에 맞는 음식과 기운을 내가 짚어 보았네. \n꼭 챙겨 먹게나.";
@@ -332,8 +335,7 @@ export default function App() {
         return "오호라, 이 모임의 기운이 보통이 아니구먼.\n모임 전체부터 일대일 궁합까지 정리해 두었네.\n자, 찬찬히 읽어보시게.";
       case ROUTES.RANKING:
         return "허허, 전국 방방곡곡의 인연들이 다 모였구먼! \n자네들의 모임은 과연 몇 번째 기운을 가졌을꼬?";
-      case ROUTES.PERSONAL_PHOTO_BOOTH:
-      case ROUTES.GROUP_PHOTO_BOOTH:
+      case ROUTES.PHOTO_BOOTH:
         return "허허, 사진 네컷을 찍는구먼! \n기다리는 동안 즐거운 추억을 남기게나.";
       default:
         return "";
@@ -454,6 +456,9 @@ export default function App() {
                     groupAnalysisResult={groupAnalysisResult}
                     onViewRanking={handleViewRanking}
                     onTabChange={setGroupResultTab}
+                    onNavigateToPhotoBooth={() =>
+                      navigate(ROUTES.PHOTO_BOOTH, { state: { from: "result", mode: "group" } })
+                    }
                   />
                 ) : (
                   <AnalysisSection
@@ -461,7 +466,7 @@ export default function App() {
                     onRestart={handleRestart}
                     onTabChange={setPersonalResultTab}
                     onNavigateToPhotoBooth={() =>
-                      navigate(getPhotoBoothPath(mode), { state: { from: "result" } })
+                      navigate(ROUTES.PHOTO_BOOTH, { state: { from: "result", mode } })
                     }
                     frameImage={frameImageState || location.state?.frameImage}
                     fromPhotoBooth={fromPhotoBoothState || location.state?.fromPhotoBooth}
@@ -506,7 +511,7 @@ export default function App() {
               </motion.div>
             )}
 
-            {(pathname === ROUTES.PERSONAL_PHOTO_BOOTH || pathname === ROUTES.GROUP_PHOTO_BOOTH) && (
+            {pathname === ROUTES.PHOTO_BOOTH && (
               <motion.div
                 key="photo-booth"
                 initial={{ opacity: 0, y: 20 }}
@@ -516,43 +521,41 @@ export default function App() {
                 className="w-full h-full"
               >
                 <PhotoBoothSection
-                  mode={mode}
+                  mode={photoBoothMode}
                   analysisDone={analysisDone}
-                  onNavigateToResult={() => navigate(getResultPath(mode))}
+                  onNavigateToResult={() => navigate(getResultPath(photoBoothMode))}
                   onStepChange={(isCapturing) => setIsPhotoBoothCapturing(isCapturing)}
                   onBack={() => {
-                    // analyzing이 완료된 상태면 결과창으로, 진행 중이면 analyzing으로
                     if (analysisDone) {
-                      navigate(getResultPath(mode));
+                      navigate(getResultPath(photoBoothMode));
                     } else {
-                      navigate(getAnalyzingPath(mode));
+                      navigate(getAnalyzingPath(photoBoothMode));
                     }
                   }}
                   onComplete={(photos) => {
-                    // 싸피네컷 완료 → photoBoothSets에 저장
+                    const storageKey =
+                      photoBoothMode === "personal"
+                        ? "photoBoothSets_personal"
+                        : "photoBoothSets_group";
                     const newSet = {
                       id: Date.now().toString(),
                       photos: photos,
                       createdAt: new Date().toISOString(),
                     };
                     const existing = JSON.parse(
-                      localStorage.getItem("photoBoothSets") || "[]"
+                      localStorage.getItem(storageKey) || "[]"
                     );
                     existing.unshift(newSet);
                     const toSave = existing.slice(0, 1);
                     try {
-                      localStorage.setItem(
-                        "photoBoothSets",
-                        JSON.stringify(toSave)
-                      );
+                      localStorage.setItem(storageKey, JSON.stringify(toSave));
                     } catch {
                       // QuotaExceededError 등: 저장 실패해도 진행 (갤러리 미반영)
                     }
-                    // 싸피네컷 다 찍었을 때: 분석 끝남 → /result, 아니면 → /analyzing
                     if (analysisDone) {
-                      navigate(getResultPath(mode));
+                      navigate(getResultPath(photoBoothMode));
                     } else {
-                      navigate(getAnalyzingPath(mode));
+                      navigate(getAnalyzingPath(photoBoothMode));
                     }
                   }}
                 />
@@ -569,10 +572,16 @@ export default function App() {
         getGuideMessage={getGuideMessage}
         isPhotoBooth={isPhotoBooth}
         photoBoothAction={
-          pathname === ROUTES.PERSONAL_ANALYZING
+          pathname === ROUTES.PERSONAL_ANALYZING || pathname === ROUTES.GROUP_ANALYZING
             ? {
                 label: "네컷 사진 찍기",
-                onClick: () => navigate(getPhotoBoothPath(mode), { state: { from: "analyzing" } }),
+                onClick: () =>
+                  navigate(ROUTES.PHOTO_BOOTH, {
+                    state: {
+                      from: "analyzing",
+                      mode: pathname === ROUTES.GROUP_ANALYZING ? "group" : mode,
+                    },
+                  }),
               }
             : undefined
         }
@@ -585,12 +594,7 @@ export default function App() {
         onClose={() => setShowAnalysisCompleteToast(false)}
         onAction={() => {
           if (analysisDone) {
-            const currentPath = pathnameRef.current;
-            if (isPhotoBoothPath(currentPath)) {
-              navigate(getResultPath(mode));
-            } else {
-              navigate(getResultPath(mode));
-            }
+            navigate(getResultPath(photoBoothMode));
             setShowAnalysisCompleteToast(false);
           }
         }}
@@ -617,20 +621,20 @@ function TurtleGuideGate({
   const { hideTurtleGuide } = useHideTurtleGuide();
   if (isPhotoBooth) return null;
   // /personal/analyzing에서는 토글 닫아둔 상태여도 무조건 TurtleGuide 표시
-  if (hideTurtleGuide && pathname !== ROUTES.PERSONAL_ANALYZING) return null;
+  if (hideTurtleGuide && pathname !== ROUTES.PERSONAL_ANALYZING && pathname !== ROUTES.GROUP_ANALYZING) return null;
   return (
     <TurtleGuide
       pathname={pathname}
       message={getGuideMessage()}
       isThinking={isAnalyzingPath(pathname)}
       thinkingMessage={
-        pathname === ROUTES.PERSONAL_ANALYZING
+        pathname === ROUTES.PERSONAL_ANALYZING || pathname === ROUTES.GROUP_ANALYZING
           ? "기다리는 동안 심심하지 않게 작은 선물을 준비했소.\n아래 버튼으로 가 보시게."
           : undefined
       }
       actionLabel={photoBoothAction?.label}
       onAction={photoBoothAction?.onClick}
-      disableAutoClose={pathname === ROUTES.PERSONAL_ANALYZING}
+      disableAutoClose={pathname === ROUTES.PERSONAL_ANALYZING || pathname === ROUTES.GROUP_ANALYZING}
     />
   );
 }

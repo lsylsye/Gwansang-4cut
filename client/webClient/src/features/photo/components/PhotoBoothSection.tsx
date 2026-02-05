@@ -98,15 +98,15 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
     { name: "Black", value: "#010C13" },
   ];
 
-  // 컴포넌트 마운트 시 이전 촬영 사진 캐시 삭제
+  // 컴포넌트 마운트 시 현재 모드의 이전 촬영 캐시만 삭제 (개인/모임 분리)
+  const storageKey = isPersonal ? "photoBoothSets_personal" : "photoBoothSets_group";
   useEffect(() => {
-    // 이전 localStorage 데이터 삭제
     try {
-      localStorage.removeItem("photoBoothSets");
+      localStorage.removeItem(storageKey);
     } catch (error) {
       console.error("이전 촬영 데이터 삭제 실패:", error);
     }
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     if (frameType === "vertical") setFrameColor("#BFE7FF");
@@ -549,8 +549,9 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
         // Data URL로 변환하여 localStorage에 저장
         const frameImage = canvas.toDataURL("image/png", 1.0);
         
-        // localStorage에 저장
+        // localStorage에 저장 (개인/모임 분리)
         const selectedPhotos = selectedPhotoIndices.map(idx => photos[idx] as string);
+        const storageKey = mode === "personal" ? "photoBoothSets_personal" : "photoBoothSets_group";
         const newSet = {
           id: Date.now().toString(),
           photos: selectedPhotos,
@@ -558,15 +559,12 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
           createdAt: new Date().toISOString(),
         };
         const existing = JSON.parse(
-          localStorage.getItem("photoBoothSets") || "[]"
+          localStorage.getItem(storageKey) || "[]"
         );
         existing.unshift(newSet);
         const toSave = existing.slice(0, 1);
         try {
-          localStorage.setItem(
-            "photoBoothSets",
-            JSON.stringify(toSave)
-          );
+          localStorage.setItem(storageKey, JSON.stringify(toSave));
         } catch {
           // QuotaExceededError 등: 저장 실패해도 진행
         }
