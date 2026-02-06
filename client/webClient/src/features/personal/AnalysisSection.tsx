@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images, Share2, ImageOff, Loader2 } from "lucide-react";
+import { Brain, Heart, Camera, RotateCcw, Download, QrCode, Images, Share2, ImageOff, Loader2, User } from "lucide-react";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { FaceAnalysis } from "./face/components/FaceAnalysis";
 import { StatsAnalysis, type ConstitutionPhase } from "./stats/components/StatsAnalysis";
@@ -31,6 +31,8 @@ interface AnalysisSectionProps {
     faceAnalysisResult?: Stage1Response | null;
     totalReview?: TotalReview | null;
     isLoading?: boolean;
+    /** 분석 시작 시 생성된 UUID (분석하기 버튼 누르면 이미 저장됨) */
+    analysisUuid?: string | null;
 }
 
 // --- Mock Data (부위별 상세: values, criteria, interpretation, advice) ---
@@ -322,7 +324,8 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
     onTabChange,
     faceAnalysisResult,
     totalReview: totalReviewProp,
-    isLoading = false 
+    isLoading = false,
+    analysisUuid,
 }) => {
     const [currentTab, setCurrentTab] = useState<"physiognomy" | "constitution" | "future" | "ssafy-cut">(
         "physiognomy"
@@ -362,7 +365,7 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [isSavingShare, setIsSavingShare] = useState(false);
-    const [savedUuid, setSavedUuid] = useState<string | null>(null);
+    const [savedUuid, setSavedUuid] = useState<string | null>(analysisUuid || null);
     const [futureImage, setFutureImage] = useState<string | null>(null);
     const [savedFrameImage, setSavedFrameImage] = useState<string | null>(null);
 
@@ -530,6 +533,23 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
         navigator.clipboard.writeText(shareUrl);
         alert('링크가 복사되었습니다!');
     };
+
+    // 분석 데이터 없음(로딩 완료 후) → 결과 없음 화면 (모임 궁합과 동일)
+    if (!isLoading && !featuresData) {
+        return (
+            <div className="w-full min-w-0 mx-auto box-border pb-20 px-4">
+                <div className="flex flex-col items-center justify-center min-h-[50vh] py-16 text-center">
+                    <User className="w-16 h-16 text-gray-300 mb-4" aria-hidden />
+                    <h2 className="text-xl font-bold text-gray-800 font-display mb-2">결과 없음</h2>
+                    <p className="text-gray-500 font-sans text-sm sm:text-base leading-relaxed">
+                        분석된 데이터가 없습니다.
+                        <br />
+                        개인 관상을 다시 분석해 주세요.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full max-w-7xl mx-auto pb-20" id="analysis-result-container">
@@ -704,18 +724,6 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                                 className="flex-1 flex items-center justify-center gap-2"
                             >
                                 링크 복사
-                            </ActionButton>
-                            <ActionButton 
-                                variant="primary" 
-                                onClick={() => {
-                                    const link = document.createElement('a');
-                                    link.download = 'qr-code.png';
-                                    link.href = qrCodeUrl;
-                                    link.click();
-                                }}
-                                className="flex-1 flex items-center justify-center gap-2"
-                            >
-                                <Download size={18} /> QR 저장
                             </ActionButton>
                         </div>
                     </div>

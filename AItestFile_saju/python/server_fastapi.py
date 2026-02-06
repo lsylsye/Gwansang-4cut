@@ -8,7 +8,7 @@ GMS API 텍스트 생성 서버 (FastAPI 버전)
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List, Dict, Any
 import os
 import json
@@ -275,6 +275,13 @@ class GroupMemberSajuInput(BaseModel):
     gender: str = "male"  # 'male' | 'female'
     birthTimeUnknown: bool = False
     calendarType: str = Field(default="solar", description="solar | lunar")
+
+    @model_validator(mode="after")
+    def normalize_birth_time_for_unknown(self):
+        """태어난 시간 '모름'이거나 birthTime이 비어 있으면 '00:00'으로 통일"""
+        if self.birthTimeUnknown or not (self.birthTime or "").strip():
+            return self.model_copy(update={"birthTime": "00:00"})
+        return self
 
 
 class GroupFaceMeshRequest(BaseModel):
@@ -917,13 +924,12 @@ def _default_group_overall(member_names: List[str]) -> Dict[str, Any]:
             "stabilityDetail": "역할을 나누면 안정적입니다.",
         },
         "maintenance": {
-            "do": ["말로 소통하기", "결정은 함께", "만남 빈도 조절"],
-            "dont": ["감정을 쌓아두지 말 것", "일방적 결단 금지", "방치하지 말 것"],
             "maintenanceCards": [
                 {"label": "소통", "title": "말로 소통하기", "description": "마음을 표현하면 오해가 줄어듭니다."},
                 {"label": "리더십", "title": "결정은 함께", "description": "중요한 일은 함께 정하면 좋습니다."},
                 {"label": "빈도", "title": "만남 빈도 조절", "description": "적당한 간격이 관계를 오래 갑니다."},
             ],
+            "problemChild": {"name": "", "whySentence": "", "survivalStrategy": [], "guidelines": []},
         },
         "members": members_list,
     }
@@ -942,13 +948,17 @@ def _process_group_members(group_members: List) -> tuple:
     for member in group_members:
         try:
             birth_date = (member.birthDate or "").replace(".", "-").strip()
-            birth_time = (member.birthTime or "00:00").strip()
+            birth_time_unknown = bool(getattr(member, "birthTimeUnknown", False))
+            # 태어난 시간 '모름'이면 기본 00:00 사용 (parse_birth_info에서 12:00으로 해석)
+            birth_time = ("00:00" if birth_time_unknown else (member.birthTime or "00:00")).strip()
+            if birth_time and ":" not in birth_time:
+                birth_time = "00:00"
             saju_data_dict = {
                 "birthDate": birth_date,
                 "birthTime": birth_time,
                 "gender": member.gender,
                 "calendarType": member.calendarType or "solar",
-                "birthTimeUnknown": member.birthTimeUnknown,
+                "birthTimeUnknown": birth_time_unknown,
             }
             birth_info = parse_birth_info(saju_data_dict)
             saju = calculate_saju(birth_info)

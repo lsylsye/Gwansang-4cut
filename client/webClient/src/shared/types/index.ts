@@ -13,6 +13,21 @@ export interface UserProfile {
   profileImage?: string;
 }
 
+/** 히스토리 아이템 타입 (개인/단체 공통) */
+export interface HistoryItem {
+  id: string;
+  type: "personal" | "group";
+  date: string;
+  timestamp: string;
+  // 개인 관상용
+  images?: string[];
+  // 단체 궁합용
+  teamName?: string;
+  memberCount?: number;
+  score?: number;
+  thumbnail?: string;
+}
+
 
 /** 오행 분포 (사주 4주 기준 목·화·토·금·수 개수) */
 export interface FiveElements {

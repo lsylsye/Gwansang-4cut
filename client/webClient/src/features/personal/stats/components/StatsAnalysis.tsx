@@ -280,8 +280,9 @@ interface FutureImages {
 const HEALTH_FOODS_SECTION_TITLE = "건강 관리를 위해 꼭 챙기면 좋은 것들";
 
 function ConstitutionSajuBlock({ data }: { data: ConstitutionSajuData }) {
-    const { head, oheng, sections } = data;
+    const { head, oheng, sections, daeunAndFoods } = data;
     const filteredSections = sections.filter((item) => item.sub !== HEALTH_FOODS_SECTION_TITLE);
+
     return (
         <div className="pt-4">
             <h3 className="text-2xl font-bold text-gray-900 mb-6 font-display text-center">당신의 체질 풀이</h3>

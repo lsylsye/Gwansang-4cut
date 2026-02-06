@@ -10,20 +10,21 @@ import { API_ENDPOINTS } from './config';
 
 /** 랭킹 등록 요청 (단일 객체) */
 export interface RankingRegisterRequest {
-  score: number; // Long
+  score: number; // Long — 점수
   title: string; // 모임명
-  numberOfMembers: number; // Long
+  numberOfMembers: number; // Long — 모임 인원수
   memberNames: { name: string }[];
 }
 
-/** 랭킹 조회 응답 한 건 (백엔드 DTO) */
+/**
+ * 랭킹 조회 응답 한 건 (GET /api/db/ranking 응답 배열 요소)
+ * 리스트용 id/rank는 프론트에서 인덱스로 부여
+ */
 export interface RankingResponseItem {
-  id?: string | number;
   score: number;
   title: string;
   numberOfMembers: number;
   memberNames: { name: string }[];
-  rank?: number;
 }
 
 // ============================================================
@@ -33,12 +34,16 @@ export interface RankingResponseItem {
 /**
  * 랭킹 등록
  * POST /api/db/ranking
- * @param payload 랭킹 등록 데이터 (단일 객체)
+ * Body: { score, title, numberOfMembers, memberNames: [{ name }] }
  */
 export async function registerRanking(
   payload: RankingRegisterRequest
 ): Promise<void> {
-  const response = await fetch(API_ENDPOINTS.RANKING, {
+  const url = API_ENDPOINTS.RANKING;
+  if (import.meta.env.DEV) {
+    console.log('[랭킹 등록] POST', url);
+  }
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -55,7 +60,8 @@ export async function registerRanking(
 /**
  * 랭킹 조회
  * GET /api/db/ranking
- * @returns 랭킹 목록 (점수 순 정렬은 백엔드 기준)
+ * Response: [{ score, title, numberOfMembers, memberNames: [{ name }] }, ...]
+ * @returns 랭킹 목록 배열 (점수 순 정렬은 백엔드 기준)
  */
 export async function getRankings(): Promise<RankingResponseItem[]> {
   const response = await fetch(API_ENDPOINTS.RANKING, {

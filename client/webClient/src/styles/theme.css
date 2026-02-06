@@ -90,6 +90,15 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* 300~640px 구간에서도 픽셀마다 유동 확장 (clamp/vw), 330px~ 뷰포트에 맞게 */
+  --content-px: clamp(12px, 2px + 4vw, 32px);
+  --content-pb: clamp(2rem, 4vw + 1rem, 5rem);
+  --section-gap: clamp(0.75rem, 2vw + 0.5rem, 1.5rem);
+  --content-max-width: 100%;
+  /* 모바일 문서형 세로/가로 간격도 300~640 구간에서 연속 확장 */
+  --flow-space-y: clamp(0.5rem, 1.5vw + 0.25rem, 1rem);
+  --flow-block: clamp(0.75rem, 2vw + 0.5rem, 1.25rem);
 }
 
 .dark {
@@ -130,6 +139,9 @@
 }
 
 @theme inline {
+  /* Breakpoints: 최소 330px 기준, 모바일 ~639px / sm 640px~ */
+  --breakpoint-xs: 330px;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -372,3 +384,32 @@
   padding: 8px 12px;
   max-width: 100%;
 }
+
+/* 모임 결과 모바일 문서형: 330px~ 뷰포트에 따라 섹션 간격 자동 확장, 텍스트가 너비에 맞게 채워지도록 */
+.section-flow {
+  width: 100%;
+  max-width: 100%;
+  padding-bottom: var(--section-gap);
+  margin-bottom: var(--section-gap);
+  border-bottom: 1px solid var(--border);
+  box-sizing: border-box;
+}
+.section-flow:last-child {
+  margin-bottom: 0;
+  border-bottom-width: 0;
+}
+.section-flow h2,
+.section-flow h3,
+.section-flow p,
+.section-flow ul,
+.section-flow li {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+/* 300~640px 구간 유동 간격: 모바일 문서형 내부 여백도 뷰포트에 따라 확장 */
+.flow-gap-y { gap: var(--flow-space-y); }
+.flow-col { display: flex; flex-direction: column; gap: var(--flow-block); }
+.flow-mb-block { margin-bottom: var(--flow-block); }
+.flow-mb-title { margin-bottom: var(--flow-space-y); }

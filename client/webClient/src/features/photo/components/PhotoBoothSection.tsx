@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
-import { Camera, ArrowRight, ArrowLeft, Check } from "lucide-react";
+import { Camera, ArrowRight, ArrowLeft, Check, Printer } from "lucide-react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { Card } from "@/shared/ui/core/card";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
@@ -70,7 +70,7 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
   const [frameColor, setFrameColor] = useState("");
   const [customText, setCustomText] = useState("아자스");
   const [isCustomInput, setIsCustomInput] = useState(false);
-  
+
   // 스크롤 따라오는 플로팅 사이드바
   const [sidebarTop, setSidebarTop] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
@@ -515,6 +515,34 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
     setPhotos(Array(TOTAL_PHOTOS).fill(null));
     setCurrentPhotoIndex(0);
     startCamera();
+  };
+
+  /** 캔버스(프레임) 영역만 인쇄 — 새 창에 이미지만 띄운 뒤 해당 창 인쇄 */
+  const handlePrint = () => {
+    const canvas = frameCanvasRef.current;
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL("image/png", 1.0);
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head><title>인쇄</title>
+          <style>
+            body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+            img { max-width: 100%; height: auto; }
+            @media print { body { padding: 0; } img { max-width: 100% !important; } }
+          </style>
+        </head>
+        <body><img src="${dataUrl}" alt="프레임" /></body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.onafterprint = () => printWindow.close();
+    }, 300);
   };
 
   const handleFinish = async () => {
@@ -974,12 +1002,26 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
   // Step 4: Customization Screen
   if (showCustomization) {
     return (
-      <div ref={containerRef} className="flex flex-col lg:flex-row w-full bg-gray-50/20 relative overflow-x-hidden scrollbar-hide" style={{ minHeight: '100vh' }}>
-        {/* Main Content Area - Frame Preview */}
+      <div ref={containerRef} className="flex flex-col lg:flex-row w-full bg-gray-50/20 relative overflow-x-hidden scrollbar-hide">
+        {/* Main Content Area - 프레임 크기에 따라 높이 결정 (minHeight 제거) */}
         <div 
-          className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12 pb-24 lg:pb-12 lg:max-w-[calc(100%-20rem)] xl:max-w-[calc(100%-24rem)] scrollbar-hide" 
-          style={{ minHeight: '100vh' }}
+          className="flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12 pb-20 sm:pb-24 lg:pb-12 lg:max-w-[calc(100%-20rem)] xl:max-w-[calc(100%-24rem)] scrollbar-hide"
         >
+        {/* 뒤로가기: 사진 선택으로 — 메인 영역 상단 왼쪽 */}
+          <div className="w-full max-w-5xl mb-2 sm:mb-3">
+            <button
+              type="button"
+              onClick={() => setShowCustomization(false)}
+              className={`inline-flex items-center justify-center p-2.5 rounded-xl border-2 transition-all shadow-sm hover:shadow-md ${
+                isPersonal
+                  ? "text-gray-700 border-gray-200 bg-white hover:border-brand-green hover:bg-green-50/80 hover:text-brand-green"
+                  : "text-gray-700 border-gray-200 bg-white hover:border-brand-orange hover:bg-orange-50/80 hover:text-brand-orange"
+              }`}
+              aria-label="사진 선택으로 돌아가기"
+            >
+              <ArrowLeft size={20} strokeWidth={2.5} />
+            </button>
+          </div>
         {/* Header */}
           <div className="w-full max-w-5xl mb-6 sm:mb-8 md:mb-12">
             <div className="text-center space-y-2 sm:space-y-3">
@@ -988,8 +1030,8 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
           </div>
         </div>
 
-          {/* Frame Preview */}
-          <div className="relative w-full max-w-5xl flex-1 flex items-center justify-center">
+          {/* Frame Preview - flex-1 제거하여 프레임(캔버스) 크기만큼만 영역 차지 */}
+          <div className="relative w-full max-w-5xl flex items-center justify-center">
         <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -1007,8 +1049,8 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
                   }}
                 />
             </motion.div>
-            </div>
           </div>
+        </div>
 
         {/* Sidebar - Controls (플로팅바처럼 따라오기) */}
         <motion.div
@@ -1021,15 +1063,15 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
           transition={{ 
             x: { duration: 0.5 }
           }}
-          className="w-full lg:w-80 xl:w-96 bg-white lg:border-r border-t lg:border-t-0 border-gray-200 shadow-lg flex flex-col p-6 sm:p-7 md:p-8 lg:p-10 rounded-t-2xl lg:rounded-tr-2xl lg:rounded-br-2xl overflow-y-auto lg:overflow-visible scrollbar-hide fixed lg:absolute bottom-0 lg:bottom-auto left-0 right-0 lg:left-auto lg:right-0 z-40 max-h-[60vh] lg:max-h-none"
+          className="w-full lg:w-80 xl:w-96 bg-white lg:border-r border-t lg:border-t-0 border-gray-200 shadow-lg flex flex-col p-4 sm:p-5 lg:p-10 rounded-t-2xl lg:rounded-tr-2xl lg:rounded-br-2xl overflow-y-auto lg:overflow-visible scrollbar-hide fixed lg:absolute bottom-0 lg:bottom-auto left-0 right-0 lg:left-auto lg:right-0 z-40 max-h-[42vh] sm:max-h-[45vh] lg:max-h-none"
           style={{
             top: isDesktop ? `${sidebarTop}px` : 'auto',
             transition: isDesktop ? 'top 1s ease-out' : 'none'
           }}
         >
-          <div className="space-y-4 sm:space-y-5 md:space-y-6">
+          <div className="space-y-3 sm:space-y-4 lg:space-y-6 flex-1 min-h-0">
             {/* 배경 색상 선택 */}
-            <div className="space-y-2 sm:space-y-3 md:space-y-4">
+            <div className="space-y-1.5 sm:space-y-2 lg:space-y-4">
                 <div className="flex items-center gap-2">
                 <div className={`w-1 h-5 sm:w-1.5 sm:h-6 ${isPersonal ? "bg-brand-green" : "bg-brand-orange"} rounded-full shadow-sm`} />
                 <h3 className="text-sm sm:text-base md:text-lg font-bold text-gray-900">배경 색상</h3>
@@ -1062,7 +1104,7 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
 
             {/* 가로 프레임 말풍선 커스텀 문구 (가로 프레임일 때만 표시) */}
             {frameType === "horizontal" && (
-              <div className="space-y-3 sm:space-y-4">
+              <div className="space-y-2 sm:space-y-3 lg:space-y-4">
                   <div className="flex items-center gap-2">
                   <div className={`w-1.5 h-6 ${isPersonal ? "bg-brand-green" : "bg-brand-orange"} rounded-full shadow-sm`} />
                   <h3 className="text-base sm:text-lg font-bold text-gray-900">말풍선 문구</h3>
@@ -1117,22 +1159,22 @@ export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
                 </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="flex flex-col gap-3 mt-auto pt-4 sm:pt-6">
+            {/* Action Buttons - 모바일에서 높이 절약 */}
+            <div className="flex flex-col gap-2 sm:gap-3 mt-auto pt-2 sm:pt-4 lg:pt-6">
               <ActionButton
                 onClick={handleFinish}
                 variant={isPersonal ? "primary" : "orange-primary"}
-                className="w-full text-sm sm:text-base py-4 sm:py-5"
+                className="w-full text-sm sm:text-base py-2.5 sm:py-4 lg:py-5"
               >
                 저장하고 결과보러 가기
               </ActionButton>
               <ActionButton
                 variant={isPersonal ? "secondary" : "orange-secondary"}
-                onClick={() => setShowCustomization(false)}
-                className="w-full flex items-center justify-center gap-2 text-sm sm:text-base py-4 sm:py-5"
+                onClick={handlePrint}
+                className="w-full flex items-center justify-center gap-2 text-sm sm:text-base py-2.5 sm:py-4 lg:py-5"
               >
-                <ArrowLeft size={18} />
-                사진 선택으로
+                <Printer size={18} />
+                인쇄
               </ActionButton>
             </div>
           </div>

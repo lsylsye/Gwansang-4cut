@@ -338,11 +338,16 @@ export async function analyzeGroupPairs(payload: {
     if (!res.ok || !data?.success) {
       return { success: false, error: data?.detail ?? '1:1 궁합 분석에 실패했습니다.' };
     }
+    const rawPairs = Array.isArray(data.pairs) ? data.pairs : [];
+    const pairs = rawPairs.map((p: Record<string, unknown>) => {
+      const romance = Array.isArray(p.romanceLines) ? p.romanceLines : Array.isArray((p as { romance_lines?: string[] }).romance_lines) ? (p as { romance_lines: string[] }).romance_lines : undefined;
+      return romance !== undefined ? { ...p, romanceLines: romance } : p;
+    });
     return {
       success: true,
       timestamp: data.timestamp ?? payload.timestamp ?? '',
       members: data.members ?? [],
-      pairs: Array.isArray(data.pairs) ? data.pairs : [],
+      pairs,
     };
   } catch (error) {
     console.error('❌ 모임 1:1 궁합 API 오류:', error);
