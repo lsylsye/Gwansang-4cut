@@ -1567,18 +1567,6 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                             >
                                 링크 복사
                             </ActionButton>
-                            <ActionButton 
-                                variant="orange-primary" 
-                                onClick={() => {
-                                    const link = document.createElement('a');
-                                    link.download = 'qr-code.png';
-                                    link.href = qrCodeUrl;
-                                    link.click();
-                                }}
-                                className="flex-1 flex items-center justify-center gap-2"
-                            >
-                                <Download size={18} /> QR 저장
-                            </ActionButton>
                         </div>
                     </div>
                 </ModalBody>
