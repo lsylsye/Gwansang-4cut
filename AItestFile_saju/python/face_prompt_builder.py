@@ -1022,15 +1022,15 @@ def build_group_overall_prompt(members_data: List[Dict[str, Any]]) -> tuple:
 관상·얼굴은 사용하지 마시오. **출력 문장에는 오행·5행·목화토금수·상생·상극 등 사주/명리 용어를 쓰지 말고, 누구나 알아듣는 일상어로만 쓸 것.**
 
 ## 말투 (필수)
-- **직설적으로** 쓸 것. 부드럽게 돌리거나 완곡하게 말하지 말고, 결론을 뚜렷이 말하시오.
-- **추측·완곡 표현 금지**: "~일 수 있오", "~인 편이오", "~할 수도 있소", "아마 ~일 거요" 같은 표현 쓰지 말 것.
-- **단정적으로** 쓸 것: "~이오", "~하시오", "~다", "반드시 ~하라"처럼 단정형으로 작성하시오. 재미 있으면서도 확신 있는 말투를 유지하시오.
+- **직설적으로** 쓸 것. 부드럽게 돌리거나 완곡하게 말하지 말고, 결론을 뚜렷이 말하세요.
+- **추측·완곡 표현 금지**: "~일 수 있어요", "~인 편이에요", "~할 수도 있어요", "아마 ~일 거예요" 같은 표현 쓰지 말 것.
+- **단정적으로** 쓸 것: "~입니다", "~하세요", "~해요", "반드시 ~하세요"처럼 존댓말 단정형으로 작성하세요. 재미 있으면서도 확신 있는 말투를 유지하세요.
 
 ## 반드시 지킬 것
-1. 응답은 반드시 아래 JSON만 출력하시오. 다른 설명이나 마크다운 없이 JSON만.
-2. "personality", "compatibility", "teamwork", "maintenance", "members" 키를 모두 포함하시오.
-3. members 배열은 반드시 입력된 멤버 **순서와 이름** 그대로, 같은 인원수로 작성하시오.
-4. compatibility.score는 **1000점 만점**이므로 0 이상 1000 이하 정수 하나만 출력하시오. 아래 기준에 따라 327, 518, 891 등 **다양한 값**을 부여할 것. 100점 만점이 아니며, 100 미만이 나와도 ×10 하지 말고 그대로 둠.
+1. 응답은 반드시 아래 JSON만 출력하세요. 다른 설명이나 마크다운 없이 JSON만.
+2. "personality", "compatibility", "teamwork", "maintenance", "members" 키를 모두 포함하세요.
+3. members 배열은 반드시 입력된 멤버 **순서와 이름** 그대로, 같은 인원수로 작성하세요.
+4. compatibility.score는 **1000점 만점**이므로 0 이상 1000 이하 정수 하나만 출력하세요. 아래 기준에 따라 327, 518, 891 등 **다양한 값**을 부여하세요. 100점 만점이 아니며, 100 미만이 나와도 ×10 하지 말고 그대로 두세요.
    - 900~1000: 최고 궁합(오행 균형·상생 많음, 역할 분담 명확, 갈등 최소)
    - 750~899: 좋은 궁합(전반적 조화, 일부 보완 필요)
    - 600~749: 보통(균형 있으나 특정 조합에서 주의)
@@ -1048,14 +1048,14 @@ def build_group_overall_prompt(members_data: List[Dict[str, Any]]) -> tuple:
      (2) **survivalStrategy**: **그 문제아의 생존 전략** — 그 사람이 이 모임에서 잘 살아남으려면 어떻게 해야 하는지 2~4가지(문자열 배열). 일상어, 자연스럽게.
      (3) **guidelines**: **그래서 모임이 오래 가려면** — (그 사람 때문에) 뭘 고쳐야 하는지 3~4가지(문자열 배열). 일상어, 과장·추측 넣어서 재밌게.
 5-1. **personality.improvement**와 **maintenance 전부**에 멤버 이름을 실제로 많이 넣을 것. "OOO", "XXX" 대신 입력된 이름 사용.
-5-2. **personality 전부(title, harmony, comprehensive)** 는 **일상어만** 사용. 오행·5행·명리 용어는 출력에 쓰지 말 것. harmony, comprehensive는 도사 어투 말고 **누구나 알아듣는 말**로. **improvement·maintenance만** 과장·추측 넣어서 재밌게.
-6. **personality(우리팀을 한마디로 정의)** 에서는 **오행·5행·목화토금수·상생·상극 등 사주/명리 용어를 절대 쓰지 말 것.** **일상어만** 사용해서 누구나 알아듣기 쉽게. personality.title은 재미있고 짧은 한마디(25자 내외). 말장난·재치 OK. 예: "완벽하게 맞지는 않는데, 이상하게 끊어지지도 않는 모임", "서로 말 안 해도 눈치만으로 돌아가는 편한 모임". personality.harmony, comprehensive도 **출력 문장에 오행/명리 용어 넣지 말고** 일상어로 풀어서 쓸 것.
-7. **문장 형식 금지**: personality.harmony, comprehensive, improvement, teamwork의 *Detail, maintenance의 maintenanceCards, members의 description/strengths/warnings 등 **모든 문자열 필드**에서 다음을 절대 사용하지 마시오.
+5-2. **personality 전부(title, harmony, comprehensive)** 는 **존댓말 + 일상어** 사용. 오행·5행·명리 용어는 출력에 쓰지 말 것. harmony, comprehensive는 **존댓말**(예: ~입니다, ~해요, ~세요)로 **누구나 알아듣는 말**로. **improvement·maintenance만** 과장·추측 넣어서 재밌게.
+6. **personality(우리팀을 한마디로 정의)** 에서는 **오행·5행·목화토금수·상생·상극 등 사주/명리 용어를 절대 쓰지 말 것.** **존댓말 + 일상어** 사용해서 누구나 알아듣기 쉽게. personality.title은 재미있고 짧은 한마디(25자 내외). 말장난·재치 OK. 예: "완벽하게 맞지는 않지만, 이상하게 끊어지지도 않는 모임이에요", "서로 말 안 해도 눈치만으로 돌아가는 편한 모임이에요". personality.harmony, comprehensive도 **출력 문장에 오행/명리 용어 넣지 말고** 존댓말 + 일상어로 풀어서 쓸 것.
+7. **문장 형식 금지**: personality.harmony, comprehensive, improvement, teamwork의 *Detail, maintenance의 maintenanceCards, members의 description/strengths/warnings 등 **모든 문자열 필드**에서 다음을 절대 사용하지 마세요.
    - 이모지(✅, 🔹, →, • 등)
    - "해석:", "✅ 해석:", "→" 같은 접두어·라벨
    - 불릿·화살표로 시작하는 리스트형 문장(본문만 산문으로 연속 작성할 것)."""
 
-    user_prompt = f"""아래 {len(members_data)}명의 사주 정보를 바탕으로, 모임 전체 궁합을 분석하여 아래 JSON 형식으로만 응답하시오.
+    user_prompt = f"""아래 {len(members_data)}명의 사주 정보를 바탕으로, 모임 전체 궁합을 분석하여 아래 JSON 형식으로만 응답하세요.
 멤버 이름(순서 유지): {names_ordered}
 
 {_members_block_for_json(members_data)}
@@ -1063,9 +1063,9 @@ def build_group_overall_prompt(members_data: List[Dict[str, Any]]) -> tuple:
 ## 출력할 JSON 형식 (따옴표·쉼표·괄호 정확히 지킬 것)
 {{
   "personality": {{
-    "title": "우리팀을 한마디로 정의. 일상어만, 오행/5행 언급 금지. 25자 내외 (예: 완벽하게 맞지는 않는데 이상하게 끊어지지도 않는 모임 / 서로 말 안 해도 눈치만으로 돌아가는 편한 모임)",
-    "harmony": "모임의 조화 및 균형. 일상어로만 3~5문장. 오행·명리 용어 쓰지 말 것. 이모지·해석 접두어 없이",
-    "comprehensive": "종합 궁합, 각 멤버 역할과 구조. 일상어로만 4~6문장. 오행·명리 용어 쓰지 말 것",
+    "title": "우리팀을 한마디로 정의. 존댓말 + 일상어만, 오행/5행 언급 금지. 25자 내외 (예: 완벽하게 맞지는 않지만 이상하게 끊어지지도 않는 모임이에요 / 서로 말 안 해도 눈치만으로 돌아가는 편한 모임이에요)",
+    "harmony": "모임의 조화 및 균형. 존댓말 + 일상어로만 3~5문장. 오행·명리 용어 쓰지 말 것. 이모지·해석 접두어 없이 (예: ~입니다, ~해요, ~세요)",
+    "comprehensive": "종합 궁합, 각 멤버 역할과 구조. 존댓말 + 일상어로만 4~6문장. 오행·명리 용어 쓰지 말 것 (예: ~입니다, ~해요, ~세요)",
     "improvement": "모임을 오래 가게 만드는 방법. **일상어**로 자연스럽게(친구한테 말하듯). 과장·추측 넣어서 재밌게. 멤버 이름 실제로. 예: 정현이 말 많이 하면 승연이 피곤해함. 말 줄이는 게 좋음. 한 달에 한두 번이 딱임. 더 자주 만나면 다 지쳐서 해체 직행. 딱딱한 표현 금지"
   }},
   "compatibility": {{ "score": 718 }},
@@ -1095,8 +1095,8 @@ def build_group_overall_prompt(members_data: List[Dict[str, Any]]) -> tuple:
   ]
 }}
 
-members 배열은 반드시 {len(members_data)}명, 위 이름 순서대로 작성하시오. compatibility.score는 0~1000 사이 정수(예: 327, 518, 891) 하나만 출력하시오. maintenance에는 maintenanceCards + **problemChild** 포함. problemChild: name, whySentence(선정 이유 한 줄), survivalStrategy(그 문제아 생존 전략 2~4개), guidelines(모임이 오래 가려면 고칠 점 3~4개). maintenanceCards 2~6개. **improvement·maintenance 전부 일상어로 자연스럽게, 과장·추측 넣어서 재밌게**, 멤버 이름 실제로, 딱딱한 표현 금지. JSON만 출력하시오.
-**문장 규칙**: harmony, comprehensive, *Detail에는 이모지·해석 접두어 없이. **improvement·maintenance**는 일상어, 자연스러운 말투, 과장·추측 넣어서 재밌게."""
+members 배열은 반드시 {len(members_data)}명, 위 이름 순서대로 작성하세요. compatibility.score는 0~1000 사이 정수(예: 327, 518, 891) 하나만 출력하세요. maintenance에는 maintenanceCards + **problemChild** 포함. problemChild: name, whySentence(선정 이유 한 줄), survivalStrategy(그 문제아 생존 전략 2~4개), guidelines(모임이 오래 가려면 고칠 점 3~4개). maintenanceCards 2~6개. **improvement·maintenance 전부 일상어로 자연스럽게, 과장·추측 넣어서 재밌게**, 멤버 이름 실제로, 딱딱한 표현 금지. JSON만 출력하세요.
+**문장 규칙**: harmony, comprehensive, *Detail에는 존댓말로 작성하고 이모지·해석 접두어 없이. **improvement·maintenance**는 일상어, 자연스러운 말투, 과장·추측 넣어서 재밌게."""
 
     return system_prompt, user_prompt
 
@@ -1147,30 +1147,30 @@ def build_group_pairs_prompt(member_names: List[str], members_data: List[Dict[st
     names_ordered = ", ".join(member_names)
 
     system_prompt = """당신은 두 사람 간 관계를 쉽고 직설적으로 설명하는 전문가입니다.
-주어진 멤버들 간의 **1대1 궁합**을 분석하여, 모든 쌍에 대해 순위(rank), 점수(score), 유형(type), 이유(reason), 요약(summary)을 JSON으로 출력하시오.
-내부적으로는 사주(일간·오행 등)를 참고하되, **출력 문장에는 사주·명리 용어를 절대 쓰지 마시오.**
+주어진 멤버들 간의 **1대1 궁합**을 분석하여, 모든 쌍에 대해 순위(rank), 점수(score), 유형(type), 이유(reason), 요약(summary)을 JSON으로 출력하세요.
+내부적으로는 사주(일간·오행 등)를 참고하되, **출력 문장에는 사주·명리 용어를 절대 쓰지 마세요.**
 
 ## 말투 (필수)
-- **직설적·단정적으로** 쓸 것. "~일 수 있음", "~인 편", "아마 ~할 것" 같은 추측·완곡 표현 쓰지 말 것.
-- "~다", "~임", "~해야 함", "~주의"처럼 단정형으로 작성하시오. 재미 있으면서도 확신 있는 말투.
+- **존댓말로** 쓸 것. "존댓말 + 직설적"으로 작성. "~일 수 있어요", "~인 편이에요", "아마 ~할 거예요" 같은 추측·완곡 표현 쓰지 말 것.
+- "~입니다", "~해요", "~세요", "~해야 해요", "~주의하세요"처럼 존댓말 단정형으로 작성하세요. 재미 있으면서도 확신 있는 말투.
 
 ## 표현 규칙 (필수)
 - 일간, 오행, 목·화·토·금·수, 상생·상극, 식신·편인 등 전문 용어 금지.
-- "조율자 × 직설가", "안정형 × 불꽃형", "참는 사람 × 말하는 사람", "말 없어도 신뢰", "감정 상한 상태에선 말투 충돌 주의"처럼 **누가 봐도 이해할 수 있는 일상어**로만 작성하시오.
-- reason: 2~3문장. 첫째는 두 사람 성향을 한 줄로 단정적으로(예: 둘 다 안정·유지형 / 조율자×직설가), 둘째는 장점·시너지, 셋째는 주의점(단, ~주의) 형식. 추측형 말투 금지.
-- summary: 한 줄 요약. 역시 일상어로, 단정형으로.
+- "조율자 × 직설가", "안정형 × 불꽃형", "참는 사람 × 말하는 사람", "말 없어도 신뢰", "감정 상한 상태에선 말투 충돌 주의"처럼 **누가 봐도 이해할 수 있는 일상어**로만 작성하세요.
+- reason: 2~3문장. 첫째는 두 사람 성향을 한 줄로 단정적으로(예: 둘 다 안정·유지형이에요 / 조율자×직설가입니다), 둘째는 장점·시너지, 셋째는 주의점(단, ~주의하세요) 형식. 추측형 말투 금지.
+- summary: 한 줄 요약. 역시 존댓말 일상어로, 단정형으로.
 
 ## 규칙
-1. 응답은 반드시 아래 형식의 JSON만 출력하시오. 다른 텍스트 없이.
-2. member1, member2는 반드시 입력된 **멤버 이름 그대로** 사용하시오. 오타 금지.
+1. 응답은 반드시 아래 형식의 JSON만 출력하세요. 다른 텍스트 없이.
+2. member1, member2는 반드시 입력된 **멤버 이름 그대로** 사용하세요. 오타 금지.
 3. pairs 배열 길이는 반드시 n*(n-1)/2 (모든 쌍). 각 쌍은 한 번만 (A-B와 B-A 중 하나만).
 4. rank는 1부터 순서대로. 1위가 가장 궁합 좋은 쌍.
 5. score는 0~100 정수. 90 이상 best, 75~89 good, 60~74 normal, 50~59 unstable, 50 미만 worst 권장.
 6. type은 반드시 "best" | "normal" | "unstable" | "worst" 중 하나.
-7. reason, summary는 각 1~3문장이며 반드시 일상어(비사주)로만 작성.
-8. **연애 궁합은 summary/reason과 따로**, **romanceLines 하나만** 출력하시오. romanceLines는 **정확히 3줄** (문자열 배열 3개). 장점/단점 나누지 말고 **그냥 내용 3줄**로만 쓸 것. 연애 궁합만의 내용, reason·summary와 중복 금지. 쌍마다 다르게. 이름 넣어도 됨.
-9. **좋은 궁합(best/good)도 직설적·재밌게** 쓸 것. 예: "천생연분이다", "뭘 해도 결혼까지 간다", "이 조합은 망할 수가 없음", "서로만 보면 됨".
-10. **안 좋은 궁합(unstable/worst)은 직설적으로** 쓸 것. 예: "이 조합은 연애로 가기 힘듦", "서로 맞지 않음. 무리하지 마라"."""
+7. reason, summary는 각 1~3문장이며 반드시 존댓말 일상어(비사주)로만 작성하세요.
+8. **연애 궁합은 summary/reason과 따로**, **romanceLines 하나만** 출력하세요. romanceLines는 **정확히 3줄** (문자열 배열 3개). 장점/단점 나누지 말고 **그냥 내용 3줄**로만 쓸 것. 연애 궁합만의 내용, reason·summary와 중복 금지. 쌍마다 다르게. 이름 넣어도 됨.
+9. **좋은 궁합(best/good)도 직설적·재밌게** 쓸 것. 예: "천생연분이에요", "뭘 해도 결혼까지 가요", "이 조합은 망할 수가 없어요", "서로만 보면 돼요".
+10. **안 좋은 궁합(unstable/worst)은 직설적으로** 쓸 것. 예: "이 조합은 연애로 가기 힘들어요", "서로 맞지 않아요. 무리하지 마세요"."""
 
     members_block = _members_block_for_json(members_data)
     user_prompt = f"""멤버(이름 그대로 사용): {names_ordered}
@@ -1195,8 +1195,8 @@ def build_group_pairs_prompt(member_names: List[str], members_data: List[Dict[st
 }}
 
 - **romanceLines**: 문자열 배열 **정확히 3개**. 장점/단점 나누지 말고 **그냥 연애 궁합 내용 3줄**로만. reason·summary와 겹치지 말 것.
-- best/good: 직설적·재밌게 (천생연분, 뭘 해도 결혼까지 감 등). unstable/worst: 직설적으로.
-pairs 배열은 반드시 {pair_count}개. JSON만 출력하시오."""
+- best/good: 직설적·재밌게 (천생연분이에요, 뭘 해도 결혼까지 가요 등). unstable/worst: 직설적으로.
+pairs 배열은 반드시 {pair_count}개. JSON만 출력하세요."""
 
     return system_prompt, user_prompt
 
