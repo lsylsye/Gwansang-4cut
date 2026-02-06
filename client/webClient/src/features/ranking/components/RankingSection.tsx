@@ -328,7 +328,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                           {item.rank}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className={`font-bold font-display truncate ${isUser ? "text-brand-orange" : "text-gray-900"}`}>
+                          <h4 className={`font-bold font-display line-clamp-2 break-words ${isUser ? "text-brand-orange" : "text-gray-900"}`}>
                             {item.teamName}
                             {isUser && <span className="ml-1 text-xs font-sans bg-brand-orange/25 text-brand-orange font-bold px-1.5 py-0.5 rounded uppercase">YOU</span>}
                           </h4>
@@ -458,7 +458,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                       </div>
 
                       <h4 className={`font-bold text-gray-900 font-display text-center px-1 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 ${isFirst ? "text-lg sm:text-xl" : "text-base sm:text-lg"}`}>
-                        <span className="truncate max-w-full">{item.teamName}</span>
+                        <span className="break-words text-center">{item.teamName}</span>
                         {item.isUser && (
                           <span className="shrink-0 text-xs font-sans bg-brand-orange/25 text-brand-orange font-bold px-2 py-0.5 rounded uppercase">
                             우리 팀
@@ -539,7 +539,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                         {item.rank}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className={`font-bold font-display truncate text-sm sm:text-base ${isUser ? "text-brand-orange" : "text-gray-900"}`}>
+                        <h4 className={`font-bold font-display line-clamp-2 break-words text-sm sm:text-base ${isUser ? "text-brand-orange" : "text-gray-900"}`}>
                           {item.teamName}
                           {isUser && <span className="ml-1 text-xs font-sans bg-brand-orange/25 text-brand-orange font-bold px-1.5 py-0.5 rounded uppercase">YOU</span>}
                         </h4>
@@ -582,7 +582,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                         {item.rank}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className={`font-bold font-display truncate text-sm sm:text-base ${isUser ? "text-brand-orange" : "text-gray-900"}`}>
+                        <h4 className={`font-bold font-display line-clamp-2 break-words text-sm sm:text-base ${isUser ? "text-brand-orange" : "text-gray-900"}`}>
                           {item.teamName}
                           {isUser && <span className="ml-1 text-xs font-sans bg-brand-orange/25 text-brand-orange font-bold px-1.5 py-0.5 rounded uppercase">YOU</span>}
                         </h4>
