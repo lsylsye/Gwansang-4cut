@@ -24,6 +24,8 @@ interface GroupAnalysisSectionProps {
     onTabChange?: (tab: "overall" | "pairs" | "ssafy-cut") => void;
     /** 싸피네컷(네컷) 페이지로 이동 (개인 결과처럼 결과 페이지에서 진입용) */
     onNavigateToPhotoBooth?: () => void;
+    /** 분석 시작 시 생성된 UUID (분석하기 버튼 누르면 이미 저장됨) */
+    analysisUuid?: string | null;
 }
 
 export const GroupAnalysisSection: React.FC<GroupAnalysisSectionProps> = ({
@@ -35,6 +37,7 @@ export const GroupAnalysisSection: React.FC<GroupAnalysisSectionProps> = ({
     hasRegisteredRanking = false,
     onTabChange,
     onNavigateToPhotoBooth,
+    analysisUuid,
 }) => {
     return (
         <div className="w-full min-w-0">
@@ -47,6 +50,7 @@ export const GroupAnalysisSection: React.FC<GroupAnalysisSectionProps> = ({
                 hasRegisteredRanking={hasRegisteredRanking}
                 onTabChange={onTabChange}
                 onNavigateToPhotoBooth={onNavigateToPhotoBooth}
+                analysisUuid={analysisUuid}
             />
         </div>
     );

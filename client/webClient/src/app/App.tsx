@@ -42,6 +42,16 @@ import {
   analyzeGroupOverall,
   analyzeGroupPairs,
 } from "@/shared/api/faceAnalysisApi";
+import {
+  createPersonalAnalysisPlaceholder,
+  updatePersonalAnalysis,
+  PersonalAnalysisData,
+} from "@/shared/api/personalAnalysisApi";
+import {
+  createGroupAnalysisPlaceholder,
+  updateGroupAnalysis,
+  GroupAnalysisData,
+} from "@/shared/api/groupAnalysisApi";
 
 export default function App() {
   const navigate = useNavigate();
@@ -70,6 +80,10 @@ export default function App() {
   const [isPhotoBoothCapturing, setIsPhotoBoothCapturing] = useState(false);
   // faceMeshMetadata를 App에서 관리
   const [faceMeshMetadata, setFaceMeshMetadata] = useState<any>(null);
+  /** 현재 분석 중인 개인 분석 UUID */
+  const [currentPersonalUuid, setCurrentPersonalUuid] = useState<string | null>(null);
+  /** 현재 분석 중인 그룹 분석 UUID */
+  const [currentGroupUuid, setCurrentGroupUuid] = useState<string | null>(null);
   /** 모임 궁합 API 응답 (members, overall, pairs). API 연결 후 결과 화면에서 렌더링용 */
   const [groupAnalysisResult, setGroupAnalysisResult] = useState<{
     success: boolean;
@@ -178,11 +192,18 @@ export default function App() {
       setFaceMeshMetadata(metadata ?? null);
     }
 
-    // 개인 모드: /analyzing 이동 후 API 호출 (기존과 동일)
+    // 개인 모드: placeholder 생성 후 analyzing 페이지로 이동, 분석 완료 후 UUID URL로 이동
     if (!isGroupFlow) {
-      navigate(ROUTES.ANALYZING);
       setIsAnalyzing(true);
       try {
+        // 1. placeholder 생성하여 UUID 획득
+        const uuid = await createPersonalAnalysisPlaceholder();
+        setCurrentPersonalUuid(uuid);
+        
+        // 2. /analyzing 페이지로 이동 (분석중)
+        navigate(ROUTES.ANALYZING);
+        
+        // 3. 분석 시작
         if (metadata?.faces && metadata.faces.length > 0) {
           const birthTime =
             sajuData.birthTimeUnknown
@@ -206,15 +227,39 @@ export default function App() {
             return;
           }
           setFaceAnalysisResult(result);
+          
+          // 4. 분석 완료 - DB에 결과 업데이트
+          try {
+            const saveData: PersonalAnalysisData = {
+              faceAnalysis: {
+                // 관상 분석 부위별 데이터 (stage1.faceAnalysis에서)
+                faceShape: result.stage1?.faceAnalysis?.faceShape,
+                forehead: result.stage1?.faceAnalysis?.forehead,
+                eyes: result.stage1?.faceAnalysis?.eyes,
+                nose: result.stage1?.faceAnalysis?.nose,
+                mouth: result.stage1?.faceAnalysis?.mouth,
+                chin: result.stage1?.faceAnalysis?.chin,
+                // 총평 데이터 (totalReview에서)
+                faceOverview: result.totalReview?.faceOverview,
+                careerFortune: result.totalReview?.careerFortune,
+              },
+              constitutionAnalysis: {
+                sajuInfo: result.stage1?.sajuInfo,
+                totalReview: result.totalReview,
+              },
+            };
+            await updatePersonalAnalysis(uuid, saveData);
+          } catch (saveError) {
+            console.error('분석 결과 DB 저장 실패:', saveError);
+          }
+          
           setAnalysisDone(true);
           setIsAnalyzing(false);
+          // 분석 완료 후 UUID URL로 이동
+          navigate(`/personal/${uuid}`);
           // photo booth에 있을 때만 토스트 플래그 켜기 (다른 경로로 이동 시 토스트 안 뜨게)
           if (isPhotoBoothPath(pathnameRef.current)) {
             setShowAnalysisCompleteToast(true);
-          }
-          if (!isPhotoBoothPath(pathnameRef.current)) {
-            navigate(ROUTES.PERSONAL_RESULT);
-            setShowAnalysisCompleteToast(false);
           }
         } else {
           setAnalysisError("얼굴 분석 데이터가 없습니다. 다시 촬영해주세요.");
@@ -227,8 +272,7 @@ export default function App() {
       return;
     }
 
-    // 그룹 모드: 개인 관상과 동일하게 API 레이어 사용, 전체 궁합·1:1 궁합 병렬 호출
-    navigate(ROUTES.ANALYZING);
+    // 그룹 모드: placeholder 생성 후 analyzing 페이지로 이동, 분석 완료 후 UUID URL로 이동
     setIsAnalyzing(true);
     (async () => {
       if (!metadata || !metadata.groupMembers || (metadata.groupMembers as unknown[]).length < 2) {
@@ -236,12 +280,20 @@ export default function App() {
         setIsAnalyzing(false);
         return;
       }
-      const payload = {
-        ...metadata,
-        timestamp: (metadata as { timestamp?: string }).timestamp ?? new Date().toISOString(),
-      };
-
+      
       try {
+        // 1. placeholder 생성하여 UUID 획득
+        const uuid = await createGroupAnalysisPlaceholder();
+        setCurrentGroupUuid(uuid);
+        
+        // 2. /analyzing 페이지로 이동 (분석중)
+        navigate(ROUTES.ANALYZING);
+        
+        const payload = {
+          ...metadata,
+          timestamp: (metadata as { timestamp?: string }).timestamp ?? new Date().toISOString(),
+        };
+
         // 개인 관상(analyzeFace)처럼 단일 API 함수로 병렬 호출
         const overallPromise = analyzeGroupOverall(payload);
         const pairsPromise = analyzeGroupPairs(payload);
@@ -263,23 +315,72 @@ export default function App() {
         });
 
         // 전체 궁합 응답 대기 → 성공 시 기존 state(이미 온 pairs) 유지하며 병합 후 결과 페이지 이동
-        const overallResult = await overallPromise;
+        const [overallResult, pairsResult] = await Promise.all([overallPromise, pairsPromise]);
         if (!overallResult.success || !("overall" in overallResult)) {
           setAnalysisError("error" in overallResult ? overallResult.error : "전체 궁합 분석에 실패했습니다.");
           setIsAnalyzing(false);
           return;
         }
-        setGroupAnalysisResult((prev) => ({
-          ...(prev || {}),
+        
+        const finalGroupResult = {
           success: true,
           timestamp: overallResult.timestamp ?? payload.timestamp ?? "",
-          members: overallResult.members ?? prev?.members ?? [],
+          members: overallResult.members ?? [],
           overall: overallResult.overall,
-        }));
+          pairs: pairsResult.success && "pairs" in pairsResult ? pairsResult.pairs : [],
+        };
+        
+        setGroupAnalysisResult(finalGroupResult);
+        
+        // 3. 분석 완료 - DB에 결과 업데이트
+        try {
+          // API 응답의 members 배열 (role, keywords 등 포함)
+          const apiMembers = (finalGroupResult.overall as any)?.members || finalGroupResult.members || [];
+          
+          // groupMembers(사용자 입력)와 API 분석 결과를 병합
+          const mergedMembers = groupMembers.map((gm, idx) => {
+            const apiMember = apiMembers[idx] || {};
+            return {
+              id: gm.id || idx + 1,
+              name: gm.name,
+              birthDate: gm.birthDate || "",
+              birthTime: gm.birthTime || "",
+              gender: gm.gender || "male",
+              avatar: gm.avatar || "",
+              role: apiMember.role || "",
+              keywords: apiMember.keywords || [],
+              description: apiMember.description || "",
+              strengths: apiMember.strengths || [],
+              warnings: apiMember.warnings || [],
+            };
+          });
+          
+          const saveData: GroupAnalysisData = {
+            teamName: (finalGroupResult.overall as any)?.personality?.title || '모임 궁합 분석',
+            memberCount: groupMembers.length,
+            score: (finalGroupResult.overall as any)?.compatibility?.score,
+            members: mergedMembers,
+            overallAnalysis: finalGroupResult.overall as any,
+            pairsAnalysis: (finalGroupResult.pairs as any[])?.map((p: any) => ({
+              name1: p.name1 || p.member1,
+              name2: p.name2 || p.member2,
+              score: p.score,
+              summary: p.summary || p.reason,
+              strengths: p.strengths || [],
+              cautions: p.cautions || [],
+              tips: p.tips || [],
+            })) || [],
+          };
+          await updateGroupAnalysis(uuid, saveData);
+        } catch (saveError) {
+          console.error('그룹 분석 결과 DB 저장 실패:', saveError);
+        }
+        
         setAnalysisDone(true);
-        if (!isResultPath(pathnameRef.current)) setShowAnalysisCompleteToast(true);
-        if (isAnalyzingPath(pathnameRef.current)) navigate(ROUTES.GROUP_RESULT);
         setIsAnalyzing(false);
+        // 분석 완료 후 UUID URL로 이동
+        navigate(`/group/share/${uuid}`);
+        if (!isResultPath(pathnameRef.current)) setShowAnalysisCompleteToast(true);
       } catch (error) {
         setAnalysisError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
         setIsAnalyzing(false);
@@ -317,6 +418,10 @@ export default function App() {
     (location.state as { mode?: AnalyzeMode } | null)?.mode ?? "personal";
 
   const getGuideMessage = () => {
+    // 분석 중인 경우 (UUID 기반 URL에서 분석 진행 중)
+    if (isAnalyzing && (isPersonalSharePath(pathname) || isGroupSharePath(pathname))) {
+      return "기다리는 동안 심심하지 않게 작은 선물을 준비했소. \n아래 버튼으로 가 보시게.";
+    }
     // 공유 페이지인 경우
     if (isPersonalSharePath(pathname)) {
       return "허허, 누군가의 관상 분석 결과를 보러 왔구먼! \n자네도 한번 분석받아 보고 싶지 않은가?";
@@ -477,6 +582,7 @@ export default function App() {
                     onNavigateToPhotoBooth={() =>
                       navigate(ROUTES.PHOTO_BOOTH, { state: { from: "result", mode: "group" } })
                     }
+                    analysisUuid={currentGroupUuid}
                   />
                 ) : (
                   <AnalysisSection
@@ -491,6 +597,7 @@ export default function App() {
                     faceAnalysisResult={faceAnalysisResult?.stage1}
                     totalReview={faceAnalysisResult?.totalReview}
                     isLoading={isAnalyzing}
+                    analysisUuid={currentPersonalUuid}
                   />
                 )}
               </motion.div>
@@ -526,7 +633,40 @@ export default function App() {
                 transition={{ duration: 0.4 }}
                 className="w-full h-full"
               >
-                <SharedAnalysisSection />
+                {/* 현재 분석 중인 본인의 페이지인 경우 */}
+                {currentPersonalUuid && pathname === `/personal/${currentPersonalUuid}` ? (
+                  isAnalyzing ? (
+                    <AnalyzingSection
+                      isAnalyzing={isAnalyzing}
+                      analysisError={analysisError}
+                      analysisComplete={analysisDone}
+                      onRetry={() => {
+                        setAnalysisError(null);
+                        setCurrentPersonalUuid(null);
+                        navigate(getUploadPath("personal"));
+                      }}
+                    />
+                  ) : analysisDone && faceAnalysisResult ? (
+                    <AnalysisSection
+                      images={images}
+                      onRestart={handleRestart}
+                      onTabChange={setPersonalResultTab}
+                      onNavigateToPhotoBooth={() =>
+                        navigate(ROUTES.PHOTO_BOOTH, { state: { from: "result", mode: "personal" } })
+                      }
+                      frameImage={frameImageState || location.state?.frameImage}
+                      fromPhotoBooth={fromPhotoBoothState || location.state?.fromPhotoBooth}
+                      faceAnalysisResult={faceAnalysisResult?.stage1}
+                      totalReview={faceAnalysisResult?.totalReview}
+                      isLoading={false}
+                      analysisUuid={currentPersonalUuid}
+                    />
+                  ) : (
+                    <SharedAnalysisSection />
+                  )
+                ) : (
+                  <SharedAnalysisSection />
+                )}
               </motion.div>
             )}
 
@@ -540,7 +680,39 @@ export default function App() {
                 transition={{ duration: 0.4 }}
                 className="w-full h-full"
               >
-                <SharedGroupAnalysisSection />
+                {/* 현재 분석 중인 본인의 페이지인 경우 */}
+                {currentGroupUuid && pathname === `/group/share/${currentGroupUuid}` ? (
+                  isAnalyzing ? (
+                    <AnalyzingSection
+                      isAnalyzing={isAnalyzing}
+                      analysisError={analysisError}
+                      analysisComplete={analysisDone}
+                      onRetry={() => {
+                        setAnalysisError(null);
+                        setCurrentGroupUuid(null);
+                        navigate(getUploadPath("group"));
+                      }}
+                    />
+                  ) : analysisDone && groupAnalysisResult ? (
+                    <GroupAnalysisSection
+                      groupMembers={groupMembers}
+                      groupAnalysisResult={groupAnalysisResult}
+                      isAnalyzing={false}
+                      onViewRanking={handleViewRanking}
+                      onViewRankingViewOnly={handleViewRankingViewOnly}
+                      hasRegisteredRanking={hasRegisteredRanking}
+                      onTabChange={setGroupResultTab}
+                      onNavigateToPhotoBooth={() =>
+                        navigate(ROUTES.PHOTO_BOOTH, { state: { from: "result", mode: "group" } })
+                      }
+                      analysisUuid={currentGroupUuid}
+                    />
+                  ) : (
+                    <SharedGroupAnalysisSection />
+                  )
+                ) : (
+                  <SharedGroupAnalysisSection />
+                )}
               </motion.div>
             )}
 
@@ -604,8 +776,9 @@ export default function App() {
         pathname={pathname}
         getGuideMessage={getGuideMessage}
         isPhotoBooth={isPhotoBooth}
+        isAnalyzing={isAnalyzing}
         photoBoothAction={
-          pathname === ROUTES.ANALYZING
+          (pathname === ROUTES.ANALYZING || (isAnalyzing && (isPersonalSharePath(pathname) || isGroupSharePath(pathname))))
             ? {
                 label: "네컷 사진 찍기",
                 onClick: () =>
@@ -641,30 +814,33 @@ function TurtleGuideGate({
   pathname,
   getGuideMessage,
   isPhotoBooth,
+  isAnalyzing,
   photoBoothAction,
 }: {
   pathname: string;
   getGuideMessage: () => string;
   isPhotoBooth: boolean;
+  isAnalyzing?: boolean;
   photoBoothAction?: { label: string; onClick: () => void };
 }) {
   const { hideTurtleGuide } = useHideTurtleGuide();
   if (isPhotoBooth) return null;
-  // /analyzing에서는 토글 닫아둔 상태여도 무조건 TurtleGuide 표시
-  if (hideTurtleGuide && pathname !== ROUTES.ANALYZING) return null;
+  // /analyzing 또는 분석 중인 UUID 페이지에서는 토글 닫아둔 상태여도 무조건 TurtleGuide 표시
+  const isAnalyzingOnSharePath = isAnalyzing && (isPersonalSharePath(pathname) || isGroupSharePath(pathname));
+  if (hideTurtleGuide && pathname !== ROUTES.ANALYZING && !isAnalyzingOnSharePath) return null;
   return (
     <TurtleGuide
       pathname={pathname}
       message={getGuideMessage()}
-      isThinking={isAnalyzingPath(pathname)}
+      isThinking={isAnalyzingPath(pathname) || isAnalyzingOnSharePath}
       thinkingMessage={
-        pathname === ROUTES.ANALYZING
+        (pathname === ROUTES.ANALYZING || isAnalyzingOnSharePath)
           ? "기다리는 동안 심심하지 않게 작은 선물을 준비했소.\n아래 버튼으로 가 보시게."
           : undefined
       }
       actionLabel={photoBoothAction?.label}
       onAction={photoBoothAction?.onClick}
-      disableAutoClose={pathname === ROUTES.ANALYZING}
+      disableAutoClose={pathname === ROUTES.ANALYZING || isAnalyzingOnSharePath}
     />
   );
 }

@@ -17,12 +17,14 @@ public class PersonalAnalysisResponse {
     
     private UUID id;
     private String analysisData;
+    private String status;  // ANALYZING or COMPLETED
     private LocalDateTime createdAt;
     
     public static PersonalAnalysisResponse from(PersonalAnalysis entity) {
         return PersonalAnalysisResponse.builder()
                 .id(entity.getUuid())
                 .analysisData(entity.getAnalysisData())
+                .status(entity.getStatus().name())
                 .createdAt(entity.getCreatedAt())
                 .build();
     }
