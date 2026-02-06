@@ -155,15 +155,47 @@ export const SharedGroupAnalysisSection: React.FC = () => {
         };
     });
 
-    // 1:1 궁합 데이터
-    const completePairs = (pairsAnalysis || []).map((p: PairAnalysis, idx: number) => ({
-        ...p,
-        member1: p.name1 || "",
-        member2: p.name2 || "",
-        rank: idx + 1,
-        type: p.score && p.score >= 80 ? "best_friend" : p.score && p.score >= 60 ? "good" : "normal",
-        reason: p.summary || "",
-    }));
+    // 1:1 궁합 데이터: 기존 API 응답 + 누락된 nC2 조합 보강
+    const completePairs = (() => {
+        const names = membersWithRoles.map((m) => m.name);
+        const pairKey = (a: string, b: string) => [a, b].sort().join("\0");
+        
+        // API 응답을 먼저 매핑
+        const mappedPairs = (pairsAnalysis || []).map((p: PairAnalysis, idx: number) => ({
+            ...p,
+            member1: p.name1 || "",
+            member2: p.name2 || "",
+            rank: idx + 1,
+            type: p.score && p.score >= 80 ? "best_friend" : p.score && p.score >= 60 ? "good" : "normal",
+            reason: p.summary || "",
+        }));
+        
+        // 기존 쌍 키 Set 생성
+        const existingKeys = new Set(mappedPairs.map((p) => pairKey(p.member1, p.member2)));
+        const result = [...mappedPairs];
+        
+        // 누락된 nC2 조합 보강
+        for (let i = 0; i < names.length; i++) {
+            for (let j = i + 1; j < names.length; j++) {
+                const key = pairKey(names[i], names[j]);
+                if (!existingKeys.has(key)) {
+                    result.push({
+                        member1: names[i],
+                        member2: names[j],
+                        name1: names[i],
+                        name2: names[j],
+                        rank: 0,
+                        score: 65,
+                        type: "normal",
+                        reason: "추가 분석 데이터가 확보되면 궁합이 표시됩니다.",
+                        summary: "보통 수준",
+                    });
+                    existingKeys.add(key);
+                }
+            }
+        }
+        return result;
+    })();
 
     // 관계 레벨 계산
     const getRelationshipLevel = (score: number) => {
