@@ -18,7 +18,29 @@ public class PersonalAnalysisController {
 
     private final PersonalAnalysisService service;
 
-    // 저장
+    /** 분석 시작 시 placeholder 생성 (ANALYZING 상태) */
+    @PostMapping("/placeholder")
+    public ResponseEntity<UUID> createPlaceholder() {
+        UUID savedId = service.createPlaceholder();
+
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .replacePath("/api/db/share/personal/{uuid}")
+                .buildAndExpand(savedId)
+                .toUri();
+
+        return ResponseEntity.created(location).body(savedId);
+    }
+
+    /** 분석 완료 후 결과 데이터 업데이트 */
+    @PutMapping("/{uuid}")
+    public ResponseEntity<Void> updateAnalysis(
+            @PathVariable UUID uuid,
+            @RequestBody PersonalAnalysisSaveRequest request) {
+        service.updateAnalysisResult(uuid, request);
+        return ResponseEntity.ok().build();
+    }
+
+    // 저장 (기존 방식 유지 - 결과와 함께 저장)
     @PostMapping
     public ResponseEntity<UUID> saveAnalysis(@RequestBody PersonalAnalysisSaveRequest request) {
          UUID savedId = service.save(request);

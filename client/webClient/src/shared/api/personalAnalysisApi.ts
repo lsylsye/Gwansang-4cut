@@ -40,10 +40,14 @@ export interface PersonalAnalysisData {
   };
 }
 
+/** 분석 상태 */
+export type AnalysisStatus = 'ANALYZING' | 'COMPLETED';
+
 /** 개인 분석 조회 응답 (서버 DTO에 맞춤) */
 export interface PersonalAnalysisResponse {
   id: string; // UUID
   analysisData: string; // JSON 문자열
+  status: AnalysisStatus; // 분석 상태
   createdAt?: string;
 }
 
@@ -52,7 +56,65 @@ export interface PersonalAnalysisResponse {
 // ============================================================
 
 /**
- * 개인 분석 결과 저장
+ * 분석 시작 시 placeholder 생성 (ANALYZING 상태)
+ * POST /api/db/share/personal/placeholder
+ * @returns 생성된 UUID
+ */
+export async function createPersonalAnalysisPlaceholder(): Promise<string> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/share/personal/placeholder`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`개인 분석 placeholder 생성 실패: ${response.status} - ${errorText}`);
+    }
+
+    const uuid = await response.text();
+    return uuid.replace(/"/g, ''); // 따옴표 제거
+  } catch (error) {
+    console.error('❌ 개인 분석 placeholder 생성 오류:', error);
+    throw error;
+  }
+}
+
+/**
+ * 분석 완료 후 결과 데이터 업데이트
+ * PUT /api/db/share/personal/{uuid}
+ */
+export async function updatePersonalAnalysis(
+  uuid: string,
+  data: PersonalAnalysisData
+): Promise<void> {
+  try {
+    const requestBody: PersonalAnalysisSaveRequest = {
+      jsonData: JSON.stringify(data),
+    };
+
+    const response = await fetch(`${API_BASE_URL}/share/personal/${uuid}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`개인 분석 업데이트 실패: ${response.status} - ${errorText}`);
+    }
+  } catch (error) {
+    console.error('❌ 개인 분석 업데이트 오류:', error);
+    throw error;
+  }
+}
+
+/**
+ * 개인 분석 결과 저장 (기존 방식 - 결과와 함께 저장)
  * POST /api/db/share/personal
  */
 export async function savePersonalAnalysis(

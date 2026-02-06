@@ -106,6 +106,10 @@ interface GroupResultProps {
     onTabChange?: (tab: "overall" | "pairs" | "ssafy-cut") => void;
     /** 싸피네컷(네컷) 페이지로 이동 (개인 결과처럼 결과 페이지에서 진입용) */
     onNavigateToPhotoBooth?: () => void;
+    /** 분석 시 생성된 UUID (공유 링크용) */
+    analysisUuid?: string | null;
+    /** 싸피네컷 탭 숨김 (공유 페이지에서 사용) */
+    hideSsafyCut?: boolean;
 }
 
 export const GroupResult: React.FC<GroupResultProps> = ({
@@ -117,6 +121,8 @@ export const GroupResult: React.FC<GroupResultProps> = ({
     hasRegisteredRanking = false,
     onTabChange,
     onNavigateToPhotoBooth,
+    analysisUuid,
+    hideSsafyCut = false,
 }) => {
     const [currentTab, setCurrentTab] = useState<"overall" | "pairs" | "ssafy-cut">("overall");
     const [selectedMemberForRelation, setSelectedMemberForRelation] = useState<string | null>(null);
@@ -127,8 +133,15 @@ export const GroupResult: React.FC<GroupResultProps> = ({
     const [savedGroupFrameImage, setSavedGroupFrameImage] = useState<string | null>(null);
     /** 저장 중 로딩 상태 */
     const [isSavingShare, setIsSavingShare] = useState(false);
-    /** 저장된 UUID */
-    const [savedUuid, setSavedUuid] = useState<string | null>(null);
+    /** 저장된 UUID (analysisUuid가 있으면 그것을 사용) */
+    const [savedUuid, setSavedUuid] = useState<string | null>(analysisUuid ?? null);
+    
+    // analysisUuid가 변경되면 savedUuid 업데이트
+    useEffect(() => {
+        if (analysisUuid) {
+            setSavedUuid(analysisUuid);
+        }
+    }, [analysisUuid]);
 
     // 모임용 싸피네컷 저장 이미지 로드
     useEffect(() => {
@@ -455,7 +468,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                 tabs={[
                     { id: "overall", label: "전체 궁합", icon: Users },
                     { id: "pairs", label: "1:1 궁합", icon: UserCheck },
-                    { id: "ssafy-cut", label: "싸피네컷", icon: Images },
+                    ...(!hideSsafyCut ? [{ id: "ssafy-cut", label: "싸피네컷", icon: Images }] : []),
                 ]}
                 activeTab={currentTab}
                 onTabChange={(tabId) => setCurrentTab(tabId as "overall" | "pairs" | "ssafy-cut")}

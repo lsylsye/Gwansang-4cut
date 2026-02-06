@@ -17,12 +17,14 @@ public class GroupAnalysisResponse {
 
     private UUID id;
     private String analysisData;
+    private String status;  // ANALYZING or COMPLETED
     private LocalDateTime createdAt;
 
     public static GroupAnalysisResponse from(GroupAnalysis entity) {
         return GroupAnalysisResponse.builder()
                 .id(entity.getUuid())
                 .analysisData(entity.getAnalysisData())
+                .status(entity.getStatus().name())
                 .createdAt(entity.getCreatedAt())
                 .build();
     }

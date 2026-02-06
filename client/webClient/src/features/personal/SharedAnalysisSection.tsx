@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
-import { Brain, Heart, Loader2, AlertCircle } from "lucide-react";
+import { Brain, Heart, Loader2, AlertCircle, Clock } from "lucide-react";
 import { FaceAnalysis } from "./face/components/FaceAnalysis";
 import { StatsAnalysis, type ConstitutionPhase } from "./stats/components/StatsAnalysis";
 import { TabNavigation } from "@/shared/components/TabNavigation";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
-import { getPersonalAnalysis, PersonalAnalysisData } from "@/shared/api/personalAnalysisApi";
+import { getPersonalAnalysis, PersonalAnalysisData, AnalysisStatus } from "@/shared/api/personalAnalysisApi";
 import { ROUTES } from "@/shared/config/routes";
 
 /**
@@ -34,47 +34,62 @@ export const SharedAnalysisSection: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [analysisData, setAnalysisData] = useState<PersonalAnalysisData | null>(null);
+    const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus | null>(null);
 
     // 체질 분석 상태 - 공유 페이지에서는 바로 체질 풀이 결과만 표시
     const [constitutionPhase, setConstitutionPhase] = useState<ConstitutionPhase>("constitution");
     const [constitutionSelectedMenuIdx, setConstitutionSelectedMenuIdx] = useState<number | null>(null);
 
-    // UUID로 데이터 조회
-    useEffect(() => {
-        const fetchData = async () => {
-            console.log("🔗 공유 페이지 접근, pathname:", location.pathname);
-            console.log("🔗 추출된 UUID:", uuid);
-            
-            if (!uuid) {
-                console.error("❌ UUID를 추출할 수 없습니다.");
-                setError("잘못된 접근입니다.");
-                setIsLoading(false);
-                return;
-            }
+    // 데이터 조회 함수 (polling용으로 분리)
+    const fetchData = useCallback(async () => {
+        if (!uuid) {
+            console.error("❌ UUID를 추출할 수 없습니다.");
+            setError("잘못된 접근입니다.");
+            setIsLoading(false);
+            return;
+        }
 
-            try {
-                setIsLoading(true);
-                console.log("📡 API 호출 시작:", uuid);
-                const response = await getPersonalAnalysis(uuid);
-                console.log("✅ API 응답:", response);
-                
-                // analysisData는 JSON 문자열이므로 파싱
+        try {
+            console.log("📡 API 호출 시작:", uuid);
+            const response = await getPersonalAnalysis(uuid);
+            console.log("✅ API 응답:", response);
+            
+            setAnalysisStatus(response.status);
+            
+            // 분석 완료된 경우에만 데이터 파싱
+            if (response.status === 'COMPLETED' && response.analysisData) {
                 const parsed: PersonalAnalysisData = JSON.parse(response.analysisData);
                 console.log("✅ 파싱된 데이터:", parsed);
                 setAnalysisData(parsed);
-
-                // 공유 페이지에서는 항상 체질 풀이만 바로 표시 (인트로/싸밥 추천 건너뜀)
-                // 저장된 phase 복원 없이 "constitution"으로 고정
-            } catch (err) {
-                console.error("❌ 분석 결과 조회 실패:", err);
-                setError("분석 결과를 불러오는데 실패했습니다.");
-            } finally {
-                setIsLoading(false);
             }
-        };
-
-        fetchData();
+        } catch (err) {
+            console.error("❌ 분석 결과 조회 실패:", err);
+            setError("분석 결과를 불러오는데 실패했습니다.");
+        } finally {
+            setIsLoading(false);
+        }
     }, [uuid]);
+
+    // UUID로 데이터 조회
+    useEffect(() => {
+        console.log("🔗 공유 페이지 접근, pathname:", location.pathname);
+        console.log("🔗 추출된 UUID:", uuid);
+        
+        setIsLoading(true);
+        fetchData();
+    }, [uuid, fetchData, location.pathname]);
+
+    // 분석 중일 때 주기적으로 상태 확인 (polling)
+    useEffect(() => {
+        if (analysisStatus !== 'ANALYZING') return;
+
+        const pollInterval = setInterval(() => {
+            console.log("🔄 분석 상태 확인 중...");
+            fetchData();
+        }, 3000); // 3초마다 상태 확인
+
+        return () => clearInterval(pollInterval);
+    }, [analysisStatus, fetchData]);
 
     // 로딩 상태
     if (isLoading) {
@@ -82,6 +97,29 @@ export const SharedAnalysisSection: React.FC = () => {
             <div className="w-full max-w-7xl mx-auto pb-20 flex flex-col items-center justify-center min-h-[60vh]">
                 <Loader2 size={48} className="animate-spin text-brand-green mb-4" />
                 <p className="text-gray-600 text-lg">분석 결과를 불러오는 중...</p>
+            </div>
+        );
+    }
+
+    // 분석 중 상태 (외부 사용자가 분석 진행 중에 접근한 경우)
+    if (analysisStatus === 'ANALYZING') {
+        return (
+            <div className="w-full max-w-7xl mx-auto pb-20 flex flex-col items-center justify-center min-h-[60vh]">
+                <div className="relative">
+                    <Clock size={48} className="text-brand-green mb-4 animate-pulse" />
+                    <Loader2 size={24} className="absolute -right-2 -bottom-2 animate-spin text-brand-green" />
+                </div>
+                <p className="text-gray-800 text-xl font-semibold mb-2 mt-4">
+                    관상 분석 중입니다
+                </p>
+                <p className="text-gray-500 text-sm mb-6 text-center">
+                    잠시만 기다려 주세요.<br />
+                    분석이 완료되면 자동으로 결과가 표시됩니다.
+                </p>
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>분석 진행 중...</span>
+                </div>
             </div>
         );
     }

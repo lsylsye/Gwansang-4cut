@@ -31,6 +31,8 @@ interface AnalysisSectionProps {
     faceAnalysisResult?: Stage1Response | null;
     totalReview?: TotalReview | null;
     isLoading?: boolean;
+    /** 분석 시작 시 생성된 UUID (분석하기 버튼 누르면 이미 저장됨) */
+    analysisUuid?: string | null;
 }
 
 // --- Mock Data (부위별 상세: values, criteria, interpretation, advice) ---
@@ -322,7 +324,8 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
     onTabChange,
     faceAnalysisResult,
     totalReview: totalReviewProp,
-    isLoading = false 
+    isLoading = false,
+    analysisUuid,
 }) => {
     const [currentTab, setCurrentTab] = useState<"physiognomy" | "constitution" | "future" | "ssafy-cut">(
         "physiognomy"
@@ -362,7 +365,7 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [isSavingShare, setIsSavingShare] = useState(false);
-    const [savedUuid, setSavedUuid] = useState<string | null>(null);
+    const [savedUuid, setSavedUuid] = useState<string | null>(analysisUuid || null);
     const [futureImage, setFutureImage] = useState<string | null>(null);
     const [savedFrameImage, setSavedFrameImage] = useState<string | null>(null);
 
