@@ -1068,7 +1068,6 @@ def build_group_overall_prompt(members_data: List[Dict[str, Any]]) -> tuple:
     "comprehensive": "종합 궁합, 각 멤버 역할과 구조. 존댓말 + 일상어로만 4~6문장. 오행·명리 용어 쓰지 말 것 (예: ~입니다, ~해요, ~세요)",
     "improvement": "모임을 오래 가게 만드는 방법. **일상어**로 자연스럽게(친구한테 말하듯). 과장·추측 넣어서 재밌게. 멤버 이름 실제로. 예: 정현이 말 많이 하면 승연이 피곤해함. 말 줄이는 게 좋음. 한 달에 한두 번이 딱임. 더 자주 만나면 다 지쳐서 해체 직행. 딱딱한 표현 금지"
   }},
-  "compatibility": {{ "score": 718 }},
   "teamwork": {{
     "communication": 0~100 정수,
     "speed": 0~100 정수,
