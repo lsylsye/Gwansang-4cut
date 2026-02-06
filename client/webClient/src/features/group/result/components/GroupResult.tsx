@@ -123,31 +123,6 @@ export const GroupResult: React.FC<GroupResultProps> = ({
     const [selectedPairDetail, setSelectedPairDetail] = useState<RelationPairForDetail | null>(null);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const isMobile = useIsMobile();
-
-    const hasOverall = Boolean(
-        groupAnalysisResult?.overall &&
-        (groupAnalysisResult.overall as { personality?: unknown; compatibility?: unknown; teamwork?: unknown; maintenance?: unknown; members?: unknown[] }).personality &&
-        (groupAnalysisResult.overall as { members?: unknown[] }).members
-    );
-
-    if (!hasOverall && isAnalyzing) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4">
-                <Loader2 className="w-12 h-12 text-brand-orange animate-spin" aria-hidden />
-                <p className="text-base font-medium text-gray-700">모임 궁합 분석 중...</p>
-                <p className="text-sm text-gray-500">잠시만 기다려 주세요.</p>
-            </div>
-        );
-    }
-    if (!hasOverall) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4">
-                <AlertTriangle className="w-12 h-12 text-amber-500" aria-hidden />
-                <p className="text-base font-medium text-gray-700">결과가 아직 없어요.</p>
-                <p className="text-sm text-gray-500">모임 궁합 분석을 먼저 진행해 주세요.</p>
-            </div>
-        );
-    }
     /** 모임 궁합용 싸피네컷 저장 이미지 (photoBoothSets_group) */
     const [savedGroupFrameImage, setSavedGroupFrameImage] = useState<string | null>(null);
     /** 저장 중 로딩 상태 */
@@ -180,6 +155,12 @@ export const GroupResult: React.FC<GroupResultProps> = ({
     useEffect(() => {
         onTabChange?.(currentTab);
     }, [currentTab, onTabChange]);
+
+    const hasOverall = Boolean(
+        groupAnalysisResult?.overall &&
+        (groupAnalysisResult.overall as { personality?: unknown; compatibility?: unknown; teamwork?: unknown; maintenance?: unknown; members?: unknown[] }).personality &&
+        (groupAnalysisResult.overall as { members?: unknown[] }).members
+    );
     
     // 링크 공유 기능 (저장 후 UUID로 공유 URL 생성)
     const shareUrl = savedUuid 
@@ -413,6 +394,26 @@ export const GroupResult: React.FC<GroupResultProps> = ({
             avatar: m.avatar,
         }));
     }, [membersWithRoles]);
+
+    // 훅 규칙: 모든 훅 호출 후에만 early return (로딩/결과 없음)
+    if (!hasOverall && isAnalyzing) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4">
+                <Loader2 className="w-12 h-12 text-brand-orange animate-spin" aria-hidden />
+                <p className="text-base font-medium text-gray-700">모임 궁합 분석 중...</p>
+                <p className="text-sm text-gray-500">잠시만 기다려 주세요.</p>
+            </div>
+        );
+    }
+    if (!hasOverall) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4">
+                <AlertTriangle className="w-12 h-12 text-amber-500" aria-hidden />
+                <p className="text-base font-medium text-gray-700">결과가 아직 없어요.</p>
+                <p className="text-sm text-gray-500">모임 궁합 분석을 먼저 진행해 주세요.</p>
+            </div>
+        );
+    }
 
     // 분석 데이터 없음 → 결과 없음 화면
     if (!dataSource) {

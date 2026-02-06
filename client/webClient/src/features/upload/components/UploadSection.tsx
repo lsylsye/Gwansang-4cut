@@ -496,7 +496,14 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       console.error("이전 촬영 데이터 삭제 실패:", error);
     }
 
-    const membersWithoutAvatar = groupMembers.map(({ avatar, ...rest }) => rest);
+    // 태어난 시간 '모름'일 때도 서버가 정상 처리하도록 birthTime을 "00:00"으로 정규화
+    const membersWithoutAvatar = groupMembers.map((m) => {
+      const { avatar, ...rest } = m;
+      return {
+        ...rest,
+        birthTime: m.birthTimeUnknown ? "00:00" : (rest.birthTime?.trim() || "00:00"),
+      };
+    });
 
     // 백엔드 형식: { timestamp, faces, groupMembers } (groupMembers는 avatar 제외)
     let finalPayload: (GroupFaceMeshPayload & { groupMembers: typeof membersWithoutAvatar }) | null = null;
