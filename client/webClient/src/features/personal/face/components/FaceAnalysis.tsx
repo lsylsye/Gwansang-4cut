@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import ReactMarkdown from "react-markdown";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/shared/ui/display/hover-card";
 import { Sparkles, X } from "lucide-react";
 
 // --- Types ---
@@ -29,6 +30,66 @@ const DEFAULT_TOTAL_REVIEW: TotalReview = {
 // highlightIndex: 0=얼굴형(공통·얼굴형), 1=이마, 2=눈, 3=코, 4=입, 5=턱
 const HIGHLIGHT_ORDER = 6;
 const HIGHLIGHT_DURATION_MS = 2800;
+
+/** 오형이란? 호버 카드에 표시할 설명 (하드코딩) */
+const OHEUNG_INFO = (
+    <div className="text-left text-sm text-gray-700 space-y-3 max-w-[320px]">
+        <p className="font-semibold text-gray-800">오형이란?</p>
+        <p>
+            얼굴의 &apos;모양&apos;이 아니라, 얼굴에서 가장 강하게 드러나는 <strong>기운의 방향</strong>이오.
+            어디가 눈에 들어오는가, 얼굴의 힘이 어디로 흐르는가가 오형이오.
+        </p>
+        <table className="w-full text-xs border-collapse">
+            <thead>
+                <tr className="border-b border-gray-200">
+                    <th className="py-1 pr-2 text-left font-semibold">오형</th>
+                    <th className="py-1 pr-2 text-left font-semibold">핵심 인상</th>
+                    <th className="py-1 text-left font-semibold">한마디</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">목형</td><td className="py-1 pr-2">위로 뻗는다</td><td className="py-1">성장</td></tr>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">화형</td><td className="py-1 pr-2">위가 강하다</td><td className="py-1">발산</td></tr>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">토형</td><td className="py-1 pr-2">가운데가 단단</td><td className="py-1">안정</td></tr>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">금형</td><td className="py-1 pr-2">옆으로 퍼진다</td><td className="py-1">표출</td></tr>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">수형</td><td className="py-1 pr-2">아래로 모인다</td><td className="py-1">저장</td></tr>
+            </tbody>
+        </table>
+        <p className="text-gray-600">
+            하나만 나오는 얼굴은 드물고, 대부분 주형+부형으로 조합되어 그 사람의 성격과 운의 방향을 나타내오.
+        </p>
+    </div>
+);
+
+/** 오행이란? 호버 카드에 표시할 설명 (하드코딩, 취업운·체질 이해용) */
+const OHAENG_INFO = (
+    <div className="text-left text-sm text-gray-700 space-y-3 max-w-[320px]">
+        <p className="font-semibold text-gray-800">오행이란?</p>
+        <p>
+            나무·불·흙·쇠·물이 아니라, <strong>세상을 움직이는 다섯 가지 성질(에너지 패턴)</strong>이에요.
+            사람도 자연의 일부라서, 생각하는 방식·감정·행동 습관이 이 다섯 성질로 드러나요.
+        </p>
+        <p className="text-xs text-gray-600">사계절로 보면:</p>
+        <table className="w-full text-xs border-collapse">
+            <thead>
+                <tr className="border-b border-gray-200">
+                    <th className="py-1 pr-2 text-left font-semibold">오행</th>
+                    <th className="py-1 text-left font-semibold">의미</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">木 목</td><td className="py-1">봄 · 시작·성장, 아이디어·계획</td></tr>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">火 화</td><td className="py-1">여름 · 확산·표현, 열정·주목</td></tr>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">土 토</td><td className="py-1">환절기 · 중심·조율, 안정·책임</td></tr>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">金 금</td><td className="py-1">가을 · 정리·기준, 판단·결단</td></tr>
+                <tr className="border-b border-gray-100"><td className="py-1 pr-2">水 수</td><td className="py-1">겨울 · 저장·깊이, 사고·관찰</td></tr>
+            </tbody>
+        </table>
+        <p className="text-gray-600">
+            &quot;목이 많다/화가 없다&quot;는 좋고 나쁨이 아니라, <strong>어떤 성질을 주로 쓰는지</strong>의 색깔이에요.
+        </p>
+    </div>
+);
 
 export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, features, totalReview }) => {
     const [activeFeature, setActiveFeature] = useState<string | null>(null);
@@ -59,7 +120,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
         chin: "턱/하관",
     };
 
-    /** 범위 게이지: value가 어느 구간(segment)에 해당하는지 시각화. 게이지 바 아래에 구간별 기준값만 표시 */
+    /** 범위 게이지: value가 어느 구간(segment)에 해당하는지 시각화 */
     const renderRangeGauge = (
         g: { value: number; rangeMin: number; rangeMax: number; unit?: string; segments: { label: string; min?: number; max?: number }[] },
         customLabel?: string
@@ -455,7 +516,23 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         {/* 1. 전체 관상 분석 종합 의견 — 마크다운(굵은 소제목·줄 띄움) 적용 */}
                         {(totalReview?.faceOverview || DEFAULT_TOTAL_REVIEW.faceOverview) && (
                             <section className="total-review-content rounded-xl bg-gray-100 border border-gray-200 p-4 sm:p-5">
-                                <h4 className="text-gray-800 font-bold text-base mb-3 pb-2 border-b border-gray-200/80">1. 전체 관상 분석 종합 의견</h4>
+                                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200/80">
+                                    <h4 className="text-gray-800 font-bold text-base">1. 전체 관상 분석 종합 의견</h4>
+                                    <HoverCard openDelay={200} closeDelay={100}>
+                                        <HoverCardTrigger asChild>
+                                            <button
+                                                type="button"
+                                                className="text-xs text-brand-green hover:text-brand-green/80 underline underline-offset-2 cursor-help focus:outline-none"
+                                                aria-label="오형이란?"
+                                            >
+                                                오형이란?
+                                            </button>
+                                        </HoverCardTrigger>
+                                        <HoverCardContent side="bottom" align="start" className="w-auto max-w-[340px] p-4">
+                                            {OHEUNG_INFO}
+                                        </HoverCardContent>
+                                    </HoverCard>
+                                </div>
                                 <div className="text-gray-700 text-base leading-[1.75] [&_strong]:font-bold [&_strong]:text-gray-800 [&_p:has(strong.total-review-subheading)]:mb-0 [&_p:not(:has(strong.total-review-subheading))]:mb-3 [&_p:last-child]:mb-0">
                                     <ReactMarkdown
                                         components={{
@@ -472,7 +549,23 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         {/* 2. 취업운 — 마크다운(굵은 소제목·줄 띄움) 적용 */}
                         {(totalReview?.careerFortune || DEFAULT_TOTAL_REVIEW.careerFortune) && (
                             <section className="total-review-content rounded-xl bg-gray-100 border border-gray-200 p-4 sm:p-5">
-                                <h4 className="text-gray-800 font-bold text-base mb-3 pb-2 border-b border-gray-200/80">2. 올해의 취업운 💼</h4>
+                                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200/80">
+                                    <h4 className="text-gray-800 font-bold text-base">2. 올해의 취업운 💼</h4>
+                                    <HoverCard openDelay={200} closeDelay={100}>
+                                        <HoverCardTrigger asChild>
+                                            <button
+                                                type="button"
+                                                className="text-xs text-brand-green hover:text-brand-green/80 underline underline-offset-2 cursor-help focus:outline-none"
+                                                aria-label="오행이란?"
+                                            >
+                                                오행이란?
+                                            </button>
+                                        </HoverCardTrigger>
+                                        <HoverCardContent side="bottom" align="start" className="w-auto max-w-[340px] p-4">
+                                            {OHAENG_INFO}
+                                        </HoverCardContent>
+                                    </HoverCard>
+                                </div>
                                 <div className="text-gray-700 text-base leading-[1.75] [&_strong]:font-bold [&_strong]:text-gray-800 [&_p:has(strong.total-review-subheading)]:mb-0 [&_p:not(:has(strong.total-review-subheading))]:mb-3 [&_p:last-child]:mb-0">
                                     <ReactMarkdown
                                         components={{

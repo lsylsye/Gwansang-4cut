@@ -158,6 +158,19 @@ def parse_total_review(llm_response: str) -> Dict[str, str]:
     }
 
 
+def _safe_int(value: Any, default: int) -> int:
+    """빈 문자열·None·비숫자 시 default 반환 (사주 계산 시 int() 오류 방지)"""
+    if value is None:
+        return default
+    s = str(value).strip()
+    if not s:
+        return default
+    try:
+        return int(s)
+    except (ValueError, TypeError):
+        return default
+
+
 def parse_birth_info(saju_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     사주 데이터에서 생년월일시 정보 파싱
@@ -168,25 +181,26 @@ def parse_birth_info(saju_data: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         사주 계산용 birth_info 딕셔너리
     """
-    birth_date = saju_data.get('birthDate', '')
-    birth_time = saju_data.get('birthTime', '')
+    birth_date = saju_data.get('birthDate') or ''
+    birth_time = saju_data.get('birthTime') or ''
     
-    # 날짜 파싱
+    # 날짜 파싱 (YYYY.MM.DD / YYYY-MM-DD / YYYY/MM/DD 지원)
     year, month, day = 1990, 1, 1
-    if birth_date:
-        parts = birth_date.split('-')
+    if birth_date and isinstance(birth_date, str):
+        parts = re.split(r'[.\-\/]', str(birth_date).strip())
+        parts = [p.strip() for p in parts if p.strip()]
         if len(parts) >= 3:
-            year = int(parts[0])
-            month = int(parts[1])
-            day = int(parts[2])
+            year = _safe_int(parts[0], 1990)
+            month = _safe_int(parts[1], 1)
+            day = _safe_int(parts[2], 1)
     
-    # 시간 파싱
+    # 시간 파싱 (빈 문자열·':'만 있는 경우 기본값 사용)
     hour, minute = 12, 0
-    if birth_time and not saju_data.get('birthTimeUnknown', False):
-        time_parts = birth_time.split(':')
+    if birth_time and isinstance(birth_time, str) and not saju_data.get('birthTimeUnknown', False):
+        time_parts = str(birth_time).strip().split(':')
         if len(time_parts) >= 2:
-            hour = int(time_parts[0])
-            minute = int(time_parts[1])
+            hour = _safe_int(time_parts[0], 12)
+            minute = _safe_int(time_parts[1], 0)
     
     # 성별 변환
     gender = saju_data.get('gender', 'male')

@@ -496,7 +496,14 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       console.error("이전 촬영 데이터 삭제 실패:", error);
     }
 
-    const membersWithoutAvatar = groupMembers.map(({ avatar, ...rest }) => rest);
+    // 태어난 시간 '모름'일 때도 서버가 정상 처리하도록 birthTime을 "00:00"으로 정규화
+    const membersWithoutAvatar = groupMembers.map((m) => {
+      const { avatar, ...rest } = m;
+      return {
+        ...rest,
+        birthTime: m.birthTimeUnknown ? "00:00" : (rest.birthTime?.trim() || "00:00"),
+      };
+    });
 
     // 백엔드 형식: { timestamp, faces, groupMembers } (groupMembers는 avatar 제외)
     let finalPayload: (GroupFaceMeshPayload & { groupMembers: typeof membersWithoutAvatar }) | null = null;
@@ -531,7 +538,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       }
     }
 
-    // 개인 관상과 동일: API는 App에서 /group/analyzing 이동 후 호출. 여기서는 payload만 전달.
+    // 개인 관상과 동일: API는 App에서 /analyzing 이동 후 호출. 여기서는 payload만 전달.
     const validImages = capturedImages.filter((img): img is string => img !== null);
     onAnalyze(
       validImages,
@@ -548,12 +555,21 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     );
   };
 
+  /** 그룹 멤버 한 명이 태어난 시간을 충족하는지 (모름 체크 시 OK, 아니면 시·분 모두 입력) */
+  const hasValidBirthTime = (m: { birthTimeUnknown?: boolean; birthTime?: string }) =>
+    m.birthTimeUnknown === true ||
+    (Boolean(m.birthTime?.trim()) && (m.birthTime?.split(":")[1] ?? "").trim() !== "");
+
   const isReady =
     mode === "personal"
       ? capturedImages[0] !== null && sajuData.birthDate !== ""
       : groupMembers.length >= 2 &&
       groupMembers.every(
-        (m) => m.name.trim() !== "" && m.avatar && m.birthDate !== "",
+        (m) =>
+          m.name.trim() !== "" &&
+          m.avatar &&
+          m.birthDate !== "" &&
+          hasValidBirthTime(m),
       );
 
   // --- Consent Modal ---
@@ -699,7 +715,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                     </label>
                   </div>
                   {!sajuData.birthTimeUnknown ? (
-                    <div className="grid grid-cols-2 gap-2 w-full max-w-[50%]">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-full sm:max-w-[320px]">
                       <div className="relative min-w-0">
                         <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange pointer-events-none z-10" />
                         <Select
@@ -1796,7 +1812,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                             </label>
                           </div>
                           {!member.birthTimeUnknown ? (
-                            <div className="grid grid-cols-2 gap-2 w-full min-w-0 max-w-[50%]">
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full min-w-0 max-w-full sm:max-w-[280px]">
                               <div className="relative min-w-0">
                                 <Clock
                                   className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange pointer-events-none z-10"
@@ -1835,12 +1851,14 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                                 <Input
                                   type="text"
                                   inputMode="numeric"
-                                  placeholder="0"
+                                  placeholder="00"
                                   maxLength={2}
                                   value={(() => {
-                                    if (!member.birthTime) return "";
-                                    const [, minutes] = member.birthTime.split(":");
-                                    return minutes;
+                                    const raw = member.birthTime ?? "";
+                                    if (!raw) return "";
+                                    const parts = raw.split(":");
+                                    const minutes = parts[1] ?? "";
+                                    return String(minutes);
                                   })()}
                                   onChange={(e) => {
                                     const v = e.target.value.replace(/\D/g, "").slice(0, 2);

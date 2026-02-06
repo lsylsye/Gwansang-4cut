@@ -215,18 +215,7 @@ export function RelationMapView({
                             <g
                                 className="cursor-pointer"
                                 onClick={() =>
-                                    onSelectPair(
-                                        isSelected
-                                            ? null
-                                            : {
-                                                  member1: relation.member1,
-                                                  member2: relation.member2,
-                                                  score: relation.score,
-                                                  reason: relation.reason,
-                                                  summary: relation.summary,
-                                                  type: relation.type,
-                                              }
-                                    )
+                                    onSelectPair(isSelected ? null : relation)
                                 }
                             >
                                 <circle
@@ -347,21 +336,12 @@ export function RelationMapView({
                     const nodeStroke = relation.relationLevel.color;
                     const nodeStrokeWidth = isSelected ? (isMobile ? 3 : 4) : (isMobile ? 1.5 : 2);
 
-                    const pairForDetail = {
-                        member1: relation.member1,
-                        member2: relation.member2,
-                        score: relation.score,
-                        reason: relation.reason,
-                        summary: relation.summary,
-                        type: relation.type,
-                    };
-
                     return (
                         <g
                             key={`right-${member.id}`}
                             transform={`translate(${constants.RIGHT_X}, ${rightY})`}
                             className="cursor-pointer"
-                            onClick={() => onSelectPair(isSelected ? null : pairForDetail)}
+                            onClick={() => onSelectPair(isSelected ? null : relation)}
                             style={{ cursor: "pointer" }}
                         >
                             <title>{tooltipText}</title>

@@ -57,8 +57,8 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
         <>
             <div
                 ref={navRef}
-                className={`flex ${isMobile ? 'justify-start' : 'justify-center'} mb-10 transition-all duration-300 ${
-                    isSticky ? "fixed w-full z-50 pt-4 pb-2" : ""
+                className={`flex w-full min-w-0 ${isMobile ? 'justify-start' : 'justify-center'} mb-10 transition-all duration-300 ${
+                    isSticky ? "fixed left-0 right-0 z-50 pt-4 pb-2" : ""
                 }`}
                 style={isSticky ? { 
                     top: -16,
@@ -67,7 +67,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
                     position: 'fixed'
                 } : {}}
             >
-            <div className={`${isMobile ? 'bg-white' : 'bg-white/80 sm:backdrop-blur-md'} p-1.5 sm:p-2 rounded-none sm:rounded-3xl sm:shadow-clay-sm border sm:border-2 sm:border-4 border-gray-200 sm:border-white ${isMobile ? 'w-full' : 'max-w-full'}`}>
+            <div className={`${isMobile ? 'w-full min-w-0' : 'w-fit'} ${isMobile ? 'bg-white' : 'bg-white/80 sm:backdrop-blur-md'} p-1.5 sm:p-2 rounded-none sm:rounded-3xl sm:shadow-clay-sm border sm:border-2 sm:border-4 border-gray-200 sm:border-white`}>
                 {isMobile ? (
                     <Swiper
                         modules={[FreeMode]}
@@ -83,8 +83,9 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
                                 <SwiperSlide 
                                     key={tab.id} 
                                     style={{ 
-                                        minWidth: '110px',
-                                        width: `calc((100% - ${(tabs.length - 1) * 0}px) / ${tabs.length})`
+                                        minWidth: 0,
+                                        width: `${100 / tabs.length}%`,
+                                        flexShrink: 0,
                                     }}
                                 >
                                     <button
@@ -105,7 +106,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
                         })}
                     </Swiper>
                 ) : (
-                    <div className="flex gap-1.5">
+                    <div className="flex justify-center gap-1.5">
                         {tabs.map((tab) => {
                             const Icon = tab.icon;
                             const isActive = activeTab === tab.id;

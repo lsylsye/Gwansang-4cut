@@ -104,7 +104,7 @@ export const TurtleGuide: React.FC<TurtleGuideProps> = ({ message, isThinking, t
                       type="button"
                       onClick={onAction}
                       className={`relative z-0 w-full py-2 px-4 rounded-xl font-bold text-sm transition-all duration-200 shadow-pixel flex items-center justify-center gap-2 text-white ${
-                        pathname === ROUTES.PERSONAL_ANALYZING
+                        pathname === ROUTES.ANALYZING
                           ? "bg-brand-green hover:bg-brand-green-deep shadow-[0_2px_8px_rgba(0,137,123,0.3)]"
                           : "bg-gradient-to-r from-pink-400 via-fuchsia-400 to-violet-500 hover:from-pink-500 hover:via-fuchsia-500 hover:to-violet-600"
                       }`}

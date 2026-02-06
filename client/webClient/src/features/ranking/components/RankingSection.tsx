@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { TrendingUp, Sparkles, CheckCircle, Users, ArrowLeft, Share2, Search } from "lucide-react";
+import { TrendingUp, Sparkles, CheckCircle, Users, ArrowLeft, Share2, Search, Inbox, AlertCircle } from "lucide-react";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { ActionButton } from "@/shared/ui/core/ActionButton";
 import { Toast } from "@/shared/components/Toast";
@@ -17,42 +17,36 @@ interface RankingItem {
   memberNames?: string[];
 }
 
-const MOCK_NAMES = ["홍길동", "김철수", "이영희", "박민수", "최지훈", "정수진", "한소희", "윤도현"];
-
-const MOCK_RANKINGS: RankingItem[] = [
-  { id: 1, teamName: "환상의 짝꿍 팀", score: 98, members: 4, rank: 1, memberNames: MOCK_NAMES.slice(0, 4) },
-  { id: 2, teamName: "마라탕 처돌이들", score: 92, members: 3, rank: 2, memberNames: MOCK_NAMES.slice(0, 3) },
-  { id: 3, teamName: "밤샘 코딩러들", score: 85, members: 5, rank: 3, memberNames: MOCK_NAMES.slice(0, 5) },
-  { id: 4, teamName: "불타는 청춘", score: 79, members: 2, rank: 4, memberNames: MOCK_NAMES.slice(0, 2) },
-  { id: 5, teamName: "거북이 친구들", score: 72, members: 6, rank: 5, memberNames: MOCK_NAMES.slice(0, 6) },
-  { id: 6, teamName: "주말 등산러", score: 68, members: 4, rank: 6, memberNames: MOCK_NAMES.slice(0, 4) },
-  { id: 7, teamName: "새벽 러닝크루", score: 65, members: 3, rank: 7, memberNames: MOCK_NAMES.slice(0, 3) },
-  { id: 8, teamName: "독서 모임", score: 62, members: 5, rank: 8, memberNames: MOCK_NAMES.slice(0, 5) },
-  { id: 9, teamName: "요리 마스터즈", score: 58, members: 4, rank: 9, memberNames: MOCK_NAMES.slice(0, 4) },
-  { id: 10, teamName: "사진 찍는 사람들", score: 55, members: 6, rank: 10, memberNames: MOCK_NAMES.slice(0, 6) },
-  { id: 11, teamName: "게임 프렌즈", score: 52, members: 4, rank: 11, memberNames: MOCK_NAMES.slice(0, 4) },
-  { id: 12, teamName: "여행가는 날", score: 48, members: 5, rank: 12, memberNames: MOCK_NAMES.slice(0, 5) },
-  { id: 13, teamName: "커피 애호가", score: 45, members: 3, rank: 13, memberNames: MOCK_NAMES.slice(0, 3) },
-  { id: 14, teamName: "헬스 매니아", score: 42, members: 4, rank: 14, memberNames: MOCK_NAMES.slice(0, 4) },
-  { id: 15, teamName: "영화 보는 친구들", score: 38, members: 6, rank: 15, memberNames: MOCK_NAMES.slice(0, 6) },
-  { id: 16, teamName: "뮤직 러버스", score: 35, members: 4, rank: 16, memberNames: MOCK_NAMES.slice(0, 4) },
-  { id: 17, teamName: "맛집 탐방단", score: 32, members: 3, rank: 17, memberNames: MOCK_NAMES.slice(0, 3) },
-  { id: 18, teamName: "산책 동호회", score: 29, members: 5, rank: 18, memberNames: MOCK_NAMES.slice(0, 5) },
-  { id: 19, teamName: "영어 스터디", score: 26, members: 4, rank: 19, memberNames: MOCK_NAMES.slice(0, 4) },
-  { id: 20, teamName: "반려동물 가족", score: 23, members: 2, rank: 20, memberNames: MOCK_NAMES.slice(0, 2) },
-  { id: 21, teamName: "피크닉 크루", score: 20, members: 6, rank: 21, memberNames: MOCK_NAMES.slice(0, 6) },
-  { id: 22, teamName: "드라이브 모임", score: 18, members: 4, rank: 22, memberNames: MOCK_NAMES.slice(0, 4) },
-  { id: 23, teamName: "캠핑 매니아", score: 15, members: 3, rank: 23, memberNames: MOCK_NAMES.slice(0, 3) },
-  { id: 24, teamName: "그림 동아리", score: 12, members: 5, rank: 24, memberNames: MOCK_NAMES.slice(0, 5) },
-  { id: 25, teamName: "글쓰기 모임", score: 10, members: 4, rank: 25, memberNames: MOCK_NAMES.slice(0, 4) },
-  { id: 26, teamName: "요가 클래스", score: 8, members: 3, rank: 26, memberNames: MOCK_NAMES.slice(0, 3) },
-  { id: 27, teamName: "수영 동호회", score: 6, members: 6, rank: 27, memberNames: MOCK_NAMES.slice(0, 6) },
-  { id: 28, teamName: "클라이밍 크루", score: 4, members: 2, rank: 28, memberNames: MOCK_NAMES.slice(0, 2) },
-  { id: 29, teamName: "보드게임 모임", score: 2, members: 5, rank: 29, memberNames: MOCK_NAMES.slice(0, 5) },
-  { id: 30, teamName: "테니스 클럽", score: 1, members: 4, rank: 30, memberNames: MOCK_NAMES.slice(0, 4) },
-];
-
 const CIRCLE_R = 21;
+
+function loadRankings(
+  setBase: (items: RankingItem[]) => void,
+  setLoading: (v: boolean) => void,
+  setError: (v: boolean) => void
+) {
+  setLoading(true);
+  setError(false);
+  getRankings()
+    .then((data) => {
+      const mapped = data
+        .map((item, i) => ({
+            id: i + 1,
+            teamName: item.title,
+            score: item.score,
+            members: item.numberOfMembers,
+            rank: i + 1,
+          memberNames: item.memberNames?.map((m) => m.name) ?? [],
+        }))
+        .sort((a, b) => b.score - a.score)
+        .map((item, index) => ({ ...item, rank: index + 1 }));
+      setBase(mapped);
+    })
+    .catch(() => {
+      setBase([]);
+      setError(true);
+    })
+    .finally(() => setLoading(false));
+}
 
 /** 리스트용 점수 뱃지 — 알약 형태 (원 대신 사용) */
 function ScoreBadge({
@@ -151,6 +145,8 @@ interface RankingSectionProps {
   fromAnalysis?: boolean;
   /** 인적 사항에 등록한 멤버 이름 (우리 팀 카드에 인원수 옆에 표시) */
   memberNames?: string[];
+  /** 랭킹 등록 성공 시 호출 (결과 화면에서 '랭킹 보기' 버튼으로 바꿀 때 사용) */
+  onRankingRegistered?: () => void;
 }
 
 export const RankingSection: React.FC<RankingSectionProps> = ({
@@ -159,10 +155,13 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
   initialTeamName,
   fromAnalysis = false,
   memberNames = [],
+  onRankingRegistered,
 }) => {
   const [teamName, setTeamName] = useState(initialTeamName);
   const [isFixed, setIsFixed] = useState(false);
-  const [baseRankings, setBaseRankings] = useState<RankingItem[]>(MOCK_RANKINGS);
+  const [baseRankings, setBaseRankings] = useState<RankingItem[]>([]);
+  const [rankingsLoading, setRankingsLoading] = useState(true);
+  const [rankingsError, setRankingsError] = useState(false);
   const [toast, setToast] = useState<{ open: boolean; message: string; type: "success" | "error" }>({
     open: false,
     message: "",
@@ -171,36 +170,30 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    getRankings()
-      .then((data) => {
-        const mapped = data
-          .map((item, i) => ({
-            id: item.id ?? i + 1,
-            teamName: item.title,
-            score: item.score,
-            members: item.numberOfMembers,
-            rank: item.rank ?? i + 1,
-            memberNames: item.memberNames?.map((m) => m.name) ?? [],
-          }))
-          .sort((a, b) => b.score - a.score)
-          .map((item, index) => ({ ...item, rank: index + 1 }));
-        setBaseRankings(mapped);
-      })
-      .catch(() => { /* 실패 시 baseRankings는 MOCK_RANKINGS 유지 */ });
+    loadRankings(setBaseRankings, setRankingsLoading, setRankingsError);
   }, []);
 
   const names = memberNames.filter(Boolean);
+  const normalizedTeamName = teamName.trim() || "우리 팀";
   const userEntry: RankingItem = {
     id: "user",
-    teamName,
+    teamName: normalizedTeamName,
     score: userScore,
     members: names.length || 4,
     rank: 0,
     isUser: true,
     memberNames: names.length ? names : undefined,
   };
+  // 등록 후에는 서버 목록(baseRankings)에 이미 우리 팀이 포함되므로, 중복 제거 후 userEntry 하나만 넣어 한 번만 표시
   const rankings = isFixed
-    ? [...baseRankings, userEntry].sort((a, b) => b.score - a.score).map((item, index) => ({ ...item, rank: index + 1 }))
+    ? (() => {
+        const withoutDuplicate = baseRankings.filter(
+          (r) => !(r.teamName === normalizedTeamName && r.score === userScore)
+        );
+        return [...withoutDuplicate, userEntry]
+          .sort((a, b) => b.score - a.score)
+          .map((item, index) => ({ ...item, rank: index + 1 }));
+      })()
     : baseRankings;
 
   const top3 = rankings.filter((r) => r.rank <= 3);
@@ -287,7 +280,9 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                     try {
                       await registerRanking(payload);
                       setIsFixed(true);
+                      onRankingRegistered?.();
                       setToast({ open: true, message: "랭킹에 등록되었어요!", type: "success" });
+                      loadRankings(setBaseRankings, setRankingsLoading, setRankingsError);
                     } catch {
                       setToast({ open: true, message: "랭킹 등록에 실패했어요. 다시 시도해 주세요.", type: "error" });
                     } finally {
@@ -348,6 +343,20 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
                 </div>
               </>
             )}
+          </section>
+        ) : rankingsLoading ? (
+          <section className="rounded-2xl border border-gray-200 bg-white/90 shadow-md p-12 text-center">
+            <p className="text-gray-500 font-sans">랭킹을 불러오는 중…</p>
+          </section>
+        ) : rankingsError ? (
+          <section className="rounded-2xl border border-gray-200 bg-white/90 shadow-md p-12 text-center flex flex-col items-center gap-3">
+            <AlertCircle className="w-12 h-12 text-gray-400 shrink-0" />
+            <p className="text-gray-500 font-sans">랭킹을 불러오지 못했어요.</p>
+          </section>
+        ) : rankings.length === 0 ? (
+          <section className="rounded-2xl border border-gray-200 bg-white/90 shadow-md p-12 text-center flex flex-col items-center gap-3">
+            <Inbox className="w-12 h-12 text-gray-400 shrink-0" />
+            <p className="text-gray-500 font-sans">아직 등록된 랭킹이 없어요.</p>
           </section>
         ) : (
           <>
