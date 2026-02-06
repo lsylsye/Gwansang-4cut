@@ -255,11 +255,11 @@ export default function App() {
           
           setAnalysisDone(true);
           setIsAnalyzing(false);
-          // 분석 완료 후 UUID URL로 이동
-          navigate(`/personal/${uuid}`);
-          // photo booth에 있을 때만 토스트 플래그 켜기 (다른 경로로 이동 시 토스트 안 뜨게)
+          // 사진부스에 있으면 자동 이동하지 않고 토스트만 표시 (사진 선택·저장 후 결과 보기 가능)
           if (isPhotoBoothPath(pathnameRef.current)) {
             setShowAnalysisCompleteToast(true);
+          } else {
+            navigate(`/personal/${uuid}`);
           }
         } else {
           setAnalysisError("얼굴 분석 데이터가 없습니다. 다시 촬영해주세요.");
@@ -378,9 +378,13 @@ export default function App() {
         
         setAnalysisDone(true);
         setIsAnalyzing(false);
-        // 분석 완료 후 UUID URL로 이동
-        navigate(`/group/share/${uuid}`);
-        if (!isResultPath(pathnameRef.current)) setShowAnalysisCompleteToast(true);
+        // 사진부스에 있으면 자동 이동하지 않고 토스트만 표시 (사진 선택·저장 후 결과 보기 가능)
+        if (isPhotoBoothPath(pathnameRef.current)) {
+          setShowAnalysisCompleteToast(true);
+        } else {
+          navigate(`/group/share/${uuid}`);
+          if (!isResultPath(pathnameRef.current)) setShowAnalysisCompleteToast(true);
+        }
       } catch (error) {
         setAnalysisError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
         setIsAnalyzing(false);
