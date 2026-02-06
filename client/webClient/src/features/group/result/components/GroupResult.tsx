@@ -563,13 +563,13 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                 <section className="section-flow">
                                     <h2 className="text-base font-bold text-gray-800 font-display flow-mb-block w-full">팀워크 분석</h2>
                                     <h3 className="text-sm font-bold text-gray-700 font-display flow-mb-title w-full">1. 커뮤니케이션 밀도</h3>
-                                    <p className="text-xs text-gray-500 font-hand flow-mb-title w-full">"말이 많아서 문제인가, 적어서 문제인가?"</p>
+                                    <p className="text-xs text-gray-500 font-hand flow-mb-title w-full">"말이 많아서 문제인가요, 적어서 문제인가요?"</p>
                                     <p className="text-sm text-gray-700 leading-[1.8] font-sans flow-mb-block w-full break-keep">{dataSource.teamwork.communicationDetail}</p>
                                     <h3 className="text-sm font-bold text-gray-700 font-display flow-mb-title w-full">2. 갈등 발생 시 대응력</h3>
-                                    <p className="text-xs text-gray-500 font-hand flow-mb-title w-full">"문제가 생겼을 때 이 팀은 어떻게 반응하는가?"</p>
+                                    <p className="text-xs text-gray-500 font-hand flow-mb-title w-full">"문제가 생겼을 때 이 팀은 어떻게 반응하나요?"</p>
                                     <p className="text-sm text-gray-700 leading-[1.8] font-sans flow-mb-block w-full break-keep">{dataSource.teamwork.speedDetail}</p>
                                     <h3 className="text-sm font-bold text-gray-700 font-display flow-mb-title w-full">3. 의사결정 구조</h3>
-                                    <p className="text-xs text-gray-500 font-hand flow-mb-title w-full">"누가 말하면 정리가 되는가?"</p>
+                                    <p className="text-xs text-gray-500 font-hand flow-mb-title w-full">"누가 말하면 정리가 되나요?"</p>
                                     <p className="text-sm text-gray-700 leading-[1.8] font-sans w-full break-keep">{dataSource.teamwork.stabilityDetail}</p>
                                 </section>
                                 <section className="section-flow">
@@ -957,7 +957,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                     <span className="text-xs sm:text-sm font-bold text-orange-500">점</span>
                                                 </div>
                                             </div>
-                                            <p className="text-gray-600 text-sm sm:text-base font-hand mb-2 sm:mb-3">"말이 많아서 문제인가, 적어서 문제인가?"</p>
+                                            <p className="text-gray-600 text-sm sm:text-base font-hand mb-2 sm:mb-3">"말이 많아서 문제인가요, 적어서 문제인가요?"</p>
                                             <p className="text-gray-700 text-sm sm:text-base leading-[1.8] font-sans min-w-0 break-words">{dataSource.teamwork.communicationDetail}</p>
                                         </section>
 
@@ -973,7 +973,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                     <span className="text-xs sm:text-sm font-bold text-orange-500">점</span>
                                                 </div>
                                             </div>
-                                            <p className="text-gray-600 text-sm sm:text-base font-hand mb-2 sm:mb-3">"문제가 생겼을 때 이 팀은 어떻게 반응하는가?"</p>
+                                            <p className="text-gray-600 text-sm sm:text-base font-hand mb-2 sm:mb-3">"문제가 생겼을 때 이 팀은 어떻게 반응하나요?"</p>
                                             <p className="text-gray-700 text-sm sm:text-base leading-[1.8] font-sans min-w-0 break-words">{dataSource.teamwork.speedDetail}</p>
                                         </section>
 
@@ -989,7 +989,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                     <span className="text-xs sm:text-sm font-bold text-orange-500">점</span>
                                                 </div>
                                             </div>
-                                            <p className="text-gray-600 text-sm sm:text-base font-hand mb-2 sm:mb-3">"누가 말하면 정리가 되는가?"</p>
+                                            <p className="text-gray-600 text-sm sm:text-base font-hand mb-2 sm:mb-3">"누가 말하면 정리가 되나요?"</p>
                                             <p className="text-gray-700 text-sm sm:text-base leading-[1.8] font-sans min-w-0 break-words">{dataSource.teamwork.stabilityDetail}</p>
                                         </section>
                                     </div>
