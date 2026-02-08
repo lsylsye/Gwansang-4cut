@@ -48,7 +48,6 @@ export interface GroupAnalysisData {
       title?: string;
       harmony?: string;
       comprehensive?: string;
-      improvement?: string;
     };
     compatibility?: {
       score?: number;
@@ -75,6 +74,18 @@ export interface GroupAnalysisData {
         survivalStrategy?: string[];
         guidelines?: string[];
       };
+      /** 돈을 가장 많이 벌 것 같은 사람 */
+      richestPerson?: {
+        name: string;
+        whySentence?: string;
+        detailedReasons?: string[];
+      };
+      /** 모임의 핵심 인물 */
+      keyPerson?: {
+        name: string;
+        whySentence?: string;
+        tips?: string[];
+      };
     };
     members?: Array<{
       name: string;
@@ -91,10 +102,12 @@ export interface GroupAnalysisData {
     name1?: string;
     name2?: string;
     score?: number;
+    reason?: string;
     summary?: string;
     strengths?: string[];
     cautions?: string[];
     tips?: string[];
+    romanceLines?: string[];
   }>;
 }
 

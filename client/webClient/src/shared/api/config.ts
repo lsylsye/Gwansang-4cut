@@ -34,8 +34,12 @@ export const DB_ENDPOINTS = {
 /** 관상/사주 관련 (베이스: /api/face) — 개인·모임 관상, 사주, 오행 조합 */
 export const FACE_ENDPOINTS = {
   BASE: FACE_BASE_URL,
-  /** 개인 관상 + 사주 통합 분석 */
+  /** 개인 관상 + 사주 통합 분석 (기존 단일 호환) */
   FACEMESH_PERSONAL: `${FACE_BASE_URL}/facemesh/personal`,
+  /** 개인 관상 1차: 관상 + 취업만 빠르게 */
+  FACEMESH_PERSONAL_FIRST: `${FACE_BASE_URL}/facemesh/personal/first`,
+  /** 개인 관상 2차: 체질 + 웰스토리 메뉴 */
+  FACEMESH_PERSONAL_SECOND: `${FACE_BASE_URL}/facemesh/personal/second`,
   /** 모임 관상 (단체 facemesh 전송·분석) */
   FACEMESH_GROUP: `${FACE_BASE_URL}/facemesh/group`,
   /** 모임 전체 궁합만 (전체 궁합 페이지 먼저 표시용) */
@@ -57,6 +61,8 @@ export const IMAGE_ENDPOINTS = {
 /** 통합 엔드포인트 (기존 호출부 호환용 — 코드에서는 API_ENDPOINTS 또는 도메인별 *_ENDPOINTS 사용) */
 export const API_ENDPOINTS = {
   FACEMESH_PERSONAL: FACE_ENDPOINTS.FACEMESH_PERSONAL,
+  FACEMESH_PERSONAL_FIRST: FACE_ENDPOINTS.FACEMESH_PERSONAL_FIRST,
+  FACEMESH_PERSONAL_SECOND: FACE_ENDPOINTS.FACEMESH_PERSONAL_SECOND,
   FACEMESH_GROUP: FACE_ENDPOINTS.FACEMESH_GROUP,
   FACEMESH_GROUP_OVERALL: FACE_ENDPOINTS.FACEMESH_GROUP_OVERALL,
   FACEMESH_GROUP_PAIRS: FACE_ENDPOINTS.FACEMESH_GROUP_PAIRS,

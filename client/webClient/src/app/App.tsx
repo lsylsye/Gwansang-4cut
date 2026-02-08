@@ -37,6 +37,8 @@ import {
 } from "@/shared/config/routes";
 import { 
   analyzeFace, 
+  analyzeFaceFirst,
+  analyzeFaceSecond,
   FaceAnalysisApiResponse,
   TotalReview,
   analyzeGroupOverall,
@@ -220,47 +222,102 @@ export default function App() {
               birthTimeUnknown: sajuData.birthTimeUnknown,
             },
           };
-          const result = await analyzeFace(requestData);
-          if (result.error) {
-            setAnalysisError(result.error);
+
+          // ★ 두 API를 동시 호출 — first(관상+취업)가 먼저 끝나면 즉시 결과 표시
+          const firstPromise = analyzeFaceFirst(requestData);
+          const secondPromise = analyzeFaceSecond(requestData);
+
+          // --- 1차: 관상 + 취업 완료 시 즉시 결과 페이지 표시 ---
+          const firstResult = await firstPromise;
+          if (firstResult.error) {
+            setAnalysisError(firstResult.error);
             setIsAnalyzing(false);
             return;
           }
-          setFaceAnalysisResult(result);
-          
-          // 4. 분석 완료 - DB에 결과 업데이트
+          setFaceAnalysisResult(firstResult);
+
+          // 1차 DB 저장 (관상 + 취업만)
           try {
             const saveData: PersonalAnalysisData = {
               faceAnalysis: {
-                // 관상 분석 부위별 데이터 (stage1.faceAnalysis에서)
-                faceShape: result.stage1?.faceAnalysis?.faceShape,
-                forehead: result.stage1?.faceAnalysis?.forehead,
-                eyes: result.stage1?.faceAnalysis?.eyes,
-                nose: result.stage1?.faceAnalysis?.nose,
-                mouth: result.stage1?.faceAnalysis?.mouth,
-                chin: result.stage1?.faceAnalysis?.chin,
-                // 총평 데이터 (totalReview에서)
-                faceOverview: result.totalReview?.faceOverview,
-                careerFortune: result.totalReview?.careerFortune,
+                faceShape: firstResult.stage1?.faceAnalysis?.faceShape,
+                forehead: firstResult.stage1?.faceAnalysis?.forehead,
+                eyes: firstResult.stage1?.faceAnalysis?.eyes,
+                nose: firstResult.stage1?.faceAnalysis?.nose,
+                mouth: firstResult.stage1?.faceAnalysis?.mouth,
+                chin: firstResult.stage1?.faceAnalysis?.chin,
+                faceOverview: firstResult.totalReview?.faceOverview,
+                careerFortune: firstResult.totalReview?.careerFortune,
+                lifeReview: firstResult.totalReview?.lifeReview,
+                meetingCompatibility: firstResult.totalReview?.meetingCompatibility,
               },
               constitutionAnalysis: {
-                sajuInfo: result.stage1?.sajuInfo,
-                totalReview: result.totalReview,
+                sajuInfo: firstResult.stage1?.sajuInfo,
+                totalReview: firstResult.totalReview,
               },
             };
             await updatePersonalAnalysis(uuid, saveData);
           } catch (saveError) {
-            console.error('분석 결과 DB 저장 실패:', saveError);
+            console.error('1차 분석 결과 DB 저장 실패:', saveError);
           }
-          
+
           setAnalysisDone(true);
           setIsAnalyzing(false);
-          // 사진부스에 있으면 자동 이동하지 않고 토스트만 표시 (사진 선택·저장 후 결과 보기 가능)
           if (isPhotoBoothPath(pathnameRef.current)) {
             setShowAnalysisCompleteToast(true);
           } else {
             navigate(`/personal/${uuid}`);
           }
+
+          // --- 2차: 체질 + 웰스토리 비동기 병합 (이미 호출 진행 중, await만) ---
+          secondPromise.then(async (secondResult) => {
+            if (!secondResult.success) {
+              console.warn('2차(체질/메뉴) 분석 실패:', secondResult.error);
+              return;
+            }
+            // state 병합: totalReview에 체질 + 메뉴 추가
+            setFaceAnalysisResult((prev: FaceAnalysisApiResponse | null) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                totalReview: {
+                  ...prev.totalReview,
+                  constitutionSummary: secondResult.totalReview?.constitutionSummary,
+                  welstoryMenus: secondResult.totalReview?.welstoryMenus,
+                  recommendedMenu: secondResult.totalReview?.recommendedMenu,
+                },
+              };
+            });
+            // 2차 DB 업데이트 (전체 데이터)
+            try {
+              const fullSaveData: PersonalAnalysisData = {
+                faceAnalysis: {
+                  faceShape: firstResult.stage1?.faceAnalysis?.faceShape,
+                  forehead: firstResult.stage1?.faceAnalysis?.forehead,
+                  eyes: firstResult.stage1?.faceAnalysis?.eyes,
+                  nose: firstResult.stage1?.faceAnalysis?.nose,
+                  mouth: firstResult.stage1?.faceAnalysis?.mouth,
+                  chin: firstResult.stage1?.faceAnalysis?.chin,
+                  faceOverview: firstResult.totalReview?.faceOverview,
+                  careerFortune: firstResult.totalReview?.careerFortune,
+                  lifeReview: firstResult.totalReview?.lifeReview,
+                  meetingCompatibility: firstResult.totalReview?.meetingCompatibility,
+                },
+                constitutionAnalysis: {
+                  sajuInfo: firstResult.stage1?.sajuInfo,
+                  totalReview: {
+                    ...firstResult.totalReview,
+                    constitutionSummary: secondResult.totalReview?.constitutionSummary,
+                    welstoryMenus: secondResult.totalReview?.welstoryMenus,
+                    recommendedMenu: secondResult.totalReview?.recommendedMenu,
+                  },
+                },
+              };
+              await updatePersonalAnalysis(uuid, fullSaveData);
+            } catch (saveError) {
+              console.error('2차 분석 결과 DB 저장 실패:', saveError);
+            }
+          }).catch((err) => console.error('2차 분석 처리 오류:', err));
         } else {
           setAnalysisError("얼굴 분석 데이터가 없습니다. 다시 촬영해주세요.");
           setIsAnalyzing(false);
@@ -298,9 +355,13 @@ export default function App() {
         const overallPromise = analyzeGroupOverall(payload);
         const pairsPromise = analyzeGroupPairs(payload);
 
-        // 1:1 궁합 완료 시 즉시 state에 반영 (overall보다 먼저 오면 pairs만 먼저 저장)
+        // pairs 결과를 보관 (overall 완료 시점에 이미 와 있으면 병합용, 나중에 오면 state만 갱신)
+        const pairsResultRef: { current: unknown[] | undefined } = { current: undefined };
+
+        // 1:1 궁합 완료 시 ref에 저장 + state 반영 (overall보다 먼저 와도 알림은 안 띄움)
         pairsPromise.then((pairsResult) => {
           if (pairsResult.success && "pairs" in pairsResult && Array.isArray(pairsResult.pairs)) {
+            pairsResultRef.current = pairsResult.pairs;
             setGroupAnalysisResult((prev) =>
               prev
                 ? { ...prev, pairs: pairsResult.pairs }
@@ -314,20 +375,21 @@ export default function App() {
           }
         });
 
-        // 전체 궁합 응답 대기 → 성공 시 기존 state(이미 온 pairs) 유지하며 병합 후 결과 페이지 이동
-        const [overallResult, pairsResult] = await Promise.all([overallPromise, pairsPromise]);
+        // overall만 도착하면 분석 완료로 간주 → 알림 표시 및 결과 페이지 이동 (pairs는 기다리지 않음)
+        const overallResult = await overallPromise;
         if (!overallResult.success || !("overall" in overallResult)) {
           setAnalysisError("error" in overallResult ? overallResult.error : "전체 궁합 분석에 실패했습니다.");
           setIsAnalyzing(false);
           return;
         }
-        
+
         const finalGroupResult = {
           success: true,
           timestamp: overallResult.timestamp ?? payload.timestamp ?? "",
           members: overallResult.members ?? [],
           overall: overallResult.overall,
-          pairs: pairsResult.success && "pairs" in pairsResult ? pairsResult.pairs : [],
+          // pairs가 아직 안 왔으면 undefined → 결과 페이지에서 "1:1 궁합 분석 중..." 표시
+          pairs: pairsResultRef.current ?? undefined,
         };
         
         setGroupAnalysisResult(finalGroupResult);
@@ -365,10 +427,12 @@ export default function App() {
               name1: p.name1 || p.member1,
               name2: p.name2 || p.member2,
               score: p.score,
-              summary: p.summary || p.reason,
+              reason: p.reason || "",
+              summary: p.summary || "",
               strengths: p.strengths || [],
               cautions: p.cautions || [],
               tips: p.tips || [],
+              romanceLines: p.romanceLines || p.romance_lines || [],
             })) || [],
           };
           await updateGroupAnalysis(uuid, saveData);

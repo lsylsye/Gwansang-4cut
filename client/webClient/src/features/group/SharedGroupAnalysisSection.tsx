@@ -34,7 +34,6 @@ function convertToGroupAnalysisResultProp(data: GroupAnalysisData): GroupAnalysi
                 title: overallAnalysis.personality?.title || "",
                 harmony: overallAnalysis.personality?.harmony || "",
                 comprehensive: overallAnalysis.personality?.comprehensive || "",
-                improvement: overallAnalysis.personality?.improvement || "",
             },
             compatibility: {
                 score: overallAnalysis.compatibility?.score || 0,
@@ -57,6 +56,16 @@ function convertToGroupAnalysisResultProp(data: GroupAnalysisData): GroupAnalysi
                     survivalStrategy: overallAnalysis.maintenance.problemChild.survivalStrategy,
                     guidelines: overallAnalysis.maintenance.problemChild.guidelines || [],
                 } : undefined,
+                richestPerson: overallAnalysis.maintenance?.richestPerson ? {
+                    name: overallAnalysis.maintenance.richestPerson.name,
+                    whySentence: overallAnalysis.maintenance.richestPerson.whySentence,
+                    detailedReasons: overallAnalysis.maintenance.richestPerson.detailedReasons,
+                } : undefined,
+                keyPerson: overallAnalysis.maintenance?.keyPerson ? {
+                    name: overallAnalysis.maintenance.keyPerson.name,
+                    whySentence: overallAnalysis.maintenance.keyPerson.whySentence,
+                    tips: overallAnalysis.maintenance.keyPerson.tips,
+                } : undefined,
             },
             members: overallAnalysis.members || [],
         } : undefined,
@@ -66,8 +75,12 @@ function convertToGroupAnalysisResultProp(data: GroupAnalysisData): GroupAnalysi
             rank: idx + 1,
             score: p.score || 0,
             type: (p.score || 0) >= 80 ? "best_friend" : (p.score || 0) >= 60 ? "good" : "normal",
-            reason: p.summary || "",
+            reason: p.reason || "",
             summary: p.summary || "",
+            romanceLines: p.romanceLines || [],
+            strengths: p.strengths || [],
+            cautions: p.cautions || [],
+            tips: p.tips || [],
         })),
     };
 }

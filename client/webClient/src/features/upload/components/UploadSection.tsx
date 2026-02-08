@@ -1718,6 +1718,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                           <Input
                             placeholder="이름을 입력하세요. (최대 6글자)"
                             maxLength={6}
+                            lang="ko"
+                            autoComplete="off"
                             className="h-10 w-full text-sm bg-white/90 border-2 border-gray-200 focus:bg-white focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 transition-all rounded-xl font-semibold pl-3 pr-10 placeholder:text-gray-400 shadow-sm"
                             value={member.name ?? ''}
                             onFocus={() =>

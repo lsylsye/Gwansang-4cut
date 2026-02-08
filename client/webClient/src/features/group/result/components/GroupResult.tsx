@@ -51,7 +51,7 @@ export type GroupAnalysisResultProp = {
     groupCombination?: string;
     /** 전체 궁합 (personality, compatibility, teamwork, maintenance, members) */
     overall?: {
-        personality: { title: string; harmony: string; comprehensive: string; improvement: string };
+        personality: { title: string; harmony: string; comprehensive: string };
         compatibility: { score: number };
         teamwork: {
             communication: number;
@@ -67,6 +67,10 @@ export type GroupAnalysisResultProp = {
             maintenanceCards?: Array<{ label: string; title: string; description: string }>;
             /** 문제아 한 명 + 선정 이유 한 줄 + 생존 전략 2~4가지 + 모임이 오래 가려면 고칠 점 3~4가지 */
             problemChild?: { name: string; whySentence?: string; survivalStrategy?: string[]; guidelines: string[] };
+            /** 돈을 가장 많이 벌 것 같은 사람 */
+            richestPerson?: { name: string; whySentence?: string; detailedReasons?: string[] };
+            /** 모임의 핵심 인물 */
+            keyPerson?: { name: string; whySentence?: string; tips?: string[] };
         };
         members: Array<{
             name: string;
@@ -88,6 +92,9 @@ export type GroupAnalysisResultProp = {
         summary: string;
         /** 연애 궁합 3줄 (API: romanceLines 또는 romance_lines) */
         romanceLines?: string[];
+        strengths?: string[];
+        cautions?: string[];
+        tips?: string[];
     }>;
 } | null;
 
@@ -222,10 +229,12 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                     name1: p.member1,
                     name2: p.member2,
                     score: p.score,
+                    reason: p.reason,
                     summary: p.summary,
                     strengths: p.strengths,
                     cautions: p.cautions,
                     tips: p.tips,
+                    romanceLines: p.romanceLines || [],
                 })),
             };
             
@@ -637,34 +646,81 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                     );
                                                 })}
                                                 </ul>
-                                                {(() => {
-                                        const pc = dataSource.maintenance?.problemChild;
-                                        if (!pc?.name || !Array.isArray(pc.guidelines) || pc.guidelines.length === 0) return null;
-                                        return (
-                                            <div className="mt-4 p-3 bg-amber-50/80 rounded-xl border border-amber-200">
-                                                <p className="text-xs font-bold text-amber-800 font-display mb-2">이 모임의 문제아 · {pc.name}</p>
-                                                {pc.whySentence && pc.whySentence.trim() && (
-                                                    <p className="text-xs text-amber-900 font-sans mb-2 leading-relaxed"><span className="font-semibold">선정 이유</span> {pc.whySentence}</p>
-                                                )}
-                                                {Array.isArray(pc.survivalStrategy) && pc.survivalStrategy.length > 0 && (
-                                                    <>
-                                                        <p className="text-[10px] font-semibold text-amber-700 font-sans mb-1">그 사람의 생존 전략</p>
-                                                        <ul className="list-disc pl-5 space-y-1 text-xs text-gray-700 font-sans mb-2">
-                                                            {pc.survivalStrategy.slice(0, 4).map((s, i) => (
-                                                                <li key={i}>{s}</li>
-                                                            ))}
-                                                        </ul>
-                                                    </>
-                                                )}
-                                                <p className="text-[10px] font-semibold text-amber-700 font-sans mb-1">그래서 이렇게 고치면 모임이 오래 가요</p>
-                                                <ul className="list-disc pl-5 space-y-1 text-xs text-gray-700 font-sans">
-                                                    {pc.guidelines.slice(0, 4).map((g, i) => (
-                                                        <li key={i}>{g}</li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        );
-                                    })()}
+                                                {/* 3개 카드 그리드 (문제아, 성공할 사람, 핵심 인물) */}
+                                                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                    {/* 이 모임의 문제아 */}
+                                                    {(() => {
+                                                        const pc = dataSource.maintenance?.problemChild;
+                                                        if (!pc?.name || !Array.isArray(pc.guidelines) || pc.guidelines.length === 0) return null;
+                                                        return (
+                                                            <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200">
+                                                                <p className="text-xs font-bold text-amber-800 font-display mb-2">이 모임의 문제아 · {pc.name}</p>
+                                                                {pc.whySentence && pc.whySentence.trim() && (
+                                                                    <p className="text-xs text-amber-900 font-sans mb-2 leading-relaxed"><span className="font-semibold">선정 이유</span> {pc.whySentence}</p>
+                                                                )}
+                                                                {Array.isArray(pc.survivalStrategy) && pc.survivalStrategy.length > 0 && (
+                                                                    <>
+                                                                        <p className="text-[10px] font-semibold text-amber-700 font-sans mb-1">그 사람의 생존 전략</p>
+                                                                        <ul className="list-disc pl-5 space-y-1 text-xs text-gray-700 font-sans mb-2">
+                                                                            {pc.survivalStrategy.slice(0, 4).map((s, i) => (
+                                                                                <li key={i}>{s}</li>
+                                                                            ))}
+                                                                        </ul>
+                                                                    </>
+                                                                )}
+                                                                <p className="text-[10px] font-semibold text-amber-700 font-sans mb-1">그래서 이렇게 고치면 모임이 오래 가요</p>
+                                                                <ul className="list-disc pl-5 space-y-1 text-xs text-gray-700 font-sans">
+                                                                    {pc.guidelines.slice(0, 4).map((g, i) => (
+                                                                        <li key={i}>{g}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                    {/* 모임의 핵심 인물 */}
+                                                    {(() => {
+                                                        const kp = dataSource.maintenance?.keyPerson;
+                                                        if (!kp?.name) return null;
+                                                        return (
+                                                            <div className="p-3 bg-violet-50/80 rounded-xl border border-violet-200">
+                                                                <p className="text-xs font-bold text-violet-800 font-display mb-2">⭐ 모임의 핵심 인물 · {kp.name}</p>
+                                                                {kp.whySentence && kp.whySentence.trim() && (
+                                                                    <p className="text-xs text-violet-900 font-sans mb-2 leading-relaxed"><span className="font-semibold">선정 이유</span> {kp.whySentence}</p>
+                                                                )}
+                                                                {Array.isArray(kp.tips) && kp.tips.length > 0 && (
+                                                                    <>
+                                                                        <p className="text-[10px] font-semibold text-violet-700 font-sans mb-1">이 사람을 잡아두려면</p>
+                                                                        <ul className="list-disc pl-5 space-y-1 text-xs text-gray-700 font-sans">
+                                                                            {kp.tips.slice(0, 4).map((t, i) => (
+                                                                                <li key={i}>{t}</li>
+                                                                            ))}
+                                                                        </ul>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                    {/* 가장 성공할 것 같은 사람 */}
+                                                    {(() => {
+                                                        const rp = dataSource.maintenance?.richestPerson;
+                                                        if (!rp?.name) return null;
+                                                        return (
+                                                            <div className="p-3 bg-emerald-50/80 rounded-xl border border-emerald-200">
+                                                                <p className="text-xs font-bold text-emerald-800 font-display mb-2">💰 가장 성공할 것 같은 사람 · {rp.name}</p>
+                                                                {rp.whySentence && rp.whySentence.trim() && (
+                                                                    <p className="text-xs text-emerald-900 font-sans mb-2 leading-relaxed"><span className="font-semibold">선정 이유</span> {rp.whySentence}</p>
+                                                                )}
+                                                                {Array.isArray(rp.detailedReasons) && rp.detailedReasons.length > 0 && (
+                                                                    <ul className="list-disc pl-5 space-y-1 text-xs text-gray-700 font-sans">
+                                                                        {rp.detailedReasons.slice(0, 4).map((r, i) => (
+                                                                            <li key={i}>{r}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
                                             </>
                                         );
                                     })()}
@@ -1122,11 +1178,12 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                         });
                                     })()}
                                 </div>
-                                {(() => {
-                                    const pc = dataSource.maintenance?.problemChild;
-                                    if (!pc?.name || !Array.isArray(pc.guidelines) || pc.guidelines.length === 0) return null;
-                                    return (
-                                        <div className="mt-4 sm:mt-6">
+                                {/* 문제아 / 성공할 사람 / 핵심 인물 - 3열 그리드 */}
+                                <div className="mt-4 sm:mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                    {(() => {
+                                        const pc = dataSource.maintenance?.problemChild;
+                                        if (!pc?.name || !Array.isArray(pc.guidelines) || pc.guidelines.length === 0) return null;
+                                        return (
                                             <section className="p-3 sm:p-4 bg-amber-50/80 rounded-xl sm:rounded-2xl border border-amber-200">
                                                 <p className="text-sm font-bold text-amber-800 font-display mb-2">이 모임의 문제아 · {pc.name}</p>
                                                 {pc.whySentence && pc.whySentence.trim() && (
@@ -1149,9 +1206,52 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                                                     ))}
                                                 </ul>
                                             </section>
-                                        </div>
-                                    );
-                                })()}
+                                        );
+                                    })()}
+                                    {/* 모임의 핵심 인물 */}
+                                    {(() => {
+                                        const kp = dataSource.maintenance?.keyPerson;
+                                        if (!kp?.name) return null;
+                                        return (
+                                            <section className="p-3 sm:p-4 bg-violet-50/80 rounded-xl sm:rounded-2xl border border-violet-200">
+                                                <p className="text-sm font-bold text-violet-800 font-display mb-2">⭐ 모임의 핵심 인물 · {kp.name}</p>
+                                                {kp.whySentence && kp.whySentence.trim() && (
+                                                    <p className="text-xs sm:text-sm text-violet-900 font-sans mb-2 leading-relaxed"><span className="font-semibold">선정 이유</span> {kp.whySentence}</p>
+                                                )}
+                                                {Array.isArray(kp.tips) && kp.tips.length > 0 && (
+                                                    <>
+                                                        <p className="text-xs font-semibold text-violet-700 font-sans mb-1">이 사람을 잡아두려면</p>
+                                                        <ul className="list-disc pl-5 space-y-1 text-xs sm:text-sm text-gray-700 font-sans">
+                                                            {kp.tips.slice(0, 4).map((t, i) => (
+                                                                <li key={i}>{t}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </>
+                                                )}
+                                            </section>
+                                        );
+                                    })()}
+                                    {/* 돈을 가장 많이 벌 것 같은 사람 */}
+                                    {(() => {
+                                        const rp = dataSource.maintenance?.richestPerson;
+                                        if (!rp?.name) return null;
+                                        return (
+                                            <section className="p-3 sm:p-4 bg-emerald-50/80 rounded-xl sm:rounded-2xl border border-emerald-200">
+                                                <p className="text-sm font-bold text-emerald-800 font-display mb-2">💰 가장 성공할 것 같은 사람 · {rp.name}</p>
+                                                {rp.whySentence && rp.whySentence.trim() && (
+                                                    <p className="text-xs sm:text-sm text-emerald-900 font-sans mb-2 leading-relaxed"><span className="font-semibold">선정 이유</span> {rp.whySentence}</p>
+                                                )}
+                                                {Array.isArray(rp.detailedReasons) && rp.detailedReasons.length > 0 && (
+                                                    <ul className="list-disc pl-5 space-y-1 text-xs sm:text-sm text-gray-700 font-sans">
+                                                        {rp.detailedReasons.slice(0, 4).map((r, i) => (
+                                                            <li key={i}>{r}</li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                            </section>
+                                        );
+                                    })()}
+                                </div>
                             </GlassCard>
             </motion.div>
                         )
