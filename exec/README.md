@@ -18,7 +18,7 @@
 - 배포 시 운영용 .env 파일을 적용하면됨
 
 ### 1-3. 배포 환경에 필요한 Nginx 구축 및 SSL 인증서 발급
-- 인스턴스에 compose.nginx.yml을 생성
+- 인스턴스에 compose.nginx.yml을 생성, nginx 라우팅 설정등을 위해 nginx/conf.d/app.conf 생성
 - cerbot으로 도메인 https ssl 인증서 적용
 - nginx compose 실행
 
