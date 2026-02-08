@@ -429,7 +429,8 @@ export default function App() {
         const pairsResultRef: { current: unknown[] | undefined } = { current: undefined };
 
         // 1:1 궁합 완료 시 ref에 저장 + state 반영 (overall보다 먼저 와도 알림은 안 띄움)
-        pairsPromise.then((pairsResult) => {
+        const pairsPromiseWithCallback = pairsPromise.then((pairsResult) => {
+          console.log('📥 pairs 응답 수신:', pairsResult);
           if (pairsResult.success && "pairs" in pairsResult && Array.isArray(pairsResult.pairs)) {
             pairsResultRef.current = pairsResult.pairs;
             setGroupAnalysisResult((prev) =>
@@ -443,10 +444,15 @@ export default function App() {
                   }
             );
           }
+          return pairsResult;
+        }).catch((err) => {
+          console.error('❌ pairs 분석 실패:', err);
+          return { success: false, error: err };
         });
 
         // overall만 도착하면 분석 완료로 간주 → 알림 표시 및 결과 페이지 이동 (pairs는 기다리지 않음)
         const overallResult = await overallPromise;
+        console.log('📥 overall 응답 수신:', overallResult);
         if (!overallResult.success || !("overall" in overallResult)) {
           setAnalysisError("error" in overallResult ? overallResult.error : "전체 궁합 분석에 실패했습니다.");
           setIsAnalyzing(false);
@@ -464,52 +470,7 @@ export default function App() {
         
         setGroupAnalysisResult(finalGroupResult);
         
-        // 3. 분석 완료 - DB에 결과 업데이트
-        try {
-          // API 응답의 members 배열 (role, keywords 등 포함)
-          const apiMembers = (finalGroupResult.overall as any)?.members || finalGroupResult.members || [];
-          
-          // groupMembers(사용자 입력)와 API 분석 결과를 병합
-          const mergedMembers = groupMembers.map((gm, idx) => {
-            const apiMember = apiMembers[idx] || {};
-            return {
-              id: gm.id || idx + 1,
-              name: gm.name,
-              birthDate: gm.birthDate || "",
-              birthTime: gm.birthTime || "",
-              gender: gm.gender || "male",
-              avatar: gm.avatar || "",
-              role: apiMember.role || "",
-              keywords: apiMember.keywords || [],
-              description: apiMember.description || "",
-              strengths: apiMember.strengths || [],
-              warnings: apiMember.warnings || [],
-            };
-          });
-          
-          const saveData: GroupAnalysisData = {
-            teamName: (finalGroupResult.overall as any)?.personality?.title || '모임 궁합 분석',
-            memberCount: groupMembers.length,
-            score: (finalGroupResult.overall as any)?.compatibility?.score,
-            members: mergedMembers,
-            overallAnalysis: finalGroupResult.overall as any,
-            pairsAnalysis: (finalGroupResult.pairs as any[])?.map((p: any) => ({
-              name1: p.name1 || p.member1,
-              name2: p.name2 || p.member2,
-              score: p.score,
-              reason: p.reason || "",
-              summary: p.summary || "",
-              strengths: p.strengths || [],
-              cautions: p.cautions || [],
-              tips: p.tips || [],
-              romanceLines: p.romanceLines || p.romance_lines || [],
-            })) || [],
-          };
-          await updateGroupAnalysis(uuid, saveData);
-        } catch (saveError) {
-          console.error('그룹 분석 결과 DB 저장 실패:', saveError);
-        }
-        
+        // 먼저 UI 이동 처리 (pairs 기다리지 않음)
         setAnalysisDone(true);
         setIsAnalyzing(false);
         // 사진부스에 있으면 자동 이동하지 않고 토스트만 표시 (사진 선택·저장 후 결과 보기 가능)
@@ -519,6 +480,76 @@ export default function App() {
           navigate(`/group/share/${uuid}`);
           if (!isResultPath(pathnameRef.current)) setShowAnalysisCompleteToast(true);
         }
+        
+        // 3. 분석 완료 - DB에 결과 업데이트 
+        // overall 먼저 저장 (pairs 없이)
+        const apiMembers = (finalGroupResult.overall as any)?.members || finalGroupResult.members || [];
+        const mergedMembers = groupMembers.map((gm, idx) => {
+          const apiMember = apiMembers[idx] || {};
+          return {
+            id: gm.id || idx + 1,
+            name: gm.name,
+            birthDate: gm.birthDate || "",
+            birthTime: gm.birthTime || "",
+            gender: gm.gender || "male",
+            avatar: gm.avatar || "",
+            role: apiMember.role || "",
+            keywords: apiMember.keywords || [],
+            description: apiMember.description || "",
+            strengths: apiMember.strengths || [],
+            warnings: apiMember.warnings || [],
+          };
+        });
+        
+        // overall만 먼저 저장
+        try {
+          const initialSaveData: GroupAnalysisData = {
+            teamName: (finalGroupResult.overall as any)?.personality?.title || '모임 궁합 분석',
+            memberCount: groupMembers.length,
+            score: (finalGroupResult.overall as any)?.compatibility?.score,
+            members: mergedMembers,
+            overallAnalysis: finalGroupResult.overall as any,
+            pairsAnalysis: [], // 일단 빈 배열
+          };
+          await updateGroupAnalysis(uuid, initialSaveData);
+          console.log('✅ 그룹 분석 결과 DB 1차 저장 완료 (overall)');
+        } catch (saveError) {
+          console.error('그룹 분석 결과 DB 1차 저장 실패:', saveError);
+        }
+        
+        // pairs 완료 후 DB 업데이트
+        pairsPromiseWithCallback.then(async () => {
+          const finalPairs = pairsResultRef.current;
+          if (!finalPairs || !Array.isArray(finalPairs) || finalPairs.length === 0) {
+            console.log('⚠️ pairs 데이터 없음, DB 업데이트 스킵');
+            return;
+          }
+          
+          try {
+            const saveDataWithPairs: GroupAnalysisData = {
+              teamName: (finalGroupResult.overall as any)?.personality?.title || '모임 궁합 분석',
+              memberCount: groupMembers.length,
+              score: (finalGroupResult.overall as any)?.compatibility?.score,
+              members: mergedMembers,
+              overallAnalysis: finalGroupResult.overall as any,
+              pairsAnalysis: finalPairs.map((p: any) => ({
+                name1: p.name1 || p.member1,
+                name2: p.name2 || p.member2,
+                score: p.score,
+                reason: p.reason || "",
+                summary: p.summary || "",
+                strengths: p.strengths || [],
+                cautions: p.cautions || [],
+                tips: p.tips || [],
+                romanceLines: p.romanceLines || p.romance_lines || [],
+              })),
+            };
+            await updateGroupAnalysis(uuid, saveDataWithPairs);
+            console.log('✅ 그룹 분석 결과 DB 2차 저장 완료 (pairs 포함)');
+          } catch (pairsSaveError) {
+            console.error('그룹 분석 결과 DB pairs 저장 실패:', pairsSaveError);
+          }
+        });
       } catch (error) {
         setAnalysisError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
         setIsAnalyzing(false);
