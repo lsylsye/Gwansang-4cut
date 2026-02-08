@@ -1,0 +1,145 @@
+services:
+
+  mysql:
+    container_name: mysql
+    image: mysql:8.0
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB_NAME}
+      MYSQL_USER: ${MYSQL_USERNAME}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Seoul
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - nginx-net
+  
+    minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "8500:8500"  # API 포트
+      - "8501:8501"  # 콘솔(웹 UI) 포트
+    volumes:
+      - minio_data:/data
+    env_file:
+      - .env
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}         # 관리자 ID
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD} # 관리자 PW
+      TZ: Asia/Seoul
+    command: server /data --console-address ":8501" --address ":8500"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8500/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - nginx-net
+     
+  redis:
+    image: redis/redis-stack-server:latest
+    container_name: redis
+    volumes:
+      - redis_data:/data
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    command: redis-stack-server --appendonly yes
+    networks:
+      - nginx-net
+
+  dbwas:
+    container_name: dbwas
+    env_file:
+      - .env
+    build:
+      context: ./server
+      dockerfile: dbwas.Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - DB_HOST=mysql     # Docker 네트워크에서는 서비스 이름 사용
+      - DB_PORT=3306      # 컨테이너 내부 포트 (외부 포트 3307 아님)
+      - MYSQL_DATABASE=${MYSQL_DB_NAME}
+      - MYSQL_USER=${MYSQL_USERNAME}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    restart: unless-stopped
+    networks:
+      - nginx-net
+
+  face:
+    build:
+      context: ./AItestFile_saju/python
+      dockerfile: face.Dockerfile
+    container_name: face
+    env_file:
+      - .env
+    environment:
+      - GMS_KEY=${GMS_KEY}
+      - GMS_BASE_URL=${GMS_BASE_URL}
+      - USE_REDIS_RAG=${USE_REDIS_RAG:-false}
+      - REDIS_HOST=redis  
+      - WELSTORY_API_URL=${WELSTORY_API_URL:-http://welstory:8000} # 같은 네트워크에서는 서비스 이름 사용  
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - nginx-net
+
+  image:
+    build:
+      context: ./server/ai-server
+      dockerfile: image.Dockerfile
+    container_name: image
+    env_file:
+      - .env
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    restart: unless-stopped
+    networks:
+      - nginx-net
+
+  welstory:
+    build:
+      context: ./welstoryLunch
+      dockerfile: welstory.Dockerfile
+    container_name: welstory
+    environment:
+      - MATTERMOST_BASE_URL=${MATTERMOST_BASE_URL:-https://meeting.ssafy.com}
+      - MATTERMOST_WEBHOOK_PATHS=${MATTERMOST_WEBHOOK_PATHS:-["/hooks/채널1경로","/hooks/채널2경로"]}
+      - WELSTORY_USERNAME=${WELSTORY_USERNAME:-웰스토리아이디}
+      - WELSTORY_PASSWORD=${WELSTORY_PASSWORD:-웰스토리비밀번호}
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - nginx-net
+
+networks:
+  nginx-net:
+    external: true
+
+volumes:
+  mysql-data:
+  redis_data:
+  minio_data:
