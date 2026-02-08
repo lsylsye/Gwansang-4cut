@@ -19,6 +19,8 @@ export interface PersonalAnalysisData {
   faceAnalysis: {
     faceOverview?: string; // 전체 관상 분석 종합 의견
     careerFortune?: string; // 취업운
+    lifeReview?: string; // 1번 블록: 지금까지 당신이 걸어온 길
+    meetingCompatibility?: string; // 3번 블록: 이런 사람과 만나면 좋을 것이다.
     common?: any; // 공통 분석 데이터
     faceShape?: any; // 얼굴형 분석
     forehead?: any; // 이마 분석

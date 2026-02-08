@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import ReactMarkdown from "react-markdown";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/shared/ui/display/hover-card";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles, X, ChevronDown } from "lucide-react";
 
 // --- Types ---
 interface FaceAnalysisProps {
@@ -14,17 +14,21 @@ interface FaceAnalysisProps {
 }
 
 // 거북 도사의 총평: 2가지 구성
-// 1. 전체 관상 분석 종합 의견
+// 1. 관상+사주 종합 총평 (이 사람은 어떤 사람인가)
 // 2. 취업운
 interface TotalReview {
-    faceOverview?: string; // 전체 관상 분석 종합 의견
-    careerFortune?: string; // 취업운 (사주 포함)
+    faceOverview?: string; // 총평 (관상+사주)
+    careerFortune?: string; // 2번 블록: 당신의 앞으로의 길, 같이 고민해보지 않겠소?
+    lifeReview?: string; // 1번 블록: 지금까지 당신이 걸어온 길
+    meetingCompatibility?: string; // 3번 블록: 그대에게 맞는 사람, 조심할 연애
 }
 
 // 백엔드 응답이 없을 때 표시할 기본 예시 데이터
 const DEFAULT_TOTAL_REVIEW: TotalReview = {
-    faceOverview: "이마가 넓고 눈이 균형 잡혀 있으며, 코와 입의 비율이 조화롭습니다. 전체적으로 상중하 삼정(三停)이 고르게 발달해 있어, 초년·중년·말년 운이 안정적으로 흘러갈 가능성이 높습니다. 특히 이마와 턱이 서로 받쳐주는 구조로, 생각한 것을 끝까지 실행하는 힘이 돋보입니다. 당신은 '부드러운 카리스마'를 가진 얼굴입니다. 첫인상은 다소 차분해 보일 수 있으나, 시간이 지날수록 신뢰를 얻는 타입입니다.",
-    careerFortune: "올해는 취업운이 상승하는 시기입니다. 관상에서 보이는 안정적인 이마와 균형 잡힌 눈은 면접에서 신뢰감을 주는 인상입니다. 사주의 오행 분포를 보면, 기획·분석·관리 분야에서 두각을 나타낼 수 있으며, 상반기보다 하반기에 더 좋은 기회가 올 가능성이 높습니다. 면접 시에는 차분하고 논리적인 답변을 강조하면 좋겠습니다."
+    faceOverview: "시작은 누구보다 빠르지만 마무리에 약한 사람이오.\n\n큰 눈에 담긴 감수성과 타고난 열정이 만나니, 사람을 처음 만나면 금세 마음을 여는 편이나 그만큼 쉽게 지치기도 하오. 코에서 드러나는 신중함이 이를 잡아주니, 한 템포 늦추면 오히려 그대의 강점이 빛나리라.",
+    careerFortune: "올해는 취업운이 상승하는 시기이오. 관상에서 보이는 안정적인 이마와 균형 잡힌 눈은 면접에서 신뢰감을 주는 인상이오. 사주의 오행 분포를 보면, 기획·분석·관리 분야에서 두각을 나타낼 수 있으며, 상반기보다 하반기에 더 좋은 기회가 올 가능성이 높소.",
+    lifeReview: "",
+    meetingCompatibility: ""
 };
 
 // highlightIndex: 0=얼굴형(공통·얼굴형), 1=이마, 2=눈, 3=코, 4=입, 5=턱
@@ -61,35 +65,121 @@ const OHEUNG_INFO = (
     </div>
 );
 
-/** 오행이란? 호버 카드에 표시할 설명 (하드코딩, 취업운·체질 이해용) */
-const OHAENG_INFO = (
-    <div className="text-left text-sm text-gray-700 space-y-3 max-w-[320px]">
-        <p className="font-semibold text-gray-800">오행이란?</p>
-        <p>
-            나무·불·흙·쇠·물이 아니라, <strong>세상을 움직이는 다섯 가지 성질(에너지 패턴)</strong>이에요.
-            사람도 자연의 일부라서, 생각하는 방식·감정·행동 습관이 이 다섯 성질로 드러나요.
-        </p>
-        <p className="text-xs text-gray-600">사계절로 보면:</p>
-        <table className="w-full text-xs border-collapse">
-            <thead>
-                <tr className="border-b border-gray-200">
-                    <th className="py-1 pr-2 text-left font-semibold">오행</th>
-                    <th className="py-1 text-left font-semibold">의미</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr className="border-b border-gray-100"><td className="py-1 pr-2">木 목</td><td className="py-1">봄 · 시작·성장, 아이디어·계획</td></tr>
-                <tr className="border-b border-gray-100"><td className="py-1 pr-2">火 화</td><td className="py-1">여름 · 확산·표현, 열정·주목</td></tr>
-                <tr className="border-b border-gray-100"><td className="py-1 pr-2">土 토</td><td className="py-1">환절기 · 중심·조율, 안정·책임</td></tr>
-                <tr className="border-b border-gray-100"><td className="py-1 pr-2">金 금</td><td className="py-1">가을 · 정리·기준, 판단·결단</td></tr>
-                <tr className="border-b border-gray-100"><td className="py-1 pr-2">水 수</td><td className="py-1">겨울 · 저장·깊이, 사고·관찰</td></tr>
-            </tbody>
-        </table>
-        <p className="text-gray-600">
-            &quot;목이 많다/화가 없다&quot;는 좋고 나쁨이 아니라, <strong>어떤 성질을 주로 쓰는지</strong>의 색깔이에요.
-        </p>
-    </div>
-);
+// --- 3개 블록 아코디언 (상세 자리: 삶 / 방향성 / 만남) ---
+interface ThreeBlocksAccordionProps {
+    totalReview?: TotalReview | null;
+    defaultTotalReview: TotalReview;
+}
+
+const BLOCK_TITLES: Record<1 | 2 | 3, string> = {
+    1: "지금까지 당신이 걸어온 길",
+    2: "당신의 앞으로의 길, 같이 고민해보지 않겠소?",
+    3: "그대에게 맞는 사람, 조심할 연애",
+};
+
+function ThreeBlocksAccordion({ totalReview, defaultTotalReview }: ThreeBlocksAccordionProps) {
+    const [expanded, setExpanded] = useState<Set<1 | 2 | 3>>(new Set());
+
+    const toggle = (id: 1 | 2 | 3) => {
+        setExpanded((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const careerText = totalReview?.careerFortune ?? defaultTotalReview.careerFortune ?? "";
+    const lifeReviewText = totalReview?.lifeReview ?? defaultTotalReview.lifeReview ?? "";
+    const meetingText = totalReview?.meetingCompatibility ?? defaultTotalReview.meetingCompatibility ?? "";
+
+    return (
+        <div className="space-y-2">
+            {([1, 2, 3] as const).map((id) => {
+                const isOpen = expanded.has(id);
+                return (
+                    <div
+                        key={id}
+                        className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden"
+                    >
+                        <button
+                            type="button"
+                            onClick={() => toggle(id)}
+                            className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left font-bold text-gray-800 hover:bg-gray-100 transition-colors"
+                        >
+                            <span className="text-sm sm:text-base">{BLOCK_TITLES[id]}</span>
+                            <ChevronDown
+                                className={`w-5 h-5 flex-shrink-0 text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                            />
+                        </button>
+                        <AnimatePresence initial={false}>
+                            {isOpen && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.25 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="px-4 pb-4 pt-1 border-t border-gray-200/80">
+                                        {id === 1 && (
+                                            <>
+                                                {lifeReviewText.trim() ? (
+                                                    <div className="text-gray-700 text-base leading-[1.75] max-h-[40vh] overflow-y-auto custom-scrollbar pr-1 [&_strong]:font-bold [&_strong]:text-gray-800">
+                                                        <ReactMarkdown
+                                                            components={{
+                                                                p: ({ children }) => <p>{children}</p>,
+                                                                strong: ({ children }) => <strong className="font-bold text-gray-800">{children}</strong>,
+                                                            }}
+                                                        >
+                                                            {lifeReviewText.trim()}
+                                                        </ReactMarkdown>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-gray-500 text-sm">준비 중이오. 곧 풀이를 채워 넣으리라.</p>
+                                                )}
+                                            </>
+                                        )}
+                                        {id === 2 && (
+                                            <div className="text-gray-700 text-base leading-[1.75] max-h-[40vh] overflow-y-auto custom-scrollbar pr-1 [&_strong]:font-bold [&_strong]:text-gray-800">
+                                                <ReactMarkdown
+                                                    components={{
+                                                        p: ({ children }) => <p>{children}</p>,
+                                                        strong: ({ children }) => <strong className="font-bold text-gray-800">{children}</strong>,
+                                                    }}
+                                                >
+                                                    {careerText.trim()}
+                                                </ReactMarkdown>
+                                            </div>
+                                        )}
+                                        {id === 3 && (
+                                            <>
+                                                {meetingText.trim() ? (
+                                                    <div className="text-gray-700 text-base leading-[1.75] max-h-[40vh] overflow-y-auto custom-scrollbar pr-1 [&_strong]:font-bold [&_strong]:text-gray-800">
+                                                        <ReactMarkdown
+                                                            components={{
+                                                                p: ({ children }) => <p>{children}</p>,
+                                                                strong: ({ children }) => <strong className="font-bold text-gray-800">{children}</strong>,
+                                                            }}
+                                                        >
+                                                            {meetingText.trim()}
+                                                        </ReactMarkdown>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-gray-500 text-sm">준비 중이오. 곧 풀이를 채워 넣으리라.</p>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
 
 export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, features, totalReview }) => {
     const [activeFeature, setActiveFeature] = useState<string | null>(null);
@@ -509,80 +599,74 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                 <GlassCard className="w-full min-w-0 flex flex-col p-6 sm:p-8 border-4 border-white rounded-[32px] shadow-clay-md bg-white/50">
                     <div className="flex items-center gap-3 mb-5">
                         <div className="w-10 h-10 bg-brand-green/10 border-2 border-brand-green rounded-xl flex items-center justify-center">🐢</div>
-                        <h3 className="font-bold text-xl sm:text-2xl text-gray-800">거북 도사의 총평 및 취업운</h3>
+                        <h3 className="font-bold text-xl sm:text-2xl text-gray-800">거북 도사의 풀이</h3>
                     </div>
 
                     <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-4 max-h-[50vh]">
-                        {/* 1. 전체 관상 분석 종합 의견 — 마크다운(굵은 소제목·줄 띄움) 적용 */}
+                        {/* 1. 관상+사주 종합 총평 — 이 사람은 어떤 사람인가 */}
                         {(totalReview?.faceOverview || DEFAULT_TOTAL_REVIEW.faceOverview) && (
                             <section className="total-review-content rounded-xl bg-gray-100 border border-gray-200 p-4 sm:p-5">
                                 <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200/80">
-                                    <h4 className="text-gray-800 font-bold text-base">1. 전체 관상 분석 종합 의견</h4>
-                                    <HoverCard openDelay={200} closeDelay={100}>
-                                        <HoverCardTrigger asChild>
-                                            <button
-                                                type="button"
-                                                className="text-xs text-brand-green hover:text-brand-green/80 underline underline-offset-2 cursor-help focus:outline-none"
-                                                aria-label="오형이란?"
-                                            >
-                                                오형이란?
-                                            </button>
-                                        </HoverCardTrigger>
-                                        <HoverCardContent side="bottom" align="start" className="w-auto max-w-[340px] p-4">
-                                            {OHEUNG_INFO}
-                                        </HoverCardContent>
-                                    </HoverCard>
+                                    <h4 className="text-gray-800 font-bold text-base">🐢 거북 도사의 총평</h4>
                                 </div>
-                                <div className="text-gray-700 text-base leading-[1.75] [&_strong]:font-bold [&_strong]:text-gray-800 [&_p:has(strong.total-review-subheading)]:mb-0 [&_p:not(:has(strong.total-review-subheading))]:mb-3 [&_p:last-child]:mb-0">
-                                    <ReactMarkdown
-                                        components={{
-                                            p: ({ children }) => <p>{children}</p>,
-                                            strong: ({ children }) => <strong className="font-bold text-gray-800 total-review-subheading">{children}</strong>,
-                                        }}
-                                    >
-                                        {(totalReview?.faceOverview || DEFAULT_TOTAL_REVIEW.faceOverview).trim()}
-                                    </ReactMarkdown>
-                                </div>
+                                {(() => {
+                                    const raw = (totalReview?.faceOverview || DEFAULT_TOTAL_REVIEW.faceOverview).trim();
+                                    // 첫 문단(한줄요약)과 나머지(풀이)를 분리
+                                    const parts = raw.split(/\n\s*\n/);
+                                    const hookLine = parts[0] || "";
+                                    const bodyLines = parts.slice(1).join("\n\n");
+                                    return (
+                                        <div className="text-gray-700 text-base leading-[1.75]">
+                                            {/* 한줄요약 — 사주 기반 임팩트 */}
+                                            {hookLine && (
+                                                <p className="text-lg font-semibold text-gray-900 mb-3">{hookLine}</p>
+                                            )}
+                                            {/* 소제목 + 호버 (고정) */}
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="font-bold text-gray-800">관상과 사주로 본 그대</span>
+                                                <HoverCard openDelay={200} closeDelay={100}>
+                                                    <HoverCardTrigger asChild>
+                                                        <button
+                                                            type="button"
+                                                            className="text-xs text-brand-green hover:text-brand-green/80 underline underline-offset-2 cursor-help focus:outline-none"
+                                                            aria-label="부위별 상세 보기"
+                                                        >
+                                                            부위별 상세 보기
+                                                        </button>
+                                                    </HoverCardTrigger>
+                                                    <HoverCardContent side="bottom" align="start" className="w-auto max-w-[260px] p-3">
+                                                        <p className="text-sm text-gray-700 leading-relaxed">
+                                                            오른쪽 얼굴 그림에서 <strong className="text-brand-green">궁금한 부위를 직접 클릭</strong>하면, 해당 부위의 상세 분석과 수치를 확인할 수 있어요.
+                                                        </p>
+                                                    </HoverCardContent>
+                                                </HoverCard>
+                                            </div>
+                                            {/* 풀이 본문 */}
+                                            {bodyLines && (
+                                                <div className="[&_p]:mb-3 [&_p:last-child]:mb-0">
+                                                    <ReactMarkdown
+                                                        components={{
+                                                            p: ({ children }) => <p>{children}</p>,
+                                                        }}
+                                                    >
+                                                        {bodyLines}
+                                                    </ReactMarkdown>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
                             </section>
                         )}
 
-                        {/* 2. 취업운 — 마크다운(굵은 소제목·줄 띄움) 적용 */}
-                        {(totalReview?.careerFortune || DEFAULT_TOTAL_REVIEW.careerFortune) && (
-                            <section className="total-review-content rounded-xl bg-gray-100 border border-gray-200 p-4 sm:p-5">
-                                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200/80">
-                                    <h4 className="text-gray-800 font-bold text-base">2. 올해의 취업운 💼</h4>
-                                    <HoverCard openDelay={200} closeDelay={100}>
-                                        <HoverCardTrigger asChild>
-                                            <button
-                                                type="button"
-                                                className="text-xs text-brand-green hover:text-brand-green/80 underline underline-offset-2 cursor-help focus:outline-none"
-                                                aria-label="오행이란?"
-                                            >
-                                                오행이란?
-                                            </button>
-                                        </HoverCardTrigger>
-                                        <HoverCardContent side="bottom" align="start" className="w-auto max-w-[340px] p-4">
-                                            {OHAENG_INFO}
-                                        </HoverCardContent>
-                                    </HoverCard>
-                                </div>
-                                <div className="text-gray-700 text-base leading-[1.75] [&_strong]:font-bold [&_strong]:text-gray-800 [&_p:has(strong.total-review-subheading)]:mb-0 [&_p:not(:has(strong.total-review-subheading))]:mb-3 [&_p:last-child]:mb-0">
-                                    <ReactMarkdown
-                                        components={{
-                                            p: ({ children }) => <p>{children}</p>,
-                                            strong: ({ children }) => <strong className="font-bold text-gray-800 total-review-subheading">{children}</strong>,
-                                        }}
-                                    >
-                                        {(totalReview?.careerFortune || DEFAULT_TOTAL_REVIEW.careerFortune).trim()}
-                                    </ReactMarkdown>
-                                </div>
-                            </section>
-                        )}
                     </div>
 
+                    {/* 3개 블록 — 1열 3행 토글 (상세 자리) */}
                     <section className="mt-5 pt-4 border-t border-gray-100 flex-shrink-0">
-                        <h4 className="text-sm font-bold text-gray-600 mb-1.5">상세</h4>
-                        <p className="text-gray-600 text-sm leading-relaxed">이마, 눈, 코, 입, 턱, 얼굴형 중 궁금한 부위를 눌러 부위별 상세해석을 확인해 보세요.</p>
+                        <ThreeBlocksAccordion
+                            totalReview={totalReview}
+                            defaultTotalReview={DEFAULT_TOTAL_REVIEW}
+                        />
                     </section>
                 </GlassCard>
             </div>

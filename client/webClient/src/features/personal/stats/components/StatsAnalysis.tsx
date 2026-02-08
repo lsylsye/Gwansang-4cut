@@ -886,6 +886,18 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
                                     </GlassCard>
                                 );
                             }
+                            {/* 사주 있지만 체질 데이터 아직 로딩 중 (2차 API 대기) */}
+                            if (sajuInfo && !constitutionBlock) {
+                                return (
+                                    <GlassCard className="w-full max-w-4xl mx-auto p-6 sm:p-8 border-4 border-white rounded-[32px] shadow-clay-md bg-white/50 mb-6">
+                                        <h3 className="text-2xl font-bold text-gray-900 mb-6 font-display text-center">당신의 체질 풀이</h3>
+                                        <div className="flex flex-col items-center gap-3 py-4">
+                                            <div className="w-8 h-8 border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
+                                            <p className="text-gray-500 text-sm">체질 분석 중입니다...</p>
+                                        </div>
+                                    </GlassCard>
+                                );
+                            }
                             const constitutionData: ConstitutionSajuData = constitutionBlock
                                 ? {
                                       type: head,

@@ -430,12 +430,18 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
             // 관상 분석 데이터 준비
             const faceAnalysisData: any = {};
             
-            // totalReview에서 faceOverview, careerFortune 가져오기
+            // totalReview에서 faceOverview, careerFortune, lifeReview 가져오기
             if (totalReviewData?.faceOverview) {
                 faceAnalysisData.faceOverview = totalReviewData.faceOverview;
             }
             if (totalReviewData?.careerFortune) {
                 faceAnalysisData.careerFortune = totalReviewData.careerFortune;
+            }
+            if (totalReviewData?.lifeReview) {
+                faceAnalysisData.lifeReview = totalReviewData.lifeReview;
+            }
+            if (totalReviewData?.meetingCompatibility) {
+                faceAnalysisData.meetingCompatibility = totalReviewData.meetingCompatibility;
             }
             
             // featuresData에서 각 부위별 데이터 가져오기

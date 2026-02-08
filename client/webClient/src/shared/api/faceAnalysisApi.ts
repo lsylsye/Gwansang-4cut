@@ -174,6 +174,14 @@ export interface TotalReview {
   harmony?: string;       // 부위 간의 조화 및 균형 해석 (관상)
   comprehensive?: string; // 종합 운세 해석 (관상)
   improvement?: string;   // 운을 좋게 만드는 방법 제안 (관상)
+  /** 전체 관상 종합 의견 */
+  faceOverview?: string;
+  /** 취업운 (사주 포함) */
+  careerFortune?: string;
+  /** 1번 블록: 지금까지 당신이 걸어온 길 (사주 기반 인생 회고) */
+  lifeReview?: string;
+  /** 3번 블록: 이런 사람과 만나면 좋을 것이다. (사주 기반 만남/궁합) */
+  meetingCompatibility?: string;
   /** 체질 풀이 전체 (사주 기반 건강/체질 분석) */
   constitutionSummary?: string;
   /** welstory 오늘의 점심 메뉴 (최대 4개) */
@@ -268,6 +276,86 @@ export async function analyzeFace(
       totalReview: null,
       error: error instanceof Error ? error.message : '알 수 없는 오류',
     };
+  }
+}
+
+// ============================================================
+// 2-Step Personal API (동시 호출: first + second)
+// ============================================================
+
+type FaceRequestData = {
+  timestamp?: string;
+  faces: Array<{
+    faceIndex: number;
+    duration?: number;
+    landmarks: Array<{ index: number; x: number; y: number; z?: number }>;
+  }>;
+  sajuData?: {
+    gender: 'male' | 'female';
+    calendarType: 'solar' | 'lunar';
+    birthDate: string;
+    birthTime?: string;
+    birthTimeUnknown?: boolean;
+  };
+  model?: string;
+  timeout?: number;
+};
+
+/** 2차 API 응답 타입 (체질 + 웰스토리) */
+export interface FaceSecondApiResponse {
+  success: boolean;
+  timestamp?: string;
+  totalReview: Pick<TotalReview, 'constitutionSummary' | 'welstoryMenus' | 'recommendedMenu'>;
+  sajuInfo?: SajuInfo;
+  error?: string;
+}
+
+/**
+ * 개인관상 1차 — 관상(faceOverview) + 취업(careerFortune)만 빠르게.
+ * /second와 동시에 호출하여, 먼저 완료되면 즉시 결과 페이지를 표시한다.
+ */
+export async function analyzeFaceFirst(
+  requestData: FaceRequestData
+): Promise<FaceAnalysisApiResponse> {
+  try {
+    const response = await fetch(API_ENDPOINTS.FACEMESH_PERSONAL_FIRST, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...requestData, timestamp: requestData.timestamp || new Date().toISOString() }),
+    });
+    if (!response.ok) throw new Error(`관상 1차 요청 실패: ${response.status} - ${await response.text()}`);
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error || '관상 1차 분석 실패');
+    return {
+      stage1: { success: data.success, timestamp: data.timestamp, faceIndex: data.faceIndex, faceAnalysis: data.faceAnalysis, meta: data.meta, sajuInfo: data.sajuInfo },
+      totalReview: data.totalReview || null,
+    };
+  } catch (error) {
+    console.error('❌ 관상 1차 API 오류:', error);
+    return { stage1: null, totalReview: null, error: error instanceof Error ? error.message : '알 수 없는 오류' };
+  }
+}
+
+/**
+ * 개인관상 2차 — 체질(constitutionSummary) + 웰스토리 메뉴.
+ * /first와 동시에 호출. first보다 늦게 완료되어도 프론트에서 state 병합.
+ */
+export async function analyzeFaceSecond(
+  requestData: FaceRequestData
+): Promise<FaceSecondApiResponse> {
+  try {
+    const response = await fetch(API_ENDPOINTS.FACEMESH_PERSONAL_SECOND, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...requestData, timestamp: requestData.timestamp || new Date().toISOString() }),
+    });
+    if (!response.ok) throw new Error(`체질/메뉴 요청 실패: ${response.status} - ${await response.text()}`);
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error || '체질/메뉴 분석 실패');
+    return { success: true, timestamp: data.timestamp, totalReview: data.totalReview ?? {}, sajuInfo: data.sajuInfo };
+  } catch (error) {
+    console.error('❌ 체질/메뉴 2차 API 오류:', error);
+    return { success: false, totalReview: {}, error: error instanceof Error ? error.message : '알 수 없는 오류' };
   }
 }
 

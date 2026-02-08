@@ -162,6 +162,8 @@ export const SharedAnalysisSection: React.FC = () => {
         ? { 
             faceOverview: analysisData.faceAnalysis.faceOverview,
             careerFortune: analysisData.faceAnalysis.careerFortune,
+            lifeReview: analysisData.faceAnalysis.lifeReview,
+            meetingCompatibility: analysisData.faceAnalysis.meetingCompatibility,
           }
         : undefined;
 

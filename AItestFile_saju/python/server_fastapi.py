@@ -40,6 +40,7 @@ from redis_search import (
 )
 from saju_calculation import calculate_saju
 from saju_myeongri import calculate_myeongri
+from daewoon_calculation import calculate_daewoon
 from face_analysis_service import analyze_face
 from saju_summary_service import (
     build_saju_summary_prompt,
@@ -49,8 +50,11 @@ from saju_summary_service import (
 )
 from face_prompt_builder import (
     summarize_face_analysis_for_search,
+    trim_rag_context,
     build_total_review_prompt,
     parse_total_review,
+    build_life_review_prompt,
+    build_meeting_compatibility_prompt,
     build_menu_recommendation_prompt,
     parse_menu_recommendation,
     build_face_overview_prompt,
@@ -685,6 +689,184 @@ async def generate_saju_summary(request: SajuSummaryRequest):
         raise HTTPException(status_code=500, detail=f"서버 오류: {str(e)}")
 
 
+# ========== 개인관상 공통 헬퍼 ==========
+
+def _parse_face_and_saju(request: "FaceAnalysisRequest"):
+    """관상 분석(Rule-based) + 사주 계산. Returns: (face, analysis_result, meta, saju_info)"""
+    faces = request.faces
+    if not faces or len(faces) == 0:
+        raise HTTPException(status_code=400, detail="faces 배열이 비어있습니다.")
+    face = faces[0]
+    landmarks = [{"index": lm.index, "x": lm.x, "y": lm.y, "z": lm.z} for lm in face.landmarks]
+    if not landmarks or len(landmarks) < 100:
+        raise HTTPException(status_code=400, detail="landmarks 데이터가 부족합니다.")
+    print(f"🔍 관상 분석 시작 - landmarks 수: {len(landmarks)}")
+    analysis_result = analyze_face(landmarks)
+    meta = analysis_result.pop("_meta", {})
+    print(f"✅ 관상 분석 완료 - 품질: {meta.get('qualityNote', 'N/A')}")
+
+    saju_data = request.sajuData
+    if not saju_data or not saju_data.birthDate:
+        raise HTTPException(status_code=400, detail="sajuData와 birthDate는 필수입니다.")
+    try:
+        print("🔮 사주 계산 시작...")
+        birth_info = parse_birth_info(saju_data.dict())
+        saju = calculate_saju(birth_info)
+        myeongri = calculate_myeongri(saju)
+        saju_info = {
+            "yearPillar": saju['yearPillar'], "monthPillar": saju['monthPillar'],
+            "dayPillar": saju['dayPillar'], "hourPillar": saju['hourPillar'],
+            "yearStem": saju['yearStem'], "yearBranch": saju['yearBranch'],
+            "monthStem": saju['monthStem'], "monthBranch": saju['monthBranch'],
+            "dayStem": saju['dayStem'], "dayBranch": saju['dayBranch'],
+            "hourStem": saju['hourStem'], "hourBranch": saju['hourBranch'],
+            "solarTerm": saju['solarTerm'], "fiveElements": myeongri['fiveElements'],
+        }
+        # 대운 계산 (월주 기준, 서울시간 해석, 3일=1세, 순/역 = 연간 음양 + 성별)
+        try:
+            daewoon = calculate_daewoon(
+                birth_info,
+                saju['monthStem'],
+                saju['monthBranch'],
+                saju['yearStem'],
+            )
+            saju_info["daewoon"] = daewoon
+        except Exception as dae_err:
+            print(f"   ⚠ 대운 계산 생략: {dae_err}")
+        print(f"   사주: {saju['yearPillar']} {saju['monthPillar']} {saju['dayPillar']} {saju['hourPillar']}")
+        print("✅ 사주 계산 완료")
+    except Exception as e:
+        print(f"⚠️ 사주 계산 중 오류: {e}")
+        import traceback; traceback.print_exc()
+        raise HTTPException(status_code=400, detail=f"사주 계산 오류: {str(e)}")
+    return face, analysis_result, meta, saju_info
+
+
+def _search_rag(analysis_result) -> str:
+    """RAG 검색 + trim."""
+    print("🔍 RAG 검색 시작...")
+    search_query = summarize_face_analysis_for_search(analysis_result)
+    use_redis = should_use_redis()
+    rag_context = ""
+    if use_redis:
+        try:
+            relevant_chunks = search_by_vector(search_query, topK=4)
+            rag_context = format_search_context(relevant_chunks)
+        except Exception:
+            chunks = get_knowledge_chunks()
+            if chunks:
+                relevant_chunks = search_chunks(chunks, search_query, topK=4)
+                rag_context = format_context(relevant_chunks)
+    else:
+        chunks = get_knowledge_chunks()
+        if chunks:
+            relevant_chunks = search_chunks(chunks, search_query, topK=4)
+            rag_context = format_context(relevant_chunks)
+    return trim_rag_context(rag_context)
+
+
+# ========== 개인관상 2단계 분리 API (프론트에서 동시 호출) ==========
+
+@app.post("/api/face/facemesh/personal/first")
+async def analyze_face_first(request: FaceAnalysisRequest):
+    """1차: LLM 4병렬 — 1.총평 2.취업(방향성) 3.인생회고 4.만남. 프론트에서 /second(5.체질 6.웰스토리)와 동시 호출."""
+    try:
+        face, analysis_result, meta, saju_info = _parse_face_and_saju(request)
+        total_review = None
+        try:
+            trimmed_rag = _search_rag(analysis_result)
+            face_sys, face_user = build_face_overview_prompt(analysis_result, trimmed_rag, saju_info)
+            career_sys, career_user = build_career_fortune_prompt(saju_info, trimmed_rag)
+            life_sys, life_user = build_life_review_prompt(saju_info)
+            meeting_sys, meeting_user = build_meeting_compatibility_prompt(saju_info, trimmed_rag)
+
+            print("🤖 [FIRST] LLM 병렬 호출 중 (1.총평 2.취업 3.인생회고 4.만남 4회)...")
+            import time; start_time = time.time()
+            face_result, career_result, life_result, meeting_result = await asyncio.gather(
+                call_gms_api_async(system_prompt=face_sys, user_prompt=face_user, model=request.model, timeout=request.timeout),
+                call_gms_api_async(system_prompt=career_sys, user_prompt=career_user, model=request.model, timeout=request.timeout),
+                call_gms_api_async(system_prompt=life_sys, user_prompt=life_user, model=request.model, timeout=request.timeout),
+                call_gms_api_async(system_prompt=meeting_sys, user_prompt=meeting_user, model=request.model, timeout=request.timeout),
+                return_exceptions=True,
+            )
+            print(f"⏱️ [FIRST] LLM 완료: {time.time()-start_time:.2f}초")
+
+            total_review = {
+                "faceOverview": face_result.strip() if isinstance(face_result, str) else "관상 분석 결과를 바탕으로 전체적인 종합 분석을 제공합니다.",
+                "careerFortune": career_result.strip() if isinstance(career_result, str) else "올해의 취업운을 분석합니다.",
+                "lifeReview": life_result.strip() if isinstance(life_result, str) else "",
+                "meetingCompatibility": meeting_result.strip() if isinstance(meeting_result, str) else "",
+            }
+            if isinstance(face_result, Exception): print(f"⚠️ [FIRST] 총평 LLM 오류: {face_result}")
+            if isinstance(career_result, Exception): print(f"⚠️ [FIRST] 취업 LLM 오류: {career_result}")
+            if isinstance(life_result, Exception): print(f"⚠️ [FIRST] 인생회고 LLM 오류: {life_result}")
+            if isinstance(meeting_result, Exception): print(f"⚠️ [FIRST] 만남 LLM 오류: {meeting_result}")
+        except Exception as e:
+            print(f"⚠️ [FIRST] 오류: {e}")
+            import traceback; traceback.print_exc()
+            total_review = {
+                "faceOverview": "관상 분석 결과를 바탕으로 전체적인 종합 분석을 제공합니다.",
+                "careerFortune": "올해의 취업운을 분석합니다.",
+                "lifeReview": "",
+                "meetingCompatibility": "",
+            }
+
+        return {
+            "success": True, "timestamp": request.timestamp or "",
+            "faceIndex": face.faceIndex, "faceAnalysis": analysis_result,
+            "meta": {"headRoll": meta.get("headRoll", 0), "qualityNote": meta.get("qualityNote", ""), "overallSymmetry": meta.get("symmetry", 0)},
+            "totalReview": total_review, "sajuInfo": saju_info,
+        }
+    except HTTPException: raise
+    except Exception as e:
+        print(f"❌ [FIRST] 오류: {e}"); import traceback; traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"관상 분석 오류: {str(e)}")
+
+
+@app.post("/api/face/facemesh/personal/second")
+async def analyze_face_second(request: FaceAnalysisRequest):
+    """2차: LLM 2종 — 5.체질(constitutionSummary) 6.웰스토리 메뉴 추천. 프론트에서 /first와 동시 호출."""
+    try:
+        _face, analysis_result, _meta, saju_info = _parse_face_and_saju(request)
+        constitution_summary = ""
+        try:
+            trimmed_rag = _search_rag(analysis_result)
+            const_sys, const_user = build_constitution_prompt(saju_info, trimmed_rag)
+            print("🤖 [SECOND] 체질 LLM 호출 중...")
+            import time; start_time = time.time()
+            const_result = await call_gms_api_async(system_prompt=const_sys, user_prompt=const_user, model=request.model, timeout=request.timeout)
+            print(f"⏱️ [SECOND] 체질 LLM 완료: {time.time()-start_time:.2f}초")
+            constitution_summary = const_result.strip() if isinstance(const_result, str) else ""
+        except Exception as e:
+            print(f"⚠️ [SECOND] 체질 LLM 오류: {e}"); import traceback; traceback.print_exc()
+
+        welstory_menus = []; recommended_menu = None
+        try:
+            print("🍽️ [SECOND] welstory 메뉴 조회 중...")
+            welstory_menus = await fetch_welstory_menus()
+            if welstory_menus and len(welstory_menus) > 0:
+                menu_sys, menu_user = build_menu_recommendation_prompt(saju_info, welstory_menus, constitution_summary)
+                menu_llm_result = call_gms_api(system_prompt=menu_sys, user_prompt=menu_user, model=request.model, timeout=60)
+                menu_rec = parse_menu_recommendation(menu_llm_result, len(welstory_menus))
+                idx = menu_rec.get("recommendedIndex", 0)
+                recommended_menu = {"index": idx, "menu": welstory_menus[idx], "reason": menu_rec.get("reason", "오늘의 체질에 맞는 메뉴입니다.")}
+                print(f"✅ [SECOND] 메뉴 추천 완료: {welstory_menus[idx].get('name')}")
+        except Exception as e:
+            print(f"⚠️ [SECOND] welstory 오류: {e}"); import traceback; traceback.print_exc()
+
+        return {
+            "success": True, "timestamp": request.timestamp or "",
+            "totalReview": {"constitutionSummary": constitution_summary, "welstoryMenus": welstory_menus, "recommendedMenu": recommended_menu},
+            "sajuInfo": saju_info,
+        }
+    except HTTPException: raise
+    except Exception as e:
+        print(f"❌ [SECOND] 오류: {e}"); import traceback; traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"체질/메뉴 분석 오류: {str(e)}")
+
+
+# ========== 기존 단일 API (호환 유지) ==========
+
 @app.post("/api/face/facemesh/personal")
 async def analyze_face_api(request: FaceAnalysisRequest):
     """관상 분석 + 사주 총평 통합 API"""
@@ -750,26 +932,27 @@ async def analyze_face_api(request: FaceAnalysisRequest):
             rag_context = ""
             if use_redis:
                 try:
-                    relevant_chunks = search_by_vector(search_query, topK=8)
+                    relevant_chunks = search_by_vector(search_query, topK=4)
                     rag_context = format_search_context(relevant_chunks)
                 except Exception as e:
                     chunks = get_knowledge_chunks()
                     if chunks:
-                        relevant_chunks = search_chunks(chunks, search_query, topK=8)
+                        relevant_chunks = search_chunks(chunks, search_query, topK=4)
                         rag_context = format_context(relevant_chunks)
             else:
                 chunks = get_knowledge_chunks()
                 if chunks:
-                    relevant_chunks = search_chunks(chunks, search_query, topK=8)
+                    relevant_chunks = search_chunks(chunks, search_query, topK=4)
                     rag_context = format_context(relevant_chunks)
             
             # LLM 3회 병렬 호출: 각 섹션별 개별 프롬프트로 동시 호출
             print("📝 LLM 병렬 프롬프트 생성 중 (3개 섹션)...")
             
-            # 각 섹션별 프롬프트 생성
-            face_sys, face_user = build_face_overview_prompt(analysis_result, rag_context)
-            career_sys, career_user = build_career_fortune_prompt(analysis_result, saju_info, rag_context)
-            const_sys, const_user = build_constitution_prompt(saju_info, rag_context)
+            # 각 섹션별 프롬프트 생성 (RAG 컨텍스트 길이 제한으로 토큰 절감)
+            trimmed_rag = trim_rag_context(rag_context)
+            face_sys, face_user = build_face_overview_prompt(analysis_result, trimmed_rag, saju_info)
+            career_sys, career_user = build_career_fortune_prompt(saju_info, trimmed_rag)
+            const_sys, const_user = build_constitution_prompt(saju_info, trimmed_rag)
             
             print("🤖 LLM 병렬 호출 중 (3회 동시)...")
             import time
