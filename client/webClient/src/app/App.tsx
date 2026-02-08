@@ -37,7 +37,8 @@ import {
 } from "@/shared/config/routes";
 import { 
   analyzeFace, 
-  analyzeFaceFirst,
+  analyzeFaceFirstInitial,
+  analyzeFaceFirstRemaining,
   analyzeFaceSecond,
   FaceAnalysisApiResponse,
   TotalReview,
@@ -78,6 +79,10 @@ export default function App() {
   const [faceAnalysisResult, setFaceAnalysisResult] = useState<FaceAnalysisApiResponse | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  /** first-remaining(인생회고·방향성·만남) 로딩 중 */
+  const [loadingRemaining, setLoadingRemaining] = useState(false);
+  /** second(체질·웰스토리) 로딩 중 */
+  const [loadingConstitution, setLoadingConstitution] = useState(false);
   const [showAnalysisCompleteToast, setShowAnalysisCompleteToast] = useState(false);
   const [isPhotoBoothCapturing, setIsPhotoBoothCapturing] = useState(false);
   // faceMeshMetadata를 App에서 관리
@@ -108,6 +113,10 @@ export default function App() {
   /** 모임 결과 페이지에서 선택된 탭 (TurtleGuide 멘트용: overall | pairs) */
   const [groupResultTab, setGroupResultTab] = useState<"overall" | "pairs" | null>(null);
   const pathnameRef = useRef(location.pathname);
+  /** 개인 관상 분석 중복 실행 방지 (한 번에 12개 LLM 생성 방지) */
+  const personalAnalyzingRef = useRef(false);
+  /** 1차 DB 저장 Promise — 링크 공유 시 "저장 완료" 될 때까지 기다리기 위해 보관 */
+  const firstSavePromiseRef = useRef<Promise<void> | null>(null);
 
   // 결과 페이지 벗어나면 탭 초기화
   useEffect(() => {
@@ -175,13 +184,20 @@ export default function App() {
     members?: GroupMember[],
     metadata?: any,
   ) => {
+    const isGroupFlow = Boolean(members && members.length > 0);
+
+    // 개인 모드: 중복 실행 방지 (한 번에 12개 LLM 생성되지 않도록)
+    if (!isGroupFlow) {
+      if (personalAnalyzingRef.current) return;
+      personalAnalyzingRef.current = true;
+    }
+
     setAnalysisDone(false);
     setAnalysisError(null);
     setFaceAnalysisResult(null);
     setImages(capturedImages);
     setFeatures(selectedFeatures);
     setSaju(sajuData);
-    const isGroupFlow = Boolean(members && members.length > 0);
     if (members) {
       setGroupMembers(members);
       setUserTeamName("기운찬 도사님들의 모임");
@@ -223,62 +239,121 @@ export default function App() {
             },
           };
 
-          // ★ 두 API를 동시 호출 — first(관상+취업)가 먼저 끝나면 즉시 결과 표시
-          const firstPromise = analyzeFaceFirst(requestData);
+          // ★ 3개 API 동시 호출 — first-initial(총평)만 await 후 즉시 결과 페이지, 나머지는 백그라운드 병합
+          setLoadingRemaining(true);
+          setLoadingConstitution(true);
+
+          const firstInitialPromise = analyzeFaceFirstInitial(requestData);
+          const firstRemainingPromise = analyzeFaceFirstRemaining(requestData);
           const secondPromise = analyzeFaceSecond(requestData);
 
-          // --- 1차: 관상 + 취업 완료 시 즉시 결과 페이지 표시 ---
-          const firstResult = await firstPromise;
-          if (firstResult.error) {
-            setAnalysisError(firstResult.error);
+          // --- 총평(first-initial)만 완료 대기 → 즉시 결과 페이지 이동 ---
+          const initialResult = await firstInitialPromise;
+          if (initialResult.error) {
+            setAnalysisError(initialResult.error);
+            setLoadingRemaining(false);
+            setLoadingConstitution(false);
             setIsAnalyzing(false);
+            personalAnalyzingRef.current = false;
             return;
           }
-          setFaceAnalysisResult(firstResult);
 
-          // 1차 DB 저장 (관상 + 취업만)
-          try {
-            const saveData: PersonalAnalysisData = {
-              faceAnalysis: {
-                faceShape: firstResult.stage1?.faceAnalysis?.faceShape,
-                forehead: firstResult.stage1?.faceAnalysis?.forehead,
-                eyes: firstResult.stage1?.faceAnalysis?.eyes,
-                nose: firstResult.stage1?.faceAnalysis?.nose,
-                mouth: firstResult.stage1?.faceAnalysis?.mouth,
-                chin: firstResult.stage1?.faceAnalysis?.chin,
-                faceOverview: firstResult.totalReview?.faceOverview,
-                careerFortune: firstResult.totalReview?.careerFortune,
-                lifeReview: firstResult.totalReview?.lifeReview,
-                meetingCompatibility: firstResult.totalReview?.meetingCompatibility,
-              },
-              constitutionAnalysis: {
-                sajuInfo: firstResult.stage1?.sajuInfo,
-                totalReview: firstResult.totalReview,
-              },
-            };
-            await updatePersonalAnalysis(uuid, saveData);
-          } catch (saveError) {
-            console.error('1차 분석 결과 DB 저장 실패:', saveError);
-          }
+          const initialTotalReview: TotalReview = {
+            faceOverview: initialResult.totalReview?.faceOverview,
+          };
+          setFaceAnalysisResult({
+            stage1: initialResult.stage1,
+            totalReview: initialTotalReview,
+          });
 
+          // 1차 DB 저장 (총평 + stage1만) — 백그라운드로 보냄 (await 하지 않음)
+          // [확인용] 결과 페이지가 ~24초에 뜨는지, ~36초에 뜨는지 비교하려면:
+          // - 이전: await updatePersonalAnalysis → 총평(24초) + DB저장(수 초) 후에만 navigate → 36초대
+          // - 현재: DB 저장은 기다리지 않고, 총평 도착 직후 바로 결과 페이지로 이동.
+          //   → 결과 페이지가 ~24초에 뜨면, 36초 지연의 원인이 1차 DB 저장이었던 것으로 확인됨.
+          const saveData: PersonalAnalysisData = {
+            faceAnalysis: {
+              faceShape: initialResult.stage1?.faceAnalysis?.faceShape,
+              forehead: initialResult.stage1?.faceAnalysis?.forehead,
+              eyes: initialResult.stage1?.faceAnalysis?.eyes,
+              nose: initialResult.stage1?.faceAnalysis?.nose,
+              mouth: initialResult.stage1?.faceAnalysis?.mouth,
+              chin: initialResult.stage1?.faceAnalysis?.chin,
+              faceOverview: initialResult.totalReview?.faceOverview,
+            },
+            constitutionAnalysis: {
+              sajuInfo: initialResult.stage1?.sajuInfo,
+              totalReview: initialTotalReview,
+            },
+          };
+          const firstSavePromise = updatePersonalAnalysis(uuid, saveData).catch((saveError) => {
+            console.error('1차(총평) 분석 결과 DB 저장 실패:', saveError);
+          });
+          firstSavePromiseRef.current = firstSavePromise;
+
+          // 총평만 도착했으므로 즉시 결과 페이지로 이동 (DB 저장 완료를 기다리지 않음)
           setAnalysisDone(true);
           setIsAnalyzing(false);
+          personalAnalyzingRef.current = false;
           if (isPhotoBoothPath(pathnameRef.current)) {
             setShowAnalysisCompleteToast(true);
           } else {
             navigate(`/personal/${uuid}`);
           }
 
-          // --- 2차: 체질 + 웰스토리 비동기 병합 (이미 호출 진행 중, await만) ---
+          // --- first-remaining: 인생회고·방향성·만남 백그라운드 병합 ---
+          firstRemainingPromise.then(async (remainingResult) => {
+            setLoadingRemaining(false);
+            if (!remainingResult.success) {
+              console.warn('나머지 관상(first-remaining) 분석 실패:', remainingResult.error);
+              return;
+            }
+            setFaceAnalysisResult((prev: FaceAnalysisApiResponse | null) => {
+              if (!prev) return prev;
+              const next = {
+                ...prev,
+                totalReview: {
+                  ...prev.totalReview,
+                  lifeReview: remainingResult.totalReview?.lifeReview,
+                  careerFortune: remainingResult.totalReview?.careerFortune,
+                  meetingCompatibility: remainingResult.totalReview?.meetingCompatibility,
+                },
+              };
+              updatePersonalAnalysis(uuid, {
+                faceAnalysis: {
+                  faceShape: prev.stage1?.faceAnalysis?.faceShape,
+                  forehead: prev.stage1?.faceAnalysis?.forehead,
+                  eyes: prev.stage1?.faceAnalysis?.eyes,
+                  nose: prev.stage1?.faceAnalysis?.nose,
+                  mouth: prev.stage1?.faceAnalysis?.mouth,
+                  chin: prev.stage1?.faceAnalysis?.chin,
+                  faceOverview: prev.totalReview?.faceOverview,
+                  careerFortune: remainingResult.totalReview?.careerFortune,
+                  lifeReview: remainingResult.totalReview?.lifeReview,
+                  meetingCompatibility: remainingResult.totalReview?.meetingCompatibility,
+                },
+                constitutionAnalysis: {
+                  sajuInfo: prev.stage1?.sajuInfo,
+                  totalReview: next.totalReview,
+                },
+              }).catch((err) => console.error('나머지 관상 DB 저장 실패:', err));
+              return next;
+            });
+          }).catch((err) => {
+            setLoadingRemaining(false);
+            console.error('나머지 관상 처리 오류:', err);
+          });
+
+          // --- second: 체질 + 웰스토리 백그라운드 병합 ---
           secondPromise.then(async (secondResult) => {
+            setLoadingConstitution(false);
             if (!secondResult.success) {
               console.warn('2차(체질/메뉴) 분석 실패:', secondResult.error);
               return;
             }
-            // state 병합: totalReview에 체질 + 메뉴 추가
             setFaceAnalysisResult((prev: FaceAnalysisApiResponse | null) => {
               if (!prev) return prev;
-              return {
+              const next = {
                 ...prev,
                 totalReview: {
                   ...prev.totalReview,
@@ -287,44 +362,39 @@ export default function App() {
                   recommendedMenu: secondResult.totalReview?.recommendedMenu,
                 },
               };
-            });
-            // 2차 DB 업데이트 (전체 데이터)
-            try {
-              const fullSaveData: PersonalAnalysisData = {
+              updatePersonalAnalysis(uuid, {
                 faceAnalysis: {
-                  faceShape: firstResult.stage1?.faceAnalysis?.faceShape,
-                  forehead: firstResult.stage1?.faceAnalysis?.forehead,
-                  eyes: firstResult.stage1?.faceAnalysis?.eyes,
-                  nose: firstResult.stage1?.faceAnalysis?.nose,
-                  mouth: firstResult.stage1?.faceAnalysis?.mouth,
-                  chin: firstResult.stage1?.faceAnalysis?.chin,
-                  faceOverview: firstResult.totalReview?.faceOverview,
-                  careerFortune: firstResult.totalReview?.careerFortune,
-                  lifeReview: firstResult.totalReview?.lifeReview,
-                  meetingCompatibility: firstResult.totalReview?.meetingCompatibility,
+                  faceShape: prev.stage1?.faceAnalysis?.faceShape,
+                  forehead: prev.stage1?.faceAnalysis?.forehead,
+                  eyes: prev.stage1?.faceAnalysis?.eyes,
+                  nose: prev.stage1?.faceAnalysis?.nose,
+                  mouth: prev.stage1?.faceAnalysis?.mouth,
+                  chin: prev.stage1?.faceAnalysis?.chin,
+                  faceOverview: prev.totalReview?.faceOverview,
+                  careerFortune: prev.totalReview?.careerFortune,
+                  lifeReview: prev.totalReview?.lifeReview,
+                  meetingCompatibility: prev.totalReview?.meetingCompatibility,
                 },
                 constitutionAnalysis: {
-                  sajuInfo: firstResult.stage1?.sajuInfo,
-                  totalReview: {
-                    ...firstResult.totalReview,
-                    constitutionSummary: secondResult.totalReview?.constitutionSummary,
-                    welstoryMenus: secondResult.totalReview?.welstoryMenus,
-                    recommendedMenu: secondResult.totalReview?.recommendedMenu,
-                  },
+                  sajuInfo: prev.stage1?.sajuInfo,
+                  totalReview: next.totalReview,
                 },
-              };
-              await updatePersonalAnalysis(uuid, fullSaveData);
-            } catch (saveError) {
-              console.error('2차 분석 결과 DB 저장 실패:', saveError);
-            }
-          }).catch((err) => console.error('2차 분석 처리 오류:', err));
+              }).catch((err) => console.error('체질/메뉴 DB 저장 실패:', err));
+              return next;
+            });
+          }).catch((err) => {
+            setLoadingConstitution(false);
+            console.error('2차 분석 처리 오류:', err);
+          });
         } else {
           setAnalysisError("얼굴 분석 데이터가 없습니다. 다시 촬영해주세요.");
           setIsAnalyzing(false);
+          personalAnalyzingRef.current = false;
         }
       } catch (error) {
         setAnalysisError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
         setIsAnalyzing(false);
+        personalAnalyzingRef.current = false;
       }
       return;
     }
@@ -597,6 +667,7 @@ export default function App() {
                   mode={mode}
                   pathname={pathname}
                   onAnalyze={handleAnalyze}
+                  isPersonalAnalyzing={isAnalyzing}
                   onNavigateToMembers={(state) => navigate(ROUTES.GROUP_UPLOAD_MEMBERS, { state: state ?? {} })}
                   onNavigateToUpload={() => navigate(ROUTES.GROUP_UPLOAD)}
                   onSajuInputVisible={setPersonalUploadSajuStep}
@@ -665,7 +736,10 @@ export default function App() {
                     faceAnalysisResult={faceAnalysisResult?.stage1}
                     totalReview={faceAnalysisResult?.totalReview}
                     isLoading={isAnalyzing}
+                    loadingRemaining={loadingRemaining}
+                    loadingConstitution={loadingConstitution}
                     analysisUuid={currentPersonalUuid}
+                    ensureSavedForShare={() => firstSavePromiseRef.current ?? Promise.resolve()}
                   />
                 )}
               </motion.div>
@@ -727,7 +801,10 @@ export default function App() {
                       faceAnalysisResult={faceAnalysisResult?.stage1}
                       totalReview={faceAnalysisResult?.totalReview}
                       isLoading={false}
+                      loadingRemaining={loadingRemaining}
+                      loadingConstitution={loadingConstitution}
                       analysisUuid={currentPersonalUuid}
+                      ensureSavedForShare={() => firstSavePromiseRef.current ?? Promise.resolve()}
                     />
                   ) : (
                     <SharedAnalysisSection />

@@ -35,7 +35,7 @@ type FrameType = "vertical" | "horizontal";
 
 const TOTAL_PHOTOS = 8; // 총 8장 촬영
 const FINAL_PHOTO_COUNT = 4; // 최종 4컷 선택
-const TIMER_SECONDS = 5; // 촬영 타이머 초기값 (초) — 셔터 간격
+const TIMER_SECONDS = 3; // 촬영 타이머 초기값 (초) — 셔터 간격 (3초에 1장)
 
 export const PhotoBoothSection: React.FC<PhotoBoothSectionProps> = ({
   onBack,

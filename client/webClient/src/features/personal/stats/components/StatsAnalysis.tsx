@@ -332,6 +332,8 @@ interface StatsAnalysisProps {
     /** API 오행·체질 풀이 (체질 탭에서 사용) */
     sajuInfo?: SajuInfo | null;
     totalReview?: TotalReview | null;
+    /** second(체질·웰스토리) API 로딩 중 → 체질 영역 로딩 UI */
+    loadingConstitution?: boolean;
 }
 
 // Image 서버 URL은 config.ts에서 import
@@ -384,6 +386,7 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
     onConstitutionSelectedMenuIdxChange,
     sajuInfo = null,
     totalReview = null,
+    loadingConstitution = false,
 }) => {
     const [internalPhase, setInternalPhase] = useState<ConstitutionPhase>("intro");
     const [internalMenuIdx, setInternalMenuIdx] = useState<number | null>(null);
@@ -743,6 +746,23 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
     }, [tab, futureImage, futureImages]);
 
     if (tab === "constitution") {
+        const constitutionBlockEarly = totalReview && (
+            (totalReview as Record<string, string>)["total_user_saju_information"] ??
+            totalReview.constitutionSummary
+        );
+        if (loadingConstitution && sajuInfo && !constitutionBlockEarly) {
+            return (
+                <div className="relative min-h-[60vh] flex items-center justify-center px-4">
+                    <GlassCard className="w-full max-w-2xl p-8 sm:p-10 border-4 border-white rounded-[32px] shadow-clay-md bg-white/50">
+                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 font-display text-center">당신의 체질 풀이</h3>
+                        <div className="flex flex-col items-center gap-3 py-4">
+                            <div className="w-8 h-8 border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
+                            <p className="text-gray-500 text-sm">체질·웰스토리 분석 중입니다...</p>
+                        </div>
+                    </GlassCard>
+                </div>
+            );
+        }
         return (
             <div className="relative min-h-[60vh]">
                 {/* 인트로: 거북 도사 중앙 + 대사 + 시작하기 */}
@@ -886,8 +906,8 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
                                     </GlassCard>
                                 );
                             }
-                            {/* 사주 있지만 체질 데이터 아직 로딩 중 (2차 API 대기) */}
-                            if (sajuInfo && !constitutionBlock) {
+                            {/* 사주 있지만 체질 데이터 아직 로딩 중 (2차 API 대기) 또는 loadingConstitution 플래그 */}
+                            if ((loadingConstitution || (sajuInfo && !constitutionBlock)) && sajuInfo) {
                                 return (
                                     <GlassCard className="w-full max-w-4xl mx-auto p-6 sm:p-8 border-4 border-white rounded-[32px] shadow-clay-md bg-white/50 mb-6">
                                         <h3 className="text-2xl font-bold text-gray-900 mb-6 font-display text-center">당신의 체질 풀이</h3>
@@ -933,6 +953,17 @@ export const StatsAnalysis: React.FC<StatsAnalysisProps> = ({
                             );
                             const { head } = ohengFromApi ? getOhengHead(oheng) : { head: CONSTITUTION_SAJU_DATA.head };
 
+                            if (loadingConstitution && sajuInfo && !constitutionBlock) {
+                                return (
+                                    <GlassCard className="w-full max-w-4xl mx-auto p-6 sm:p-8 border-4 border-white rounded-[32px] shadow-clay-md bg-white/50 mb-6">
+                                        <h3 className="text-2xl font-bold text-gray-900 mb-6 font-display text-center">당신의 체질 풀이</h3>
+                                        <div className="flex flex-col items-center gap-3 py-4">
+                                            <div className="w-8 h-8 border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
+                                            <p className="text-gray-500 text-sm">체질 분석 중입니다...</p>
+                                        </div>
+                                    </GlassCard>
+                                );
+                            }
                             // 데이터가 없는 경우에도 기본 체질 풀이 표시
                             const constitutionData: ConstitutionSajuData = constitutionBlock
                                 ? {

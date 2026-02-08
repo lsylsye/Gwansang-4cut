@@ -96,6 +96,7 @@ function convertToGroupMembers(data: GroupAnalysisData): GroupMember[] {
         birthTime: m.birthTime || "",
         gender: (m.gender as "male" | "female") || "male",
         avatar: m.avatar,
+        fiveElements: m.fiveElements,
     }));
 }
 

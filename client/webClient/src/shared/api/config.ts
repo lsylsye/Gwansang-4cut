@@ -36,8 +36,12 @@ export const FACE_ENDPOINTS = {
   BASE: FACE_BASE_URL,
   /** 개인 관상 + 사주 통합 분석 (기존 단일 호환) */
   FACEMESH_PERSONAL: `${FACE_BASE_URL}/facemesh/personal`,
-  /** 개인 관상 1차: 관상 + 취업만 빠르게 */
+  /** 개인 관상 1차: 관상 + 취업만 빠르게 (레거시) */
   FACEMESH_PERSONAL_FIRST: `${FACE_BASE_URL}/facemesh/personal/first`,
+  /** 개인 관상 총평만 (first-initial, 결과 페이지 즉시 표시용) */
+  FACEMESH_PERSONAL_FIRST_INITIAL: `${FACE_BASE_URL}/facemesh/personal/first-initial`,
+  /** 개인 관상 나머지: 인생회고·방향성·만남 (first-remaining, 백그라운드 병합용) */
+  FACEMESH_PERSONAL_FIRST_REMAINING: `${FACE_BASE_URL}/facemesh/personal/first-remaining`,
   /** 개인 관상 2차: 체질 + 웰스토리 메뉴 */
   FACEMESH_PERSONAL_SECOND: `${FACE_BASE_URL}/facemesh/personal/second`,
   /** 모임 관상 (단체 facemesh 전송·분석) */
@@ -62,6 +66,8 @@ export const IMAGE_ENDPOINTS = {
 export const API_ENDPOINTS = {
   FACEMESH_PERSONAL: FACE_ENDPOINTS.FACEMESH_PERSONAL,
   FACEMESH_PERSONAL_FIRST: FACE_ENDPOINTS.FACEMESH_PERSONAL_FIRST,
+  FACEMESH_PERSONAL_FIRST_INITIAL: FACE_ENDPOINTS.FACEMESH_PERSONAL_FIRST_INITIAL,
+  FACEMESH_PERSONAL_FIRST_REMAINING: FACE_ENDPOINTS.FACEMESH_PERSONAL_FIRST_REMAINING,
   FACEMESH_PERSONAL_SECOND: FACE_ENDPOINTS.FACEMESH_PERSONAL_SECOND,
   FACEMESH_GROUP: FACE_ENDPOINTS.FACEMESH_GROUP,
   FACEMESH_GROUP_OVERALL: FACE_ENDPOINTS.FACEMESH_GROUP_OVERALL,
