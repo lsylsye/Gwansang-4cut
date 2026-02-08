@@ -31,8 +31,14 @@ interface AnalysisSectionProps {
     faceAnalysisResult?: Stage1Response | null;
     totalReview?: TotalReview | null;
     isLoading?: boolean;
+    /** first-remaining(인생회고·방향성·만남) 로딩 중 → 관상 탭에서 해당 블록 로딩 UI */
+    loadingRemaining?: boolean;
+    /** second(체질·웰스토리) 로딩 중 → 체질 탭 로딩 UI */
+    loadingConstitution?: boolean;
     /** 분석 시작 시 생성된 UUID (분석하기 버튼 누르면 이미 저장됨) */
     analysisUuid?: string | null;
+    /** 링크 공유 시 1차 DB 저장이 끝날 때까지 기다리는 Promise. 없으면 대기 없이 모달 오픈 */
+    ensureSavedForShare?: () => Promise<void>;
 }
 
 // --- Mock Data (부위별 상세: values, criteria, interpretation, advice) ---
@@ -325,7 +331,10 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
     faceAnalysisResult,
     totalReview: totalReviewProp,
     isLoading = false,
+    loadingRemaining = false,
+    loadingConstitution = false,
     analysisUuid,
+    ensureSavedForShare,
 }) => {
     const [currentTab, setCurrentTab] = useState<"physiognomy" | "constitution" | "future" | "ssafy-cut">(
         "physiognomy"
@@ -365,6 +374,8 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [isSavingShare, setIsSavingShare] = useState(false);
+    /** 링크 공유하기 클릭 시 1차 DB 저장 대기 중 (로딩 표시용) */
+    const [isPreparingShare, setIsPreparingShare] = useState(false);
     const [savedUuid, setSavedUuid] = useState<string | null>(analysisUuid || null);
     const [futureImage, setFutureImage] = useState<string | null>(null);
     const [savedFrameImage, setSavedFrameImage] = useState<string | null>(null);
@@ -418,8 +429,18 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`;
 
     const handleShare = async () => {
-        // 이미 저장된 UUID가 있으면 바로 모달 열기
+        // 이미 저장된 UUID가 있으면, 1차 DB 저장이 끝날 때까지 잠깐 대기 후 모달 열기 (공유 링크 열었을 때 데이터 보장)
         if (savedUuid) {
+            if (ensureSavedForShare) {
+                setIsPreparingShare(true);
+                try {
+                    await ensureSavedForShare();
+                } catch (e) {
+                    console.error('공유 준비(저장 대기) 중 오류:', e);
+                } finally {
+                    setIsPreparingShare(false);
+                }
+            }
             setIsShareModalOpen(true);
             return;
         }
@@ -589,6 +610,7 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                                 image={images[0] || ""}
                                 features={featuresData}
                                 totalReview={totalReviewData}
+                                loadingRemaining={loadingRemaining}
                             />
                         ) : (
                             <GlassCard className="w-full max-w-2xl mx-auto min-h-[320px] p-10 sm:p-12 border-4 border-white rounded-[32px] shadow-clay-lg bg-white/70 flex flex-col items-center justify-center text-center">
@@ -614,6 +636,7 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                     {(currentTab === "constitution" || currentTab === "future") && (
                         <StatsAnalysis
                             tab={currentTab}
+                            images={images}
                             futureImage={futureImage}
                             onFutureImageUpload={setFutureImage}
                             constitutionPhase={constitutionPhase}
@@ -622,6 +645,7 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                             onConstitutionSelectedMenuIdxChange={setConstitutionSelectedMenuIdx}
                             sajuInfo={faceAnalysisResult?.sajuInfo}
                             totalReview={totalReviewData ?? undefined}
+                            loadingConstitution={loadingConstitution}
                         />
                     )}
 
@@ -692,11 +716,15 @@ export const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                     variant="primary" 
                     onClick={handleShare} 
                     className="flex items-center gap-2"
-                    disabled={isSavingShare}
+                    disabled={isSavingShare || isPreparingShare}
                 >
                     {isSavingShare ? (
                         <>
                             <Loader2 size={20} className="animate-spin" /> 저장 중...
+                        </>
+                    ) : isPreparingShare ? (
+                        <>
+                            <Loader2 size={20} className="animate-spin" /> 링크 준비 중...
                         </>
                     ) : (
                         <>

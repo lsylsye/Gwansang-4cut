@@ -205,19 +205,24 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                 teamName: dataSource.personality?.title || '모임 궁합 분석',
                 memberCount: groupMembers.length || membersWithRoles.length,
                 score: dataSource.compatibility?.score,
-                members: membersWithRoles.map((m) => ({
-                    id: m.id,
-                    name: m.name,
-                    birthDate: m.birthDate,
-                    birthTime: m.birthTime,
-                    gender: m.gender as string,
-                    avatar: m.avatar,
-                    role: m.role,
-                    keywords: m.keywords,
-                    description: m.description,
-                    strengths: m.strengths,
-                    warnings: m.warnings,
-                })),
+                members: membersWithRoles.map((m) => {
+                    // groupMembers에서 fiveElements 가져오기 (이름 기반 매칭)
+                    const originalMember = groupMembers.find(gm => gm.name === m.name);
+                    return {
+                        id: m.id,
+                        name: m.name,
+                        birthDate: m.birthDate,
+                        birthTime: m.birthTime,
+                        gender: m.gender as string,
+                        avatar: m.avatar,
+                        role: m.role,
+                        keywords: m.keywords,
+                        description: m.description,
+                        strengths: m.strengths,
+                        warnings: m.warnings,
+                        fiveElements: originalMember?.fiveElements,
+                    };
+                }),
                 overallAnalysis: {
                     personality: dataSource.personality,
                     compatibility: dataSource.compatibility,
@@ -294,7 +299,7 @@ export const GroupResult: React.FC<GroupResultProps> = ({
         }
     };
 
-    // 실제 멤버 데이터와 역할 데이터 매핑 (API overall.members만 사용)
+    // 실제 멤버 데이터와 역할 데이터 매핑 (API overall.members와 이름 기반 매칭)
     const membersWithRoles = useMemo(() => {
         if (!dataSource?.membersFromApi?.length) return [];
         if (groupMembers.length === 0) {
@@ -312,9 +317,10 @@ export const GroupResult: React.FC<GroupResultProps> = ({
                 warnings: m.warnings ?? [],
             }));
         }
-        return groupMembers.map((member, idx) => {
-            const apiMember = dataSource.membersFromApi[idx];
-            const roleData = apiMember ?? dataSource.membersFromApi[idx % dataSource.membersFromApi.length];
+        // 이름 기반 매칭으로 순서 불일치 방지
+        return groupMembers.map((member) => {
+            const apiMember = dataSource.membersFromApi.find(api => api.name === member.name);
+            const roleData = apiMember ?? dataSource.membersFromApi[0]; // fallback
             return {
                 ...member,
                 role: roleData.role,

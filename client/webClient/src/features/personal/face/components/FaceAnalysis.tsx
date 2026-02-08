@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import ReactMarkdown from "react-markdown";
 import { GlassCard } from "@/shared/ui/core/GlassCard";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/shared/ui/display/hover-card";
-import { Sparkles, X, ChevronDown } from "lucide-react";
+import { Sparkles, X, ChevronDown, Loader2 } from "lucide-react";
 
 // --- Types ---
 interface FaceAnalysisProps {
@@ -11,6 +11,8 @@ interface FaceAnalysisProps {
     scores?: any[];  // 선택적으로 변경
     features: any;
     totalReview?: TotalReview; // 거북 도사의 총평 데이터 (백엔드에서 받아옴)
+    /** first-remaining(인생회고·방향성·만남) 로딩 중일 때 해당 블록에 스피너 표시 */
+    loadingRemaining?: boolean;
 }
 
 // 거북 도사의 총평: 2가지 구성
@@ -69,6 +71,7 @@ const OHEUNG_INFO = (
 interface ThreeBlocksAccordionProps {
     totalReview?: TotalReview | null;
     defaultTotalReview: TotalReview;
+    loadingRemaining?: boolean;
 }
 
 const BLOCK_TITLES: Record<1 | 2 | 3, string> = {
@@ -77,7 +80,7 @@ const BLOCK_TITLES: Record<1 | 2 | 3, string> = {
     3: "그대에게 맞는 사람, 조심할 연애",
 };
 
-function ThreeBlocksAccordion({ totalReview, defaultTotalReview }: ThreeBlocksAccordionProps) {
+function ThreeBlocksAccordion({ totalReview, defaultTotalReview, loadingRemaining }: ThreeBlocksAccordionProps) {
     const [expanded, setExpanded] = useState<Set<1 | 2 | 3>>(new Set());
 
     const toggle = (id: 1 | 2 | 3) => {
@@ -89,8 +92,16 @@ function ThreeBlocksAccordion({ totalReview, defaultTotalReview }: ThreeBlocksAc
         });
     };
 
-    const careerText = totalReview?.careerFortune ?? defaultTotalReview.careerFortune ?? "";
+    // 로딩 여부는 실제 API 응답(totalReview)만으로 판단. default 더미는 로딩 시 표시하지 않음
+    const hasLifeReview = Boolean(totalReview?.lifeReview?.trim());
+    const hasCareerFortune = Boolean(totalReview?.careerFortune?.trim());
+    const hasMeeting = Boolean(totalReview?.meetingCompatibility?.trim());
+    const showLoading1 = loadingRemaining && !hasLifeReview;
+    const showLoading2 = loadingRemaining && !hasCareerFortune;
+    const showLoading3 = loadingRemaining && !hasMeeting;
+
     const lifeReviewText = totalReview?.lifeReview ?? defaultTotalReview.lifeReview ?? "";
+    const careerText = totalReview?.careerFortune ?? defaultTotalReview.careerFortune ?? "";
     const meetingText = totalReview?.meetingCompatibility ?? defaultTotalReview.meetingCompatibility ?? "";
 
     return (
@@ -124,7 +135,12 @@ function ThreeBlocksAccordion({ totalReview, defaultTotalReview }: ThreeBlocksAc
                                     <div className="px-4 pb-4 pt-1 border-t border-gray-200/80">
                                         {id === 1 && (
                                             <>
-                                                {lifeReviewText.trim() ? (
+                                                {showLoading1 ? (
+                                                    <div className="flex items-center gap-2 py-4 text-gray-500">
+                                                        <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" />
+                                                        <span className="text-sm">풀이를 생성하고 있오...</span>
+                                                    </div>
+                                                ) : hasLifeReview ? (
                                                     <div className="text-gray-700 text-base leading-[1.75] max-h-[40vh] overflow-y-auto custom-scrollbar pr-1 [&_strong]:font-bold [&_strong]:text-gray-800">
                                                         <ReactMarkdown
                                                             components={{
@@ -141,20 +157,36 @@ function ThreeBlocksAccordion({ totalReview, defaultTotalReview }: ThreeBlocksAc
                                             </>
                                         )}
                                         {id === 2 && (
-                                            <div className="text-gray-700 text-base leading-[1.75] max-h-[40vh] overflow-y-auto custom-scrollbar pr-1 [&_strong]:font-bold [&_strong]:text-gray-800">
-                                                <ReactMarkdown
-                                                    components={{
-                                                        p: ({ children }) => <p>{children}</p>,
-                                                        strong: ({ children }) => <strong className="font-bold text-gray-800">{children}</strong>,
-                                                    }}
-                                                >
-                                                    {careerText.trim()}
-                                                </ReactMarkdown>
-                                            </div>
+                                            <>
+                                                {showLoading2 ? (
+                                                    <div className="flex items-center gap-2 py-4 text-gray-500">
+                                                        <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" />
+                                                        <span className="text-sm">풀이를 생성하고 있오...</span>
+                                                    </div>
+                                                ) : hasCareerFortune ? (
+                                                    <div className="text-gray-700 text-base leading-[1.75] max-h-[40vh] overflow-y-auto custom-scrollbar pr-1 [&_strong]:font-bold [&_strong]:text-gray-800">
+                                                        <ReactMarkdown
+                                                            components={{
+                                                                p: ({ children }) => <p>{children}</p>,
+                                                                strong: ({ children }) => <strong className="font-bold text-gray-800">{children}</strong>,
+                                                            }}
+                                                        >
+                                                            {careerText.trim()}
+                                                        </ReactMarkdown>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-gray-500 text-sm">준비 중이오. 곧 풀이를 채워 넣으리라.</p>
+                                                )}
+                                            </>
                                         )}
                                         {id === 3 && (
                                             <>
-                                                {meetingText.trim() ? (
+                                                {showLoading3 ? (
+                                                    <div className="flex items-center gap-2 py-4 text-gray-500">
+                                                        <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" />
+                                                        <span className="text-sm">풀이를 생성하고 있오...</span>
+                                                    </div>
+                                                ) : hasMeeting ? (
                                                     <div className="text-gray-700 text-base leading-[1.75] max-h-[40vh] overflow-y-auto custom-scrollbar pr-1 [&_strong]:font-bold [&_strong]:text-gray-800">
                                                         <ReactMarkdown
                                                             components={{
@@ -181,7 +213,7 @@ function ThreeBlocksAccordion({ totalReview, defaultTotalReview }: ThreeBlocksAc
     );
 }
 
-export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, features, totalReview }) => {
+export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, features, totalReview, loadingRemaining }) => {
     const [activeFeature, setActiveFeature] = useState<string | null>(null);
     const [highlightIndex, setHighlightIndex] = useState(0);
 
@@ -619,7 +651,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                                         <div className="text-gray-700 text-base leading-[1.75]">
                                             {/* 한줄요약 — 사주 기반 임팩트 */}
                                             {hookLine && (
-                                                <p className="text-lg font-semibold text-gray-900 mb-3">{hookLine}</p>
+                                                <p className="text-lg font-bold text-gray-900 mb-3">{hookLine}</p>
                                             )}
                                             {/* 소제목 + 호버 (고정) */}
                                             <div className="flex items-center gap-2 mb-2">
@@ -666,6 +698,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                         <ThreeBlocksAccordion
                             totalReview={totalReview}
                             defaultTotalReview={DEFAULT_TOTAL_REVIEW}
+                            loadingRemaining={loadingRemaining}
                         />
                     </section>
                 </GlassCard>

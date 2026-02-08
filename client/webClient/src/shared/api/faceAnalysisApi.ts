@@ -310,8 +310,89 @@ export interface FaceSecondApiResponse {
   error?: string;
 }
 
+/** first-remaining API 응답 (인생회고·방향성·만남) */
+export interface FaceFirstRemainingApiResponse {
+  success: boolean;
+  timestamp?: string;
+  totalReview: Pick<TotalReview, 'lifeReview' | 'careerFortune' | 'meetingCompatibility'>;
+  error?: string;
+}
+
 /**
- * 개인관상 1차 — 관상(faceOverview) + 취업(careerFortune)만 빠르게.
+ * 개인관상 총평만 (first-initial). 완료 시 즉시 결과 페이지 표시용.
+ */
+export async function analyzeFaceFirstInitial(
+  requestData: FaceRequestData
+): Promise<FaceAnalysisApiResponse> {
+  try {
+    const response = await fetch(API_ENDPOINTS.FACEMESH_PERSONAL_FIRST_INITIAL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...requestData, timestamp: requestData.timestamp || new Date().toISOString() }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const msg = (data && typeof data.detail === 'string') ? data.detail : `총평 요청 실패: ${response.status}`;
+      throw new Error(msg);
+    }
+    if (!data.success) throw new Error((data.detail ?? data.error) || '총평 분석 실패');
+    return {
+      stage1: {
+        success: data.success,
+        timestamp: data.timestamp,
+        faceIndex: data.faceIndex,
+        faceAnalysis: data.faceAnalysis,
+        meta: data.meta,
+        sajuInfo: data.sajuInfo,
+      },
+      totalReview: data.totalReview || null,
+    };
+  } catch (error) {
+    console.error('❌ 총평(first-initial) API 오류:', error);
+    return {
+      stage1: null,
+      totalReview: null,
+      error: error instanceof Error ? error.message : '알 수 없는 오류',
+    };
+  }
+}
+
+/**
+ * 개인관상 나머지 (first-remaining): 인생회고·방향성·만남 3개 LLM.
+ * first-initial과 동시 호출, 백그라운드 병합용.
+ */
+export async function analyzeFaceFirstRemaining(
+  requestData: FaceRequestData
+): Promise<FaceFirstRemainingApiResponse> {
+  try {
+    const response = await fetch(API_ENDPOINTS.FACEMESH_PERSONAL_FIRST_REMAINING, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...requestData, timestamp: requestData.timestamp || new Date().toISOString() }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const msg = (data && typeof data.detail === 'string') ? data.detail : `나머지 관상 요청 실패: ${response.status}`;
+      throw new Error(msg);
+    }
+    if (!data.success) throw new Error((data.detail ?? data.error) || '나머지 관상 분석 실패');
+    return {
+      success: true,
+      timestamp: data.timestamp,
+      totalReview: data.totalReview ?? {},
+    };
+  } catch (error) {
+    console.error('❌ 나머지 관상(first-remaining) API 오류:', error);
+    return {
+      success: false,
+      totalReview: {},
+      error: error instanceof Error ? error.message : '알 수 없는 오류',
+    };
+  }
+}
+
+/**
+ * 개인관상 1차 (레거시) — 관상(faceOverview) + 취업(careerFortune) + 인생회고 + 만남 4개 LLM.
  * /second와 동시에 호출하여, 먼저 완료되면 즉시 결과 페이지를 표시한다.
  */
 export async function analyzeFaceFirst(

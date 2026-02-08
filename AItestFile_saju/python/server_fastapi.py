@@ -767,6 +767,110 @@ def _search_rag(analysis_result) -> str:
 
 # ========== 개인관상 2단계 분리 API (프론트에서 동시 호출) ==========
 
+@app.post("/api/face/facemesh/personal/first-initial")
+async def analyze_face_first_initial(request: FaceAnalysisRequest):
+    """총평(faceOverview) 1개 LLM만 호출. 완료 시 프론트에서 즉시 결과 페이지 이동."""
+    try:
+        face, analysis_result, meta, saju_info = _parse_face_and_saju(request)
+        total_review = None
+        try:
+            trimmed_rag = _search_rag(analysis_result)
+            face_sys, face_user = build_face_overview_prompt(analysis_result, trimmed_rag, saju_info)
+            print("🤖 [FIRST-INITIAL] 총평 LLM 호출 중...")
+            import time
+            start_time = time.time()
+            face_result = await call_gms_api_async(
+                system_prompt=face_sys, user_prompt=face_user, model=request.model, timeout=request.timeout
+            )
+            print(f"⏱️ [FIRST-INITIAL] 총평 LLM 완료: {time.time() - start_time:.2f}초")
+            face_overview = face_result.strip() if isinstance(face_result, str) else "관상 분석 결과를 바탕으로 전체적인 종합 분석을 제공합니다."
+            total_review = {"faceOverview": face_overview}
+        except Exception as e:
+            print(f"⚠️ [FIRST-INITIAL] 총평 LLM 오류: {e}")
+            import traceback
+            traceback.print_exc()
+            total_review = {"faceOverview": "관상 분석 결과를 바탕으로 전체적인 종합 분석을 제공합니다."}
+
+        return {
+            "success": True,
+            "timestamp": request.timestamp or "",
+            "faceIndex": face.faceIndex,
+            "faceAnalysis": analysis_result,
+            "meta": {
+                "headRoll": meta.get("headRoll", 0),
+                "qualityNote": meta.get("qualityNote", ""),
+                "overallSymmetry": meta.get("symmetry", 0),
+            },
+            "totalReview": total_review,
+            "sajuInfo": saju_info,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ [FIRST-INITIAL] 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"관상 총평 분석 오류: {str(e)}")
+
+
+@app.post("/api/face/facemesh/personal/first-remaining")
+async def analyze_face_first_remaining(request: FaceAnalysisRequest):
+    """인생회고 + 방향성(career) + 만남 3개 LLM 병렬. first-initial과 동시 호출, 백그라운드 병합용."""
+    try:
+        _face, analysis_result, _meta, saju_info = _parse_face_and_saju(request)
+        total_review = {}
+        try:
+            trimmed_rag = _search_rag(analysis_result)
+            career_sys, career_user = build_career_fortune_prompt(saju_info, trimmed_rag)
+            life_sys, life_user = build_life_review_prompt(saju_info)
+            meeting_sys, meeting_user = build_meeting_compatibility_prompt(saju_info, trimmed_rag)
+
+            print("🤖 [FIRST-REMAINING] LLM 병렬 호출 중 (인생회고, 방향성, 만남)...")
+            import time
+            start_time = time.time()
+            life_result, career_result, meeting_result = await asyncio.gather(
+                call_gms_api_async(system_prompt=life_sys, user_prompt=life_user, model=request.model, timeout=request.timeout),
+                call_gms_api_async(system_prompt=career_sys, user_prompt=career_user, model=request.model, timeout=request.timeout),
+                call_gms_api_async(system_prompt=meeting_sys, user_prompt=meeting_user, model=request.model, timeout=request.timeout),
+                return_exceptions=True,
+            )
+            print(f"⏱️ [FIRST-REMAINING] LLM 완료: {time.time() - start_time:.2f}초")
+
+            total_review = {
+                "lifeReview": life_result.strip() if isinstance(life_result, str) else "",
+                "careerFortune": career_result.strip() if isinstance(career_result, str) else "올해의 취업운을 분석합니다.",
+                "meetingCompatibility": meeting_result.strip() if isinstance(meeting_result, str) else "",
+            }
+            if isinstance(life_result, Exception):
+                print(f"⚠️ [FIRST-REMAINING] 인생회고 LLM 오류: {life_result}")
+            if isinstance(career_result, Exception):
+                print(f"⚠️ [FIRST-REMAINING] 방향성 LLM 오류: {career_result}")
+            if isinstance(meeting_result, Exception):
+                print(f"⚠️ [FIRST-REMAINING] 만남 LLM 오류: {meeting_result}")
+        except Exception as e:
+            print(f"⚠️ [FIRST-REMAINING] 오류: {e}")
+            import traceback
+            traceback.print_exc()
+            total_review = {
+                "lifeReview": "",
+                "careerFortune": "올해의 취업운을 분석합니다.",
+                "meetingCompatibility": "",
+            }
+
+        return {
+            "success": True,
+            "timestamp": request.timestamp or "",
+            "totalReview": total_review,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ [FIRST-REMAINING] 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"관상 나머지 분석 오류: {str(e)}")
+
+
 @app.post("/api/face/facemesh/personal/first")
 async def analyze_face_first(request: FaceAnalysisRequest):
     """1차: LLM 4병렬 — 1.총평 2.취업(방향성) 3.인생회고 4.만남. 프론트에서 /second(5.체질 6.웰스토리)와 동시 호출."""

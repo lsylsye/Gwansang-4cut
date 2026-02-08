@@ -58,6 +58,8 @@ interface UploadSectionProps {
     groupMembers?: GroupMember[],
     faceMeshMetadata?: any,
   ) => void;
+  /** 개인 모드: 분석 진행 중이면 true (버튼 비활성화·중복 호출 방지) */
+  isPersonalAnalyzing?: boolean;
   /** 그룹 모드: 사진 등록/촬영 후 인적사항 등록 페이지로 이동 (state.initialGroupMembers 있으면 촬영 플로우) */
   onNavigateToMembers?: (state?: { initialGroupMembers?: GroupMember[] }) => void;
   /** 그룹 모드: 인적사항 페이지에서 업로드 페이지로 돌아가기 */
@@ -118,6 +120,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   mode,
   pathname: pathnameProp = "",
   onAnalyze,
+  isPersonalAnalyzing = false,
   onNavigateToMembers,
   onNavigateToUpload,
   onSajuInputVisible,
@@ -827,13 +830,22 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             <ActionButton
               variant="primary"
               onClick={handleNextStep}
-              disabled={!sajuData.birthDate}
+              disabled={!sajuData.birthDate || isPersonalAnalyzing}
               className={`px-12 py-5 text-lg font-bold flex items-center gap-2 transition-all duration-300 ${
-                !sajuData.birthDate ? "opacity-50 grayscale cursor-not-allowed" : "animate-bounce-subtle"
+                !sajuData.birthDate || isPersonalAnalyzing ? "opacity-50 grayscale cursor-not-allowed" : "animate-bounce-subtle"
               }`}
             >
-              <Sparkles size={20} />
-              거북 도사님께 풀이 받기
+              {isPersonalAnalyzing ? (
+                <>
+                  <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  풀이 받는 중...
+                </>
+              ) : (
+                <>
+                  <Sparkles size={20} />
+                  거북 도사님께 풀이 받기
+                </>
+              )}
             </ActionButton>
           </div>
         </motion.div>
@@ -1720,6 +1732,10 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                             maxLength={6}
                             lang="ko"
                             autoComplete="off"
+                            autoCapitalize="off"
+                            autoCorrect="off"
+                            spellCheck={false}
+                            data-form-type="other"
                             className="h-10 w-full text-sm bg-white/90 border-2 border-gray-200 focus:bg-white focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 transition-all rounded-xl font-semibold pl-3 pr-10 placeholder:text-gray-400 shadow-sm"
                             value={member.name ?? ''}
                             onFocus={() =>
