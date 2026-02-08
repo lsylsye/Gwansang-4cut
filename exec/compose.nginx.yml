@@ -1,0 +1,29 @@
+services:
+
+  nginx:
+    image: nginx
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      # 호스트의 인증서 경로를 컨테이너에 연결 (Read-Only)
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # 추 후에 갱신 시 경로
+      - /var/www/certbot:/var/www/certbot
+      # 호스트컴퓨터에서 빌드한 리액트 빌드파일을 nginx 에 마운트하여 app.conf의 / 리스닝에 적용되게함
+      - /home/ubuntu/S14P11E208/client/webClient/dist:/usr/share/nginx/dist
+      # EC2 시간 씀
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - nginx-net
+    # 6시간마다 설정 리로드 (갱신 대비)
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+    restart: unless-stopped
+
+networks:
+  nginx-net:
+    external: true
