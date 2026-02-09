@@ -51,7 +51,7 @@
 - 사주 정보 입력 후 풀이 받기
 ![image](/uploads/4c31ece1a3ad94bc93bdb6d65e09b3d0/image.png){width=900 height=507}
 
-- 분석 결과 확인 및 결과 링크 저장 가능(사진은 DB에 저장 안함)
+- 분석 결과 확인
 - 분석 도중 / 이후 싸피 네컷 촬영 가능 (브라우저에서 이미지 다운로드 가능)
 - 결과탭에서 미래의 나 확인 가능 (10, 20, 30년 후 미래 나의 이미지 생성)
 - 체질 분석에서 웰스토리API 와 연동하여 나의 관상 / 사주 분석 결과 체질에 맞는 오늘의 점심메뉴 추천
@@ -59,6 +59,9 @@
 ![image](/uploads/c65a2d6b8cf5a75045cf02c47ec9de06/image.png){width=900 height=456}
 ![image](/uploads/3b6139df2bfb97aad68a6322e2dc05b7/image.png){width=900 height=506}
 ![image](/uploads/ace3b7a66b79860c07e21440f1571fa0/image.png){width=900 height=505}
+
+- 결과 링크 저장 가능(사진은 DB에 저장 안함)
+![스크린샷_2026-02-09_092017](/uploads/afb0d4b360b1820d6b10c6ade8dbfb4f/스크린샷_2026-02-09_092017.png){width=900 height=507}
 
 ### 모임 궁합 상세
 - 모임 궁합 클릭 후 사진 촬영 or 사진 업로드
@@ -73,6 +76,8 @@
 ![image](/uploads/03cb039a7c3ccc1a315b82c9df760019/image.png){width=900 height=500}
 ![image](/uploads/be3018b69956fb0bb43fc14e7ea85047/image.png){width=900 height=505}
 ![image](/uploads/a61aac778f8fef0047e5639e79229337/image.png){width=900 height=511}
+
+- 결과 링크 저장 가능(사진은 DB에 저장 안함)
 
 - 상단의 모임 랭킹 탭에서 랭킹 목록 조회
 ![image](/uploads/b3a5dfb178740253d6529ee9d57342dd/image.png){width=900 height=506}
