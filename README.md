@@ -1,39 +1,46 @@
-## 1. Gitlab 소스 클론 이후 빌드 및 배포 메뉴얼
+# 1. 프로젝트 소개
 
-### 1-1. Gitlab 소스 클론 이후 빌드 및 배포하는법 : 백엔드 
-1. Docker 설치
-- Docker(20.10v 이상)만 설치 하면 다른 어떠한 프로그램도 설치 필요 없이 빌드 및 실행 가능
+## 관상네컷 
 
-2. .env 삽입 및 Docker Compose 실행
-- 각 서버 및 DB 컨테이너들이 Dockerfile로 이미지 빌드 정의가 되어있고 하나의 compose 파일로 빌드 및 실행 가능함
-- 도커 컨테이너 이므로 어떠한 다른 환경에서 빌드 및 실행 해도 모두 동일한 서버 환경이 제공됨
-- compose가 있는 최상위 위치에 환경변수 파일 .env를 삽입 후 docker compose -f compose.dev.was.yml up -d --build 명령어만 실행하면 빌드(이미지 생성) 및 실행됨, 최초 실행 시엔 
-- 배포 시 운영용 .env와 compose 파일을 적용하면됨 (docker compose -f compose.prod.was.yml up -d --build)
+- MediaPipe를 활용한 AI 관상 및 사주 분석 서비스
 
-### 1-2. Gitlab 소스 클론 이후 빌드 및 배포하는법 : 프런트엔드
-1. Node.js 설치
-- Node.js 20.20
+## 기술 스택
 
-2. client/webClient 위치에서 .env 삽입 후 npm i, npm run dev 명령어 입력
-- 배포 시 운영용 .env 파일을 적용하면됨
+- **프론트**: React, TypeScript, Vite, Tailwind, MediaPipe (얼굴 랜드마크 클라이언트 연산)
+- **백엔드**: Spring Boot - DB관련 프로세스, MySQL,  FastAPI - 관상/사주 분석, 
+- **AI**:RAG(Redis), GMS(LLM), 미래 이미지 생성(Gemini)
 
-### 1-3. 배포 환경에 필요한 Nginx 구축 및 SSL 인증서 발급
-- 인스턴스에 compose.nginx.yml을 생성, nginx 라우팅 설정등을 위해 nginx/conf.d/app.conf 생성
-- cerbot으로 도메인 https ssl 인증서 적용
-- nginx compose 실행
+## 실행 방법
 
-### (참고용) 인프라 구성도 
+1. `.env` 설정 (DB, GMS_KEY 등)
+2. compose.dev.was.yml 빌드 및 실행, redis 컨테이너 내부에서 indexer.py 인덱싱파일 실행
+3. 프론트: `cd client/webClient && npm i && npm run dev` (Node 20.20)
+
+## 주요 기능
+
+- 개인/모임 관상 및 사주 분석 (랜드마크 → rule-based → RAG·LLM)
+- 사주 분석, 모임 궁합
+- 미래 얼굴 이미지 생성
+- 네컷 포토부스, 랭킹
+
+## 프로젝트 구조
+
+- `client/webClient` — 프론트
+- `server` — Spring Boot(8080) + 이미지생성 호출(8001)
+- `AItestFile_saju/python` — 관상·사주 API(8000)
+- `welstoryLunch` — welstory 연동(8002)
+
+### 인프라 구성도
 ![image](/uploads/03dca623c6c03128382d45a2353cbeed/image.png){width=521 height=456}
 
-## 2. 프로젝트에서 사용하는 외부 서비스 정보
-- GMS : key는 .env에 정의 되어 compose에서 알아서 적용됨
-- Welstory : key는 .env에 정의 되어 compose에서 알아서 적용됨
-- Gemini Nanobanana : key는 .env에 정의 되어 compose에서 알아서 적용됨
+# 2. 프로젝트에서 사용하는 외부 서비스 정보
+- GMS : key는 .env에 정의 후 compose에서 알아서 적용됨
+- Welstory : key는 .env에 정의 후 compose에서 알아서 적용됨
+- Gemini Nanobanana : key는 .env에 정의 후 compose에서 알아서 적용됨
 
-## 3. DB 덤프파일 : 필요 X
-- 컨테이너 환경 구축 + JPA DDL AUTO 로 인해 덤프파일 의미 X
 
-## 4. 시연 시나리오 
+
+# 3. 기능 소개
 ### 개인 관상 기능 요약
 ![image](/uploads/cf2e495308f8eab2b469575db78f79b5/image.png){width=769 height=407}
 
@@ -77,8 +84,8 @@
 ![image](/uploads/be3018b69956fb0bb43fc14e7ea85047/image.png){width=900 height=505}
 ![image](/uploads/a61aac778f8fef0047e5639e79229337/image.png){width=900 height=511}
 
-- 결과 링크 저장 가능(사진은 DB에 저장 안함)
+- 모임 결과도 개인 결과와 동일하게 링크 저장 가능(사진은 DB에 저장 안함)
 
-- 상단의 모임 랭킹 탭에서 랭킹 목록 조회
-![image](/uploads/b3a5dfb178740253d6529ee9d57342dd/image.png){width=900 height=506}
+- 상단의 모임 랭킹 탭에서 랭킹 목록 조회 가능
+![image](/uploads/c054ed1bf23ec866c15622c1ccbc2b18/image.png){width=900 height=460}
 
