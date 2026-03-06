@@ -31,7 +31,8 @@
 - `welstoryLunch` — welstory 연동(8002)
 
 ### 인프라 구성도
-![image](/uploads/03dca623c6c03128382d45a2353cbeed/image.png){width=521 height=456}
+<img width="1388" height="1216" alt="image" src="https://github.com/user-attachments/assets/be1732d0-8a0e-44a3-8599-49587cc0712d" />
+
 
 # 2. 프로젝트에서 사용하는 외부 서비스 정보
 - GMS : key는 .env에 정의 후 compose에서 알아서 적용됨
@@ -42,50 +43,62 @@
 
 # 3. 기능 소개
 ### 개인 관상 기능 요약
-![image](/uploads/cf2e495308f8eab2b469575db78f79b5/image.png){width=769 height=407}
+<img width="2050" height="1084" alt="image" src="https://github.com/user-attachments/assets/644fc362-ecc6-48e3-8f18-ccade816adef" />
+
 
 ### 모임 관상 기능 요약
-![image](/uploads/63e4408415e8b1d79187f9a834fefe8c/image.png){width=754 height=410}
+<img width="2010" height="1092" alt="image" src="https://github.com/user-attachments/assets/13e48ae7-f611-4627-82ad-9e334d6a7f73" />
+
 
 ### 개인 관상 상세
 - 메인 페이지
-![image](/uploads/e8ef02b5a7e1efb01f749060e16ded3c/image.png){width=900 height=511}
+<img width="2868" height="1626" alt="image" src="https://github.com/user-attachments/assets/7aafb815-9048-4b49-a5f4-7ff0ade8db3b" />
+
 
 - 개인 관상 클릭 후 사진 촬영 or 사진 업로드
-![image](/uploads/3f978b719d99d76f7690fd3164922726/image.png){width=900 height=508}
-![image](/uploads/af8b23f3e42b28cdf61c2061b724245c/image.png){width=900 height=505}
+<img width="2880" height="1622" alt="image" src="https://github.com/user-attachments/assets/bdaca060-ddc0-4a46-b855-3d5272339cf2" />
+<img width="2880" height="1614" alt="image" src="https://github.com/user-attachments/assets/5d2e1969-4ed0-4ca7-9296-ebfb7b1b13ef" />
+
 
 - 사주 정보 입력 후 풀이 받기
-![image](/uploads/4c31ece1a3ad94bc93bdb6d65e09b3d0/image.png){width=900 height=507}
+<img width="2866" height="1612" alt="image" src="https://github.com/user-attachments/assets/f2e205f4-9f03-4516-a597-2d65c00e8134" />
+
 
 - 분석 결과 확인
 - 분석 도중 / 이후 싸피 네컷 촬영 가능 (브라우저에서 이미지 다운로드 가능)
 - 결과탭에서 미래의 나 확인 가능 (10, 20, 30년 후 미래 나의 이미지 생성)
 - 체질 분석에서 웰스토리API 와 연동하여 나의 관상 / 사주 분석 결과 체질에 맞는 오늘의 점심메뉴 추천
-![image](/uploads/5a3fc68f9735f08b1a922fab20a495d3/image.png){width=900 height=506}
-![image](/uploads/c65a2d6b8cf5a75045cf02c47ec9de06/image.png){width=900 height=456}
-![image](/uploads/3b6139df2bfb97aad68a6322e2dc05b7/image.png){width=900 height=506}
-![image](/uploads/ace3b7a66b79860c07e21440f1571fa0/image.png){width=900 height=505}
+<img width="2876" height="1614" alt="image" src="https://github.com/user-attachments/assets/18918429-2003-4557-8d7e-4aed8d01a819" />
+<img width="2876" height="1614" alt="image" src="https://github.com/user-attachments/assets/8970cb2c-1358-4f6e-b024-3e98c51f82dc" />
+<img width="2880" height="1458" alt="image" src="https://github.com/user-attachments/assets/beeb0c63-7890-4900-be78-988b6fe710db" />
+<img width="2880" height="1616" alt="image" src="https://github.com/user-attachments/assets/04eb8672-4fff-48db-94e5-25a283b4000a" />
+
 
 - 결과 링크 저장 가능(사진은 DB에 저장 안함)
-![스크린샷_2026-02-09_092017](/uploads/afb0d4b360b1820d6b10c6ade8dbfb4f/스크린샷_2026-02-09_092017.png){width=900 height=507}
+<img width="2879" height="1620" alt="image" src="https://github.com/user-attachments/assets/cd8a7a3e-7392-49a3-8907-853686402b9d" />
+
 
 ### 모임 궁합 상세
 - 모임 궁합 클릭 후 사진 촬영 or 사진 업로드
-![image](/uploads/4915daf3d863440e85aa4a3f81b201ff/image.png){width=900 height=500}
+<img width="2880" height="1600" alt="image" src="https://github.com/user-attachments/assets/5241119e-5653-4fea-80a5-fc9c5d3b1c8e" />
+
 
 - 감지된 각 유저별 사주 정부 입력 후 풀이 받기
-![image](/uploads/d74c7ef22a311d02367bda5664e0e2ae/image.png){width=900 height=506}
+<img width="2880" height="1618" alt="image" src="https://github.com/user-attachments/assets/9ca760fe-aafe-41f0-bfbc-3541e5ce17d3" />
+
 
 - 분석 결과 확인 및 결과 링크 저장 가능(사진은 DB에 저장 안함), 부여받은 점수로 랭킹 등록 가능
 - 분석 도중 / 이후 싸피 네컷 촬영 가능 (브라우저에서 이미지 다운로드 가능)
-![image](/uploads/01647e339efe4d91f323d03d60512255/image.png){width=900 height=508}
-![image](/uploads/03cb039a7c3ccc1a315b82c9df760019/image.png){width=900 height=500}
-![image](/uploads/be3018b69956fb0bb43fc14e7ea85047/image.png){width=900 height=505}
-![image](/uploads/a61aac778f8fef0047e5639e79229337/image.png){width=900 height=511}
+<img width="2880" height="1622" alt="image" src="https://github.com/user-attachments/assets/8dccec82-6283-40d8-82e9-3681ed59c93c" />
+<img width="2880" height="1600" alt="image" src="https://github.com/user-attachments/assets/68928db8-5380-400d-9808-3e9eb5da09fd" />
+<img width="2880" height="1612" alt="image" src="https://github.com/user-attachments/assets/bc055d78-d496-4619-9170-4f26f34ff89a" />
+<img width="2880" height="1634" alt="image" src="https://github.com/user-attachments/assets/eee83325-051f-4e2b-b7d6-77a4e883a244" />
+
 
 - 모임 결과도 개인 결과와 동일하게 링크 저장 가능(사진은 DB에 저장 안함)
 
 - 상단의 모임 랭킹 탭에서 랭킹 목록 조회 가능
-![image](/uploads/c054ed1bf23ec866c15622c1ccbc2b18/image.png){width=900 height=460}
+<img width="2866" height="1462" alt="image" src="https://github.com/user-attachments/assets/1fb4185b-00d9-438e-bc2b-5e1d32c889e5" />
+
+
 
