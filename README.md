@@ -68,10 +68,12 @@
 - 분석 도중 / 이후 싸피 네컷 촬영 가능 (브라우저에서 이미지 다운로드 가능)
 - 결과탭에서 미래의 나 확인 가능 (10, 20, 30년 후 미래 나의 이미지 생성)
 - 체질 분석에서 웰스토리API 와 연동하여 나의 관상 / 사주 분석 결과 체질에 맞는 오늘의 점심메뉴 추천
-<img width="2876" height="1614" alt="image" src="https://github.com/user-attachments/assets/18918429-2003-4557-8d7e-4aed8d01a819" />
-<img width="2876" height="1614" alt="image" src="https://github.com/user-attachments/assets/8970cb2c-1358-4f6e-b024-3e98c51f82dc" />
-<img width="2880" height="1458" alt="image" src="https://github.com/user-attachments/assets/beeb0c63-7890-4900-be78-988b6fe710db" />
-<img width="2880" height="1616" alt="image" src="https://github.com/user-attachments/assets/04eb8672-4fff-48db-94e5-25a283b4000a" />
+<img width="2876" height="1614" alt="image" src="https://github.com/user-attachments/assets/b3ffa3de-c22d-4bf1-b830-bdd66d3374d1" />
+<img width="2880" height="1458" alt="image" src="https://github.com/user-attachments/assets/12b7e1b0-6c8d-4b9d-85f4-76355bcd1d79" />
+<img width="2878" height="1618" alt="image" src="https://github.com/user-attachments/assets/36372a32-a365-4329-8809-a0d587d35b2c" />
+<img width="2880" height="1616" alt="image" src="https://github.com/user-attachments/assets/e28f6427-464b-45ee-a780-7357950ad348" />
+
+
 
 
 - 결과 링크 저장 가능(사진은 DB에 저장 안함)
@@ -99,6 +101,7 @@
 
 - 상단의 모임 랭킹 탭에서 랭킹 목록 조회 가능
 <img width="2866" height="1462" alt="image" src="https://github.com/user-attachments/assets/1fb4185b-00d9-438e-bc2b-5e1d32c889e5" />
+
 
 
 
