@@ -14,7 +14,7 @@ interface FaceTracker {
   isFrontal: boolean;   // 현재 정면인지 여부 (추가됨)
 }
 
-function getEulerAngles(matrix: any) {
+function getEulerAngles(matrix: number[] | Float32Array) {
   const m20 = matrix[2];
   const m21 = matrix[6];
   const m22 = matrix[10];
@@ -25,7 +25,7 @@ function getEulerAngles(matrix: any) {
 }
 
 interface FaceMeshWebcamProps {
-  onCapture?: (image: string, metadata?: any) => void;
+  onCapture?: (image: string, metadata?: import("@/types").AnalysisMetadata) => void;
   onClose?: () => void;
   onFaceCountChange?: (count: number) => void;
   maxFaces?: number;

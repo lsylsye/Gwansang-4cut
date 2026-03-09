@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
-import { GlassCard } from "@/shared/ui/core/GlassCard";
-import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/shared/ui/display/hover-card";
+import { GlassCard } from "@/components/ui/core/GlassCard";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/display/hover-card";
 import { OhengStarChart } from "./OhengStarChart";
 
 /** 오행(목/화/토/금/수) 개수 — 백엔드에서 동일 구조로 내려주면 그대로 사용 */

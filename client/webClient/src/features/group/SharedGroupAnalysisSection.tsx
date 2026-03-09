@@ -1,20 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, AlertCircle, Clock } from "lucide-react";
-import { ActionButton } from "@/shared/ui/core/ActionButton";
-import { getGroupAnalysis, type GroupAnalysisData, type AnalysisStatus } from "@/shared/api/groupAnalysisApi";
-import { ROUTES } from "@/shared/config/routes";
+import { ActionButton } from "@/components/ui/core/ActionButton";
+import { getGroupAnalysis, type GroupAnalysisData, type AnalysisStatus } from "@/services/groupAnalysisApi";
+import { ROUTES } from "@/routes/routes";
 import { GroupResult, type GroupAnalysisResultProp } from "./result/components/GroupResult";
-import type { GroupMember } from "@/shared/types";
-
-/**
- * URL pathname에서 UUID 추출
- * /group/share/9beefa5f-10a1-453c-9203-5aa7189bb14e -> 9beefa5f-10a1-453c-9203-5aa7189bb14e
- */
-function extractUuidFromPath(pathname: string): string | null {
-    const match = pathname.match(/^\/group\/share\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
-    return match ? match[1] : null;
-}
+import type { GroupMember } from "@/types";
+import { devLog, devError } from "@/utils/logger";
 
 /**
  * 저장된 GroupAnalysisData를 GroupResult가 사용하는 GroupAnalysisResultProp 형식으로 변환
@@ -106,11 +98,8 @@ function convertToGroupMembers(data: GroupAnalysisData): GroupMember[] {
  * GroupResult 컴포넌트를 재사용하여 싸피네컷 탭만 숨김
  */
 export const SharedGroupAnalysisSection: React.FC = () => {
-    const location = useLocation();
     const navigate = useNavigate();
-    
-    // URL에서 UUID 직접 추출 (useParams 대신)
-    const uuid = extractUuidFromPath(location.pathname);
+    const { uuid } = useParams<"uuid">();
     
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -120,27 +109,27 @@ export const SharedGroupAnalysisSection: React.FC = () => {
     // 데이터 조회 함수 (polling용으로 분리)
     const fetchData = useCallback(async () => {
         if (!uuid) {
-            console.error("❌ UUID를 추출할 수 없습니다.");
+            devError("❌ UUID를 추출할 수 없습니다.");
             setError("잘못된 접근입니다.");
             setIsLoading(false);
             return;
         }
 
         try {
-            console.log("📡 API 호출 시작:", uuid);
+            devLog("📡 API 호출 시작:", uuid);
             const response = await getGroupAnalysis(uuid);
-            console.log("✅ API 응답:", response);
+            devLog("✅ API 응답:", response);
             
             setAnalysisStatus(response.status);
             
             // 분석 완료된 경우에만 데이터 파싱
             if (response.status === 'COMPLETED' && response.analysisData) {
                 const parsed: GroupAnalysisData = JSON.parse(response.analysisData);
-                console.log("✅ 파싱된 데이터:", parsed);
+                devLog("✅ 파싱된 데이터:", parsed);
                 setAnalysisData(parsed);
             }
         } catch (err) {
-            console.error("❌ 단체 분석 결과 조회 실패:", err);
+            devError("❌ 단체 분석 결과 조회 실패:", err);
             setError("분석 결과를 불러오는데 실패했습니다.");
         } finally {
             setIsLoading(false);
@@ -149,19 +138,16 @@ export const SharedGroupAnalysisSection: React.FC = () => {
 
     // UUID로 데이터 조회
     useEffect(() => {
-        console.log("🔗 단체 분석 공유 페이지 접근, pathname:", location.pathname);
-        console.log("🔗 추출된 UUID:", uuid);
-        
         setIsLoading(true);
         fetchData();
-    }, [uuid, fetchData, location.pathname]);
+    }, [uuid, fetchData]);
 
     // 분석 중일 때 주기적으로 상태 확인 (polling)
     useEffect(() => {
         if (analysisStatus !== 'ANALYZING') return;
 
         const pollInterval = setInterval(() => {
-            console.log("🔄 분석 상태 확인 중...");
+            devLog("🔄 분석 상태 확인 중...");
             fetchData();
         }, 3000); // 3초마다 상태 확인
 

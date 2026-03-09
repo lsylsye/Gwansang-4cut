@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { TrendingUp, Sparkles, CheckCircle, Users, ArrowLeft, Share2, Search, Inbox, AlertCircle } from "lucide-react";
-import { GlassCard } from "@/shared/ui/core/GlassCard";
-import { ActionButton } from "@/shared/ui/core/ActionButton";
-import { Toast } from "@/shared/components/Toast";
-import { getRankings, registerRanking } from "@/shared/api/rankingApi";
+import { GlassCard } from "@/components/ui/core/GlassCard";
+import { ActionButton } from "@/components/ui/core/ActionButton";
+import { Toast } from "@/components/common/Toast";
+import { toast } from "sonner";
+import { getRankings, registerRanking } from "@/services/rankingApi";
 
 interface RankingItem {
   id: string | number;
@@ -138,7 +139,7 @@ function ScoreCircle({
   );
 }
 
-interface RankingSectionProps {
+export interface RankingSectionProps {
   onBack: () => void;
   userScore: number;
   initialTeamName: string;
@@ -614,7 +615,7 @@ export const RankingSection: React.FC<RankingSectionProps> = ({
           </>
         )}
         {isFixed && (
-          <ActionButton onClick={() => alert("준비 중입니다!")} className="px-8 py-4 flex items-center gap-2">
+          <ActionButton onClick={() => toast("준비 중입니다!")} className="px-8 py-4 flex items-center gap-2">
             <Share2 size={18} />
             이 랭킹 공유하기
           </ActionButton>

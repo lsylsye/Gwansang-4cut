@@ -1,22 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "motion/react";
 import { Brain, Heart, Loader2, AlertCircle, Clock } from "lucide-react";
 import { FaceAnalysis } from "./face/components/FaceAnalysis";
 import { StatsAnalysis, type ConstitutionPhase } from "./stats/components/StatsAnalysis";
-import { TabNavigation } from "@/shared/components/TabNavigation";
-import { ActionButton } from "@/shared/ui/core/ActionButton";
-import { getPersonalAnalysis, PersonalAnalysisData, AnalysisStatus } from "@/shared/api/personalAnalysisApi";
-import { ROUTES } from "@/shared/config/routes";
-
-/**
- * URL pathname에서 UUID 추출
- * /personal/9beefa5f-10a1-453c-9203-5aa7189bb14e -> 9beefa5f-10a1-453c-9203-5aa7189bb14e
- */
-function extractUuidFromPath(pathname: string): string | null {
-    const match = pathname.match(/^\/personal\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
-    return match ? match[1] : null;
-}
+import { TabNavigation } from "@/components/common/TabNavigation";
+import { ActionButton } from "@/components/ui/core/ActionButton";
+import { getPersonalAnalysis, PersonalAnalysisData, AnalysisStatus } from "@/services/personalAnalysisApi";
+import { devLog, devError } from "@/utils/logger";
+import { ROUTES } from "@/routes/routes";
 
 /**
  * 공유 링크로 접속했을 때 보여주는 결과 페이지
@@ -24,11 +16,8 @@ function extractUuidFromPath(pathname: string): string | null {
  * 관상 분석, 체질 분석 탭만 표시
  */
 export const SharedAnalysisSection: React.FC = () => {
-    const location = useLocation();
     const navigate = useNavigate();
-    
-    // URL에서 UUID 직접 추출 (useParams 대신)
-    const uuid = extractUuidFromPath(location.pathname);
+    const { uuid } = useParams<"uuid">();
     
     const [currentTab, setCurrentTab] = useState<"physiognomy" | "constitution">("physiognomy");
     const [isLoading, setIsLoading] = useState(true);
@@ -43,27 +32,27 @@ export const SharedAnalysisSection: React.FC = () => {
     // 데이터 조회 함수 (polling용으로 분리)
     const fetchData = useCallback(async () => {
         if (!uuid) {
-            console.error("❌ UUID를 추출할 수 없습니다.");
+            devError("❌ UUID를 추출할 수 없습니다.");
             setError("잘못된 접근입니다.");
             setIsLoading(false);
             return;
         }
 
         try {
-            console.log("📡 API 호출 시작:", uuid);
+            devLog("📡 API 호출 시작:", uuid);
             const response = await getPersonalAnalysis(uuid);
-            console.log("✅ API 응답:", response);
+            devLog("✅ API 응답:", response);
             
             setAnalysisStatus(response.status);
             
             // 분석 완료된 경우에만 데이터 파싱
             if (response.status === 'COMPLETED' && response.analysisData) {
                 const parsed: PersonalAnalysisData = JSON.parse(response.analysisData);
-                console.log("✅ 파싱된 데이터:", parsed);
+                devLog("✅ 파싱된 데이터:", parsed);
                 setAnalysisData(parsed);
             }
         } catch (err) {
-            console.error("❌ 분석 결과 조회 실패:", err);
+            devError("❌ 분석 결과 조회 실패:", err);
             setError("분석 결과를 불러오는데 실패했습니다.");
         } finally {
             setIsLoading(false);
@@ -72,19 +61,16 @@ export const SharedAnalysisSection: React.FC = () => {
 
     // UUID로 데이터 조회
     useEffect(() => {
-        console.log("🔗 공유 페이지 접근, pathname:", location.pathname);
-        console.log("🔗 추출된 UUID:", uuid);
-        
         setIsLoading(true);
         fetchData();
-    }, [uuid, fetchData, location.pathname]);
+    }, [uuid, fetchData]);
 
     // 분석 중일 때 주기적으로 상태 확인 (polling)
     useEffect(() => {
         if (analysisStatus !== 'ANALYZING') return;
 
         const pollInterval = setInterval(() => {
-            console.log("🔄 분석 상태 확인 중...");
+            devLog("🔄 분석 상태 확인 중...");
             fetchData();
         }, 3000); // 3초마다 상태 확인
 
@@ -156,7 +142,7 @@ export const SharedAnalysisSection: React.FC = () => {
         chin: analysisData.faceAnalysis.chin,
     } : null;
 
-    console.log("📊 불러온 featuresData:", featuresData);
+    devLog("📊 불러온 featuresData:", featuresData);
 
     const totalReviewData = analysisData.faceAnalysis?.faceOverview 
         ? { 
@@ -167,13 +153,13 @@ export const SharedAnalysisSection: React.FC = () => {
           }
         : undefined;
 
-    console.log("📊 불러온 totalReviewData:", totalReviewData);
+    devLog("📊 불러온 totalReviewData:", totalReviewData);
 
     // 체질 분석 데이터 (저장된 sajuInfo와 totalReview)
     const constitutionSajuInfo = analysisData.constitutionAnalysis?.sajuInfo || null;
     const constitutionTotalReview = analysisData.constitutionAnalysis?.totalReview || null;
 
-    console.log("📊 불러온 체질 분석 데이터:", { sajuInfo: constitutionSajuInfo, totalReview: constitutionTotalReview });
+    devLog("📊 불러온 체질 분석 데이터:", { sajuInfo: constitutionSajuInfo, totalReview: constitutionTotalReview });
 
     return (
         <div className="w-full max-w-7xl mx-auto pb-20" id="shared-analysis-container">

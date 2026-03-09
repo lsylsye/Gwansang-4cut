@@ -1,15 +1,22 @@
 import React, { useState, useEffect } from "react";
+import { devLog } from "@/utils/logger";
 import { motion, AnimatePresence } from "motion/react";
 import ReactMarkdown from "react-markdown";
-import { GlassCard } from "@/shared/ui/core/GlassCard";
-import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/shared/ui/display/hover-card";
+import { GlassCard } from "@/components/ui/core/GlassCard";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/display/hover-card";
 import { Sparkles, X, ChevronDown, Loader2 } from "lucide-react";
 
 // --- Types ---
+/** 부위별 feature 블록 (coreMeaning 있으면 전용 블록 렌더) */
+interface FeatureBlock {
+    coreMeaning?: unknown;
+    [key: string]: unknown;
+}
+
 interface FaceAnalysisProps {
     image: string;
-    scores?: any[];  // 선택적으로 변경
-    features: any;
+    scores?: unknown[];
+    features: Record<string, unknown>;
     totalReview?: TotalReview; // 거북 도사의 총평 데이터 (백엔드에서 받아옴)
     /** first-remaining(인생회고·방향성·만남) 로딩 중일 때 해당 블록에 스피너 표시 */
     loadingRemaining?: boolean;
@@ -219,9 +226,9 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
 
     // 디버깅용 로그
     useEffect(() => {
-        console.log("🎭 FaceAnalysis 렌더링");
-        console.log("  - features:", features);
-        console.log("  - totalReview:", totalReview);
+        devLog("🎭 FaceAnalysis 렌더링");
+        devLog("  - features:", features);
+        devLog("  - totalReview:", totalReview);
     }, [features, totalReview]);
 
     // 순차 하이라이트: 아무 것도 선택되지 않았을 때만 부위를 바꿔 가며 테두리 빛 표시
@@ -586,7 +593,7 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
     };
 
     /** 공통·얼굴형: 게이지 + 핵심의미 + 조언 (측정 데이터 섹션 없음, 파트 블록에서 라벨과 함께 표시) */
-    const renderCommonAndFaceShape = (_common: any, faceShape: any) => {
+    const renderCommonAndFaceShape = (_common: unknown, faceShape: unknown) => {
         const fs = faceShape || {};
         const gauge = fs.gauge ? { rangeMin: 0, rangeMax: 8, ...fs.gauge } : null;
         const coreMeaning = fs.coreMeaning || fs.summary;
@@ -891,16 +898,16 @@ export const FaceAnalysis: React.FC<FaceAnalysisProps> = ({ image, scores, featu
                                 </div>
                                 <div className="detail-card-content flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 text-base leading-relaxed [&_>div]:text-base [&_h4]:text-base [&_h4]:font-bold [&_h4]:border-b [&_h4]:border-brand-green/20 [&_h4]:pb-1.5 [&_h4]:mt-4 [&_h4]:first:mt-0 [&_h5]:text-base [&_h5]:font-bold [&_h5]:mt-3 [&_h5]:mb-1.5 [&_p]:leading-[1.7] [&_p]:text-base [&_ul]:space-y-1 [&_ul]:pl-4 [&_li]:text-gray-700">
                                     {activeFeature === "commonAndFaceShape" && renderCommonAndFaceShape(features.common, features.faceShape)}
-                                    {activeFeature === "forehead" && features.forehead && (features.forehead as any).coreMeaning && renderForeheadBlock(features.forehead)}
-                                    {activeFeature === "forehead" && features.forehead && !(features.forehead as any).coreMeaning && renderBlock(features.forehead)}
-                                    {activeFeature === "eyes" && features.eyes && (features.eyes as any).coreMeaning && renderEyesBlock(features.eyes)}
-                                    {activeFeature === "eyes" && features.eyes && !(features.eyes as any).coreMeaning && renderBlock(features.eyes)}
-                                    {activeFeature === "nose" && features.nose && (features.nose as any).coreMeaning && renderNoseBlock(features.nose)}
-                                    {activeFeature === "nose" && features.nose && !(features.nose as any).coreMeaning && renderBlock(features.nose)}
-                                    {activeFeature === "mouth" && features.mouth && (features.mouth as any).coreMeaning && renderMouthBlock(features.mouth)}
-                                    {activeFeature === "mouth" && features.mouth && !(features.mouth as any).coreMeaning && renderBlock(features.mouth)}
-                                    {activeFeature === "chin" && features.chin && (features.chin as any).coreMeaning && renderChinBlock(features.chin)}
-                                    {activeFeature === "chin" && features.chin && !(features.chin as any).coreMeaning && renderBlock(features.chin)}
+                                    {activeFeature === "forehead" && features.forehead && (features.forehead as FeatureBlock).coreMeaning && renderForeheadBlock(features.forehead)}
+                                    {activeFeature === "forehead" && features.forehead && !(features.forehead as FeatureBlock).coreMeaning && renderBlock(features.forehead)}
+                                    {activeFeature === "eyes" && features.eyes && (features.eyes as FeatureBlock).coreMeaning && renderEyesBlock(features.eyes)}
+                                    {activeFeature === "eyes" && features.eyes && !(features.eyes as FeatureBlock).coreMeaning && renderBlock(features.eyes)}
+                                    {activeFeature === "nose" && features.nose && (features.nose as FeatureBlock).coreMeaning && renderNoseBlock(features.nose)}
+                                    {activeFeature === "nose" && features.nose && !(features.nose as FeatureBlock).coreMeaning && renderBlock(features.nose)}
+                                    {activeFeature === "mouth" && features.mouth && (features.mouth as FeatureBlock).coreMeaning && renderMouthBlock(features.mouth)}
+                                    {activeFeature === "mouth" && features.mouth && !(features.mouth as FeatureBlock).coreMeaning && renderBlock(features.mouth)}
+                                    {activeFeature === "chin" && features.chin && (features.chin as FeatureBlock).coreMeaning && renderChinBlock(features.chin)}
+                                    {activeFeature === "chin" && features.chin && !(features.chin as FeatureBlock).coreMeaning && renderBlock(features.chin)}
                                 </div>
                             </GlassCard>
                         </motion.div>

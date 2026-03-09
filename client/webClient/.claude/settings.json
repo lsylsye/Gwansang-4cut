@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmd.exe /c \"cd C:\\\\Users\\\\SSAFY\\\\Desktop\\\\SSAFY-4-CUTS\\\\client\\\\webClient && pnpm add zustand 2>&1\")",
+      "Bash(cmd.exe /c \"pnpm --version 2>&1\")"
+    ]
+  }
+}

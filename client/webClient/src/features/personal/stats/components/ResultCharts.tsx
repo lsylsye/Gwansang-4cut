@@ -8,7 +8,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-import { GlassCard } from "@/shared/ui/core/GlassCard";
+import { GlassCard } from "@/components/ui/core/GlassCard";
 
 interface ChartProps {
   data: {

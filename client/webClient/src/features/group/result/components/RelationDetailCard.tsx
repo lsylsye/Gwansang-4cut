@@ -9,8 +9,8 @@ import {
     HeartHandshake,
     LucideIcon,
 } from "lucide-react";
-import { Modal, ModalHeader, ModalBody } from "@/shared/ui/core/Modal";
-import { useIsMobile } from "@/shared/lib/hooks/use-mobile";
+import { Modal, ModalHeader, ModalBody } from "@/components/ui/core/Modal";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface RelationPairForDetail {
     member1: string;

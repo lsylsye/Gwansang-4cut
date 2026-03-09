@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/SSAFY/Downloads/**)",
+      "Bash(grep -rn \"from ''date-fns''\\\\|from \"\"date-fns\"\"\\\\|react-dnd\\\\|react-popper\" /c/Users/SSAFY/Desktop/SSAFY-4-CUTS/client/webClient/src/ --include=\"*.tsx\" --include=\"*.ts\")",
+      "Bash(npm uninstall @mui/material @mui/icons-material @emotion/react @emotion/styled @popperjs/core react-popper react-dnd react-dnd-html5-backend date-fns)",
+      "Bash(npm run build)",
+      "Bash(git add package.json package-lock.json src/features/upload/components/PersonalUpload.tsx)",
+      "Bash(git commit -m \"refactor : 미사용 패키지 제거\")",
+      "Bash(git add src/contexts/TurtleGuideStateContext.tsx src/features/upload/hooks/usePersonalUploadFlow.ts src/features/upload/hooks/useGroupUploadFlow.ts src/features/upload/components/PersonalUpload.tsx src/features/upload/components/GroupUpload.tsx src/features/upload/components/UploadSection.tsx src/features/personal/AnalysisSection.tsx src/features/group/result/components/GroupResult.tsx src/features/group/result/components/GroupResultTypes.ts src/features/group/GroupAnalysisSection.tsx src/App.tsx)",
+      "Bash(git commit -m \"refactor : TurtleGuide 상태 Context로 분리\")",
+      "Bash(git add src/App.tsx)",
+      "Bash(git commit -m \"refactor : React.lazy + Suspense 코드 스플리팅\")",
+      "Bash(npm install zustand)",
+      "Read(//mnt/c/Users/SSAFY/Desktop/SSAFY-4-CUTS/client/**)",
+      "Bash(where npm)",
+      "Bash(cmd.exe /c \"where npm\")",
+      "Bash(cmd.exe /c \"npm install zustand 2>&1\")",
+      "Bash(cmd.exe /c \"cd C:\\\\Users\\\\SSAFY\\\\Desktop\\\\SSAFY-4-CUTS\\\\client\\\\webClient && npm install zustand 2>&1\")",
+      "Read(//usr/local/bin/**)",
+      "Read(//usr/bin/**)",
+      "Bash(find /usr -name \"node\" -type f)",
+      "Read(//c/Users/SSAFY/AppData/Roaming/npm//**)",
+      "Read(//c/Users/SSAFY/**)",
+      "Bash(/c/Users/SSAFY/AppData/Local/nvm/v20.20.1/npm --version)",
+      "Bash(/c/Users/SSAFY/AppData/Local/nvm/v20.20.1/npm install zustand)"
+    ]
+  }
+}

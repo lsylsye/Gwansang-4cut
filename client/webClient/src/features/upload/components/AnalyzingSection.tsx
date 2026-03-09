@@ -2,10 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { motion, AnimatePresence } from "motion/react";
 import { Sparkles, Search, Brain, Loader2, AlertCircle, CheckCircle2, RefreshCcw } from "lucide-react";
-import { ActionButton } from "@/shared/ui/core/ActionButton";
-import { ANALYSIS_STEP_INTERVAL_MS } from "@/shared/config/analysis";
+import { ActionButton } from "@/components/ui/core/ActionButton";
+import { ANALYSIS_STEP_INTERVAL_MS } from "@/config/analysis";
 
-interface AnalyzingSectionProps {
+export interface AnalyzingSectionProps {
   isAnalyzing?: boolean;
   analysisError?: string | null;
   analysisComplete?: boolean;

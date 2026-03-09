@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
-import { Badge } from "@/shared/ui/core/badge";
-import { useIsMobile } from "@/shared/lib/hooks/use-mobile";
+import { Badge } from "@/components/ui/core/badge";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface RelationMapMember {
     id: number;

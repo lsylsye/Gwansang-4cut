@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { Heart, ShieldAlert } from "lucide-react";
 import type { RelationMapMember } from "./RelationMapSidebar";
 import { getRelationLevel, type RelationPairForDetail } from "./RelationDetailCard";
-import { useIsMobile } from "@/shared/lib/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface RelationWithLevel extends RelationPairForDetail {
     otherMember: string;

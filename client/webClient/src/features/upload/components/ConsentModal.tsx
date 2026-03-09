@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/shared/ui/core/Modal";
-import { ActionButton } from "@/shared/ui/core/ActionButton";
-import { Checkbox } from "@/shared/ui/forms/checkbox";
+import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/core/Modal";
+import { ActionButton } from "@/components/ui/core/ActionButton";
+import { Checkbox } from "@/components/ui/forms/checkbox";
 import { CheckCircle2, ChevronDown, Shield, Trash2, Eye, Lock } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 
 interface ConsentModalProps {
   isOpen: boolean;

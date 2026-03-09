@@ -1,11 +1,11 @@
 import React from "react";
-import { GlassCard } from "@/shared/ui/core/GlassCard";
+import { GlassCard } from "@/components/ui/core/GlassCard";
 import { Sparkles, Camera, ArrowRight, Star, Heart, User, Users, Upload, ShieldCheck, Utensils, Clock, Brain, Image } from "lucide-react";
 import { motion } from "motion/react";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { AnalyzeMode } from "@/shared/types";
+import { AnalyzeMode } from "@/types";
 import logoImage from "@/assets/film.png";
 import { ModeSelectionCard } from "./ModeSelectionCard";
 

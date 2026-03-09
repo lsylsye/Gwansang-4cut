@@ -1,9 +1,9 @@
 import React from "react";
 import { motion } from "motion/react";
 import { Camera, ArrowRight, LucideIcon } from "lucide-react";
-import { GlassCard } from "@/shared/ui/core/GlassCard";
+import { GlassCard } from "@/components/ui/core/GlassCard";
 import { cva, type VariantProps } from "class-variance-authority";
-import { AnalyzeMode } from "@/shared/types";
+import { AnalyzeMode } from "@/types";
 
 const cardVariants = cva(
   "relative group cursor-pointer",
