@@ -20,17 +20,11 @@ export interface PersonalUploadProps {
     faceMeshMetadata?: import("@/types").AnalysisMetadata,
   ) => void;
   isPersonalAnalyzing?: boolean;
-  onSajuInputVisible?: (visible: boolean) => void;
-  onPersonalConfirmStepVisible?: (visible: boolean) => void;
-  onPersonalCameraVisible?: (visible: boolean) => void;
 }
 
 export function PersonalUpload({
   onAnalyze,
   isPersonalAnalyzing = false,
-  onSajuInputVisible,
-  onPersonalConfirmStepVisible,
-  onPersonalCameraVisible,
 }: PersonalUploadProps) {
   const {
     fileInputRef,
@@ -54,13 +48,7 @@ export function PersonalUpload({
     handleFileUpload,
     handleNextStep,
     handleRetake,
-  } = usePersonalUploadFlow({
-    onAnalyze,
-    isPersonalAnalyzing,
-    onSajuInputVisible,
-    onPersonalConfirmStepVisible,
-    onPersonalCameraVisible,
-  });
+  } = usePersonalUploadFlow({ onAnalyze, isPersonalAnalyzing });
 
   // --- Saju Input Screen ---
   if (showSajuInput && capturedImages[0]) {

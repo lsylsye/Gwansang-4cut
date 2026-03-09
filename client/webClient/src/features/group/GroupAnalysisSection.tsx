@@ -1,5 +1,5 @@
 import React from "react";
-import { GroupMember } from "@/shared/types";
+import { GroupMember } from "@/types";
 import { GroupResult } from "./result/components/GroupResult";
 
 /** 모임 궁합 API 응답 (members + groupCombination). 프론트 렌더링용 */
@@ -9,7 +9,7 @@ export type GroupAnalysisResult = {
     groupCombination?: string;
 } | null;
 
-interface GroupAnalysisSectionProps {
+export interface GroupAnalysisSectionProps {
     groupMembers?: GroupMember[];
     /** 모임 궁합 API 응답. 연결 후 결과 화면에서 데이터 렌더링에 사용 */
     groupAnalysisResult?: GroupAnalysisResult;
@@ -20,8 +20,6 @@ interface GroupAnalysisSectionProps {
     onViewRankingViewOnly?: () => void;
     /** 랭킹 등록 완료 여부 (버튼 문구: '랭킹 보기' vs '랭킹 등록하기') */
     hasRegisteredRanking?: boolean;
-    /** 탭 변경 시 TurtleGuide 멘트용 */
-    onTabChange?: (tab: "overall" | "pairs" | "ssafy-cut") => void;
     /** 싸피네컷(네컷) 페이지로 이동 (개인 결과처럼 결과 페이지에서 진입용) */
     onNavigateToPhotoBooth?: () => void;
     /** 분석 시작 시 생성된 UUID (분석하기 버튼 누르면 이미 저장됨) */
@@ -35,7 +33,6 @@ export const GroupAnalysisSection: React.FC<GroupAnalysisSectionProps> = ({
     onViewRanking,
     onViewRankingViewOnly,
     hasRegisteredRanking = false,
-    onTabChange,
     onNavigateToPhotoBooth,
     analysisUuid,
 }) => {
@@ -48,7 +45,6 @@ export const GroupAnalysisSection: React.FC<GroupAnalysisSectionProps> = ({
                 onViewRanking={onViewRanking}
                 onViewRankingViewOnly={onViewRankingViewOnly}
                 hasRegisteredRanking={hasRegisteredRanking}
-                onTabChange={onTabChange}
                 onNavigateToPhotoBooth={onNavigateToPhotoBooth}
                 analysisUuid={analysisUuid}
             />
