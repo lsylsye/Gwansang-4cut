@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from "react";
 import "./style/fonts.css";
 import "./style/theme.css";
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import { Layout } from "@/layouts/Layout";
 import { AppHeader } from "@/layouts/AppHeader";
-import { HomePage } from "@/pages/HomePage";
-import { UploadPage } from "@/pages/UploadPage";
-import { AnalyzingPage } from "@/pages/AnalyzingPage";
-import { ResultPage } from "@/pages/ResultPage";
-import { SharedPersonalResultPage } from "@/pages/SharedPersonalResultPage";
-import { SharedGroupResultPage } from "@/pages/SharedGroupResultPage";
-import { RankingPage } from "@/pages/RankingPage";
-import { PhotoBoothPage } from "@/pages/PhotoBoothPage";
+const HomePage = lazy(() => import("@/pages/HomePage").then((m) => ({ default: m.HomePage })));
+const UploadPage = lazy(() => import("@/pages/UploadPage").then((m) => ({ default: m.UploadPage })));
+const AnalyzingPage = lazy(() => import("@/pages/AnalyzingPage").then((m) => ({ default: m.AnalyzingPage })));
+const ResultPage = lazy(() => import("@/pages/ResultPage").then((m) => ({ default: m.ResultPage })));
+const SharedPersonalResultPage = lazy(() => import("@/pages/SharedPersonalResultPage").then((m) => ({ default: m.SharedPersonalResultPage })));
+const SharedGroupResultPage = lazy(() => import("@/pages/SharedGroupResultPage").then((m) => ({ default: m.SharedGroupResultPage })));
+const RankingPage = lazy(() => import("@/pages/RankingPage").then((m) => ({ default: m.RankingPage })));
+const PhotoBoothPage = lazy(() => import("@/pages/PhotoBoothPage").then((m) => ({ default: m.PhotoBoothPage })));
 import { TurtleGuide } from "@/components/common/TurtleGuide";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { HideTurtleGuideProvider, useHideTurtleGuide } from "@/contexts/HideTurtleGuideContext";
@@ -236,6 +236,7 @@ export default function App() {
           className={`container mx-auto py-8 min-h-[calc(100vh-64px)] ${pathname === ROUTES.GROUP_RESULT ? "px-0" : "px-4"}`}
         >
           <AnalysisResultProvider value={analysisResultContextValue}>
+          <Suspense fallback={<div className="flex-grow" />}>
           <Routes>
             <Route path={ROUTES.HOME} element={<HomePage onStart={handleStart} />} />
 
@@ -427,6 +428,7 @@ export default function App() {
               }
             />
           </Routes>
+          </Suspense>
           </AnalysisResultProvider>
         </div>
       </main>
